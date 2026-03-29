@@ -51,15 +51,19 @@ Stackpilot runs a five-layer pipeline inside Claude Code:
 ## Restore on a new machine
 
 ```bash
-git clone git@github.com:9aoyang/stackpilot.git
-cd stackpilot
+# 1. Clone and restore Stackpilot agents + skills
+git clone git@github.com:9aoyang/stackpilot.git ~/Documents/github/stackpilot
+cd ~/Documents/github/stackpilot
 bash scripts/restore.sh
 
-# Install gstack if needed:
+# 2. Restore personal Claude config (CLAUDE.md, settings.json)
+git clone git@github.com:9aoyang/dotfiles.git ~/Documents/github/dotfiles
+cd ~/Documents/github/dotfiles
+bash install.sh
+
+# 3. Install gstack
 git clone https://github.com/garrytan/gstack ~/.claude/skills/gstack
 ```
-
-All agents, skills, and Claude Code settings will be restored to `~/.claude/`.
 
 ## Keeping gstack up to date
 

@@ -47,12 +47,6 @@ for f in "$CONFIG_DIR/skills/stackpilot/"*.md; do
   copy "$f" "$CLAUDE_DIR/skills/stackpilot/$(basename "$f")"
 done
 
-# CLAUDE.md
-echo ""
-echo "Global config:"
-copy "$CONFIG_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
-copy "$CONFIG_DIR/settings.json" "$CLAUDE_DIR/settings.json"
-
 # gstack reminder
 echo ""
 if [ ! -d "$CLAUDE_DIR/skills/gstack" ]; then
@@ -61,4 +55,6 @@ if [ ! -d "$CLAUDE_DIR/skills/gstack" ]; then
 fi
 
 echo ""
-echo "[stackpilot] ✓ Restore complete!"
+echo "[stackpilot] ✓ Agents and skills restored!"
+echo ""
+echo "Tip: Restore personal Claude config (CLAUDE.md, settings.json) from your dotfiles repo."
