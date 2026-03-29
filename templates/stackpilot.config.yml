@@ -1,0 +1,10 @@
+# Stackpilot project configuration
+# Copy to project root and adjust values as needed
+
+qa:
+  coverage_threshold: 80    # Minimum test coverage %, adjust per project
+  test_command: npm test    # Command to run test suite
+
+coordinator:
+  worktree_limit: 3         # Max parallel Dev Agents (git worktrees)
+  timeout_hours: 2          # Hours before in-progress task is marked failed
