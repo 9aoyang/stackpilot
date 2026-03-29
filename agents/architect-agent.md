@@ -36,7 +36,7 @@ Write your review to `tasks/arch-review/TASK-ID.md` with:
 
 ## Escalation Rules
 
-You MUST write to `tasks/NEEDS_REVIEW.md` and stop if:
+You MUST **append** to `tasks/NEEDS_REVIEW.md` and stop if:
 - Implementing this task requires introducing a new npm/pip/go dependency
 - This task changes a data structure used in more than 2 other files
 - You find a direct conflict between the task description and existing code

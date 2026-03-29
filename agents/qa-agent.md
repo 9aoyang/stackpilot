@@ -37,7 +37,7 @@ ALL of the following must be true before marking done:
 
 ## On Coverage Failure (after 3 attempts)
 
-Write to `tasks/NEEDS_REVIEW.md`:
+**Append** to `tasks/NEEDS_REVIEW.md`:
 ```
 [QA][TASK-ID] Cannot reach coverage threshold of X%
 Current coverage: Y%
