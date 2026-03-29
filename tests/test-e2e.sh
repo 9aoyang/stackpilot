@@ -41,14 +41,14 @@ echo ""
 # Resolve worktree root relative to this script's location
 WORKTREE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# 3. templates/ — expect 3 files
-echo "--- templates/ (expect 3 files) ---"
+# 3. templates/ — expect 4 files
+echo "--- templates/ (expect 4 files) ---"
 TEMPLATE_COUNT=$(find "$WORKTREE_DIR/templates" -maxdepth 1 -type f | wc -l | tr -d ' ')
-if [ "$TEMPLATE_COUNT" -eq 3 ]; then
-  echo "  PASS: templates/ has 3 files (found $TEMPLATE_COUNT)"
+if [ "$TEMPLATE_COUNT" -eq 4 ]; then
+  echo "  PASS: templates/ has 4 files (found $TEMPLATE_COUNT)"
   PASS=$((PASS + 1))
 else
-  echo "  FAIL: templates/ should have 3 files, found $TEMPLATE_COUNT"
+  echo "  FAIL: templates/ should have 4 files, found $TEMPLATE_COUNT"
   FAIL=$((FAIL + 1))
 fi
 echo ""
