@@ -24,11 +24,7 @@ Stackpilot runs a five-layer pipeline inside Claude Code:
 
 1. Install agents and skills (one-time):
    ```bash
-   # Copy agent definitions to Claude's global agents dir
-   cp agents/*.md ~/.claude/agents/
-   # Copy skills
-   mkdir -p ~/.claude/skills/stackpilot
-   cp skills/stackpilot/*.md ~/.claude/skills/stackpilot/
+   bash scripts/restore.sh
    ```
 
 2. Initialize Stackpilot in your project:
@@ -51,6 +47,19 @@ Stackpilot runs a five-layer pipeline inside Claude Code:
    git checkout -b feat/my-feature
    # → Coordinator reads backlog, dispatches agents
    ```
+
+## Restore on a new machine
+
+```bash
+git clone git@github.com:9aoyang/stackpilot.git
+cd stackpilot
+bash scripts/restore.sh
+
+# Install gstack if needed:
+git clone https://github.com/garrytan/gstack ~/.claude/skills/gstack
+```
+
+All agents, skills, and Claude Code settings will be restored to `~/.claude/`.
 
 ## Keeping gstack up to date
 
