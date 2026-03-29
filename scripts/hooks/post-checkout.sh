@@ -15,7 +15,7 @@ ROOT="$(git rev-parse --show-toplevel)"
 
 echo "[stackpilot] Branch switched — running Coordinator..."
 claude -p "Run the Stackpilot Coordinator for the project at $ROOT. Follow the coordinator skill instructions." \
-  --allowedTools "Read,Write,Bash,Glob" \
+  --allowedTools Read --allowedTools Write --allowedTools Bash --allowedTools Glob \
   >> "$ROOT/tasks/coordinator.log" 2>&1 &
 
 echo "[stackpilot] Coordinator started in background (PID $!)"

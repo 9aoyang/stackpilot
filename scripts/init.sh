@@ -57,8 +57,8 @@ install_hook() {
   local dst="$HOOKS_DIR/$name"
 
   if [ -f "$dst" ]; then
-    echo "[stackpilot] WARNING: $name hook already exists — skipping (backup at ${dst}.bak)"
     cp "$dst" "${dst}.bak"
+    echo "[stackpilot] Backed up existing hook: ${dst}.bak"
   fi
 
   cp "$src" "$dst"
