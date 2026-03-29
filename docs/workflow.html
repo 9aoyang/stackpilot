@@ -5,275 +5,204 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    background: #0f1117;
-    font-family: -apple-system, 'SF Pro Display', sans-serif;
-    padding: 48px;
-    min-height: 100vh;
-    color: #fff;
+    background: #ffffff;
+    font-family: -apple-system, 'SF Pro Display', 'PingFang SC', sans-serif;
+    width: 720px;
+    padding: 56px 48px 64px;
   }
 
   h1 {
     text-align: center;
-    font-size: 22px;
+    font-size: 15px;
     font-weight: 600;
-    color: #fff;
-    margin-bottom: 40px;
-    letter-spacing: 0.5px;
+    color: #999;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 48px;
   }
 
+  /* ── Nodes ── */
+  .node {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .n-entry {
+    background: #5b50e8;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border-radius: 12px;
+    padding: 14px 32px;
+    box-shadow: 0 4px 20px rgba(91,80,232,0.25);
+  }
+
+  .n-status {
+    background: #f5f5f7;
+    color: #555;
+    font-size: 13px;
+    border: 1.5px solid #e5e5ea;
+  }
+
+  .n-decision {
+    background: #fff8ec;
+    color: #a05a00;
+    border: 1.5px solid #f5d48a;
+    font-size: 13px;
+    border-radius: 8px;
+    padding: 10px 18px;
+  }
+
+  .n-skill {
+    background: #f0faf4;
+    color: #1a7a40;
+    border: 1.5px solid #b8e8cb;
+    font-size: 13px;
+  }
+
+  .n-skill.ui {
+    background: #eef3ff;
+    color: #2d55cc;
+    border-color: #b8cbf7;
+  }
+
+  .n-agent {
+    background: #fff5ee;
+    color: #b84a00;
+    border: 1.5px solid #f5c8a0;
+    font-size: 13px;
+  }
+
+  .n-finish {
+    background: #f5f0ff;
+    color: #6b35cc;
+    border: 1.5px solid #d4b8f7;
+    font-size: 13px;
+  }
+
+  /* ── Layout ── */
   .flow {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0;
   }
 
-  /* Node styles */
-  .node {
-    border-radius: 12px;
-    padding: 12px 24px;
-    font-size: 14px;
-    font-weight: 500;
-    text-align: center;
-    position: relative;
-    white-space: nowrap;
-  }
-
-  .node-entry {
-    background: #6c63ff;
-    color: #fff;
-    font-size: 18px;
-    font-weight: 700;
-    padding: 14px 36px;
-    border-radius: 14px;
-    box-shadow: 0 0 24px rgba(108,99,255,0.5);
-    letter-spacing: 1px;
-  }
-
-  .node-status {
-    background: #1e2030;
-    border: 1.5px solid #3d4160;
-    color: #a9b1d6;
-    font-size: 13px;
-    padding: 10px 28px;
-    border-radius: 10px;
-  }
-
-  .node-decision {
-    background: #1a1f35;
-    border: 1.5px solid #4a5080;
-    color: #7aa2f7;
-    font-size: 13px;
-    padding: 10px 20px;
-    border-radius: 10px;
-  }
-
-  .node-skill {
-    background: #1a2a1a;
-    border: 1.5px solid #2a5a2a;
-    color: #9ece6a;
-    font-size: 13px;
-    padding: 10px 20px;
-    border-radius: 10px;
-  }
-
-  .node-skill.ui {
-    background: #1a1f35;
-    border-color: #3d59a1;
-    color: #7aa2f7;
-  }
-
-  .node-skill.finish {
-    background: #2a1a2a;
-    border-color: #6a3a6a;
-    color: #bb9af7;
-  }
-
-  .node-agent {
-    background: #2a1a0a;
-    border: 1.5px solid #6a4a1a;
-    color: #e0af68;
-    font-size: 13px;
-    padding: 10px 20px;
-    border-radius: 10px;
-  }
-
-  .node-action {
-    background: #1a2030;
-    border: 1.5px solid #364060;
-    color: #c0caf5;
-    font-size: 13px;
-    padding: 10px 20px;
-    border-radius: 10px;
-  }
-
-  /* Arrow */
-  .arrow {
-    width: 2px;
-    height: 24px;
-    background: #3d4160;
-    margin: 0 auto;
+  .arrow-v {
+    width: 1.5px;
+    height: 28px;
+    background: #d1d1d6;
     position: relative;
   }
-  .arrow::after {
+  .arrow-v::after {
     content: '';
     position: absolute;
-    bottom: -5px;
+    bottom: -4px;
     left: 50%;
     transform: translateX(-50%);
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 7px solid #3d4160;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 6px solid #d1d1d6;
   }
 
-  /* Branches */
-  .branches {
+  .arrow-v.short { height: 18px; }
+
+  /* Decision fan-out */
+  .fan {
     display: flex;
-    gap: 24px;
     align-items: flex-start;
-    justify-content: center;
-    width: 100%;
-  }
-
-  .branch {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     gap: 0;
-    flex: 1;
-    max-width: 200px;
-  }
-
-  .branch-label {
-    font-size: 11px;
-    color: #565f89;
-    margin-bottom: 6px;
-    text-align: center;
-    font-weight: 400;
-  }
-
-  .branch-line {
-    width: 100%;
-    height: 1.5px;
-    background: #3d4160;
-    position: relative;
-    margin: 0 auto 20px;
-  }
-
-  /* Horizontal connector */
-  .h-connector {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     width: 100%;
     position: relative;
-    height: 30px;
-    margin: 4px 0;
   }
 
-  .h-line {
-    height: 1.5px;
-    background: #3d4160;
+  .fan-col {
     flex: 1;
-  }
-
-  /* Row layout */
-  .row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .arrow-right {
-    width: 28px;
-    height: 2px;
-    background: #3d4160;
-    position: relative;
-    flex-shrink: 0;
-  }
-  .arrow-right::after {
-    content: '';
-    position: absolute;
-    right: -5px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 5px solid transparent;
-    border-bottom: 5px solid transparent;
-    border-left: 7px solid #3d4160;
-  }
-
-  .label-tag {
-    font-size: 11px;
-    color: #565f89;
-    background: #1a1d2e;
-    border: 1px solid #2d3149;
-    border-radius: 6px;
-    padding: 2px 8px;
-  }
-
-  .section-title {
-    font-size: 11px;
-    color: #565f89;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 4px 0 8px;
-  }
-
-  /* Status states panel */
-  .states-panel {
-    display: flex;
-    gap: 16px;
-    margin: 8px 0;
-  }
-
-  .state-col {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
   }
 
-  .state-badge {
+  /* Horizontal line connecting fan */
+  .h-bar {
+    height: 1.5px;
+    background: #d1d1d6;
+    width: 100%;
+    margin: 0;
+  }
+
+  .fan-drop {
+    width: 1.5px;
+    height: 20px;
+    background: #d1d1d6;
+  }
+
+  /* Label tags */
+  .tag {
     font-size: 11px;
-    padding: 3px 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
     border-radius: 20px;
-    font-weight: 500;
+    margin-bottom: 8px;
   }
-  .badge-clean { background: #1a2a1a; color: #9ece6a; border: 1px solid #2a5a2a; }
-  .badge-running { background: #1a2030; color: #7aa2f7; border: 1px solid #3d59a1; }
-  .badge-blocked { background: #2a1a10; color: #ff9e64; border: 1px solid #6a3a1a; }
-  .badge-failed { background: #2a1a1a; color: #f7768e; border: 1px solid #6a2a2a; }
+  .tag-clean   { background: #e8f7ee; color: #1a7a40; }
+  .tag-running { background: #eef3ff; color: #2d55cc; }
+  .tag-blocked { background: #fff5ee; color: #b84a00; }
+  .tag-failed  { background: #fff0f0; color: #cc2d2d; }
 
-  /* Merge arrows */
-  .merge-arrow {
-    width: 2px;
-    background: #3d4160;
-    margin: 0 auto;
+  /* Optional label */
+  .opt {
+    font-size: 11px;
+    color: #aaa;
+    margin: 6px 0 4px;
+    font-style: italic;
   }
 
   /* Divider */
-  .divider {
-    width: 600px;
-    height: 1px;
-    background: #2d3149;
-    margin: 16px auto;
-  }
-
-  .sprint-box {
-    border: 1.5px dashed #3d4160;
-    border-radius: 14px;
-    padding: 20px 32px;
+  .section-divider {
+    width: 100%;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 0;
-    background: #13161f;
+    gap: 12px;
+    margin: 32px 0;
+  }
+  .section-divider .line { flex: 1; height: 1px; background: #e5e5ea; }
+  .section-divider .label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #aaa;
   }
 
-  .optional-label {
-    font-size: 11px;
-    color: #565f89;
-    font-style: italic;
+  /* Merge point */
+  .merge-line {
+    height: 1.5px;
+    background: #d1d1d6;
+  }
+
+  /* Inline optional row */
+  .opt-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .opt-badge {
+    font-size: 10px;
+    background: #f5f5f7;
+    color: #999;
+    border: 1px solid #e5e5ea;
+    border-radius: 4px;
+    padding: 2px 7px;
+    white-space: nowrap;
   }
 </style>
 </head>
@@ -283,82 +212,90 @@
 <div class="flow">
 
   <!-- Entry -->
-  <div class="node node-entry">/stackpilot</div>
-  <div class="arrow"></div>
+  <div class="node n-entry">/stackpilot</div>
+  <div class="arrow-v"></div>
 
   <!-- Status -->
-  <div class="node node-status">📊 展示 Sprint 状态面板</div>
-  <div class="arrow"></div>
+  <div class="node n-status" style="width:280px">📊 读取 Sprint 状态面板</div>
+  <div class="arrow-v"></div>
 
-  <!-- State branches -->
-  <div style="display:flex; gap:20px; align-items:flex-start; justify-content:center;">
+  <!-- Fan-out: 4 states -->
+  <div style="width:100%; display:flex; flex-direction:column; align-items:stretch;">
+    <!-- top h-bar -->
+    <div style="display:flex; align-items:flex-start;">
+      <div style="flex:1; border-top:1.5px solid #d1d1d6; border-left:1.5px solid #d1d1d6; height:16px; border-radius:4px 0 0 0;"></div>
+      <div style="flex:1; border-top:1.5px solid #d1d1d6; height:16px;"></div>
+      <div style="flex:1; border-top:1.5px solid #d1d1d6; height:16px;"></div>
+      <div style="flex:1; border-top:1.5px solid #d1d1d6; border-right:1.5px solid #d1d1d6; height:16px; border-radius:0 4px 0 0;"></div>
+    </div>
 
-    <!-- Col 1: Sprint 干净 -->
-    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:160px;">
-      <div class="state-badge badge-clean">Sprint 干净</div>
-      <div class="arrow"></div>
-      <div class="node node-skill">superpowers:<br>brainstorming</div>
-      <div class="arrow"></div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-        <div class="optional-label">涉及 UI？</div>
-        <div class="node node-skill ui">/ui 设计</div>
+    <!-- 4 columns -->
+    <div style="display:flex; align-items:flex-start; gap:8px; padding:0 4px;">
+
+      <!-- Col 1: Sprint 干净 (main path) -->
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <div class="tag tag-clean">Sprint 干净</div>
+        <div class="node n-skill" style="width:100%">brainstorming</div>
+        <div class="arrow-v short"></div>
+        <div class="opt">有 UI？</div>
+        <div class="node n-skill ui" style="width:100%">/ui 设计</div>
+        <div class="arrow-v short"></div>
+        <div class="node n-skill" style="width:100%">writing-plans</div>
+        <div class="arrow-v short"></div>
+        <div class="node n-status" style="width:100%;font-size:12px;">写 spec → git commit</div>
+        <div class="arrow-v short"></div>
+        <div class="node n-agent" style="width:100%">PM Agent 拆任务</div>
+        <div class="arrow-v short"></div>
+        <div class="node n-agent" style="width:100%">Coordinator 调度</div>
       </div>
-      <div class="arrow"></div>
-      <div class="node node-skill">superpowers:<br>writing-plans</div>
-      <div class="arrow"></div>
-      <div class="node node-action">写入 docs/specs/<br>git commit</div>
-      <div class="arrow"></div>
-      <div class="node node-agent">PM Agent<br>拆解任务</div>
-      <div class="arrow"></div>
-      <div class="node node-agent">Coordinator<br>调度执行</div>
-    </div>
 
-    <!-- Col 2: Sprint 进行中 -->
-    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:160px;">
-      <div class="state-badge badge-running">进行中</div>
-      <div class="arrow"></div>
-      <div class="node node-decision">A 继续 Sprint<br>B 新增功能<br>C 查看详情</div>
-      <div class="arrow"></div>
-      <div class="node node-agent">Coordinator<br>推进任务</div>
-    </div>
+      <!-- Col 2: 进行中 -->
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <div class="tag tag-running">进行中</div>
+        <div class="node n-decision" style="width:100%;font-size:12px;">继续 / 新增功能<br>/ 查看详情</div>
+        <div class="arrow-v short"></div>
+        <div class="node n-agent" style="width:100%">Coordinator 推进</div>
+      </div>
 
-    <!-- Col 3: 有阻塞 -->
-    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:160px;">
-      <div class="state-badge badge-blocked">有阻塞</div>
-      <div class="arrow"></div>
-      <div class="node node-action">展示问题<br>引导用户拍板</div>
-      <div class="arrow"></div>
-      <div class="node node-action">NEEDS_REVIEW.md<br>追加 REPLY:</div>
-      <div class="arrow"></div>
-      <div class="node node-agent">Coordinator<br>解除阻塞</div>
-    </div>
+      <!-- Col 3: 有阻塞 -->
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <div class="tag tag-blocked">有阻塞</div>
+        <div class="node n-status" style="width:100%;font-size:12px;">展示问题<br>引导用户拍板</div>
+        <div class="arrow-v short"></div>
+        <div class="node n-status" style="width:100%;font-size:12px;">NEEDS_REVIEW<br>追加 REPLY:</div>
+        <div class="arrow-v short"></div>
+        <div class="node n-agent" style="width:100%">Coordinator 解锁</div>
+      </div>
 
-    <!-- Col 4: 有失败 -->
-    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:160px;">
-      <div class="state-badge badge-failed">有失败</div>
-      <div class="arrow"></div>
-      <div class="node node-decision">重试 / 跳过<br>/ 人工介入</div>
-      <div class="arrow"></div>
-      <div class="node node-agent">Coordinator<br>重新调度</div>
-    </div>
+      <!-- Col 4: 有失败 -->
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <div class="tag tag-failed">有失败</div>
+        <div class="node n-decision" style="width:100%;font-size:12px;">重试 / 跳过<br>/ 人工介入</div>
+        <div class="arrow-v short"></div>
+        <div class="node n-agent" style="width:100%">Coordinator 重调</div>
+      </div>
 
+    </div>
   </div>
 
-  <div style="height:32px;"></div>
-  <div class="divider"></div>
-  <div class="section-title">Sprint 完成</div>
-
-  <!-- Sprint complete -->
-  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
-    <div class="node node-status">✅ 所有任务 done</div>
-    <div class="arrow"></div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <div class="optional-label">有 UI 改动？</div>
-      <div class="node node-skill ui">/ui polish</div>
-    </div>
-    <div class="arrow"></div>
-    <div class="node node-skill finish">superpowers:<br>finishing-a-development-branch</div>
+  <!-- Section divider -->
+  <div class="section-divider">
+    <div class="line"></div>
+    <div class="label">Sprint 完成</div>
+    <div class="line"></div>
   </div>
+
+  <!-- Completion flow -->
+  <div class="node n-status" style="width:280px;">✅ 所有任务完成</div>
+  <div class="arrow-v"></div>
+
+  <div class="opt-row">
+    <div class="opt-badge">有 UI 改动？</div>
+    <div class="node n-skill ui" style="padding:10px 20px;">/ui polish</div>
+  </div>
+  <div class="arrow-v"></div>
+
+  <div class="node n-finish" style="width:320px;">finishing-a-development-branch</div>
 
 </div>
 </body>
