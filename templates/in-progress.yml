@@ -1,0 +1,3 @@
+# tasks/in-progress.yml — maintained by Coordinator
+# Each entry: task id, agent, started_at timestamp
+tasks: []

@@ -41,6 +41,11 @@ if [ ! -f "$PROJECT_ROOT/tasks/NEEDS_REVIEW.md" ]; then
   echo "[stackpilot] Created tasks/NEEDS_REVIEW.md"
 fi
 
+if [ ! -f "$PROJECT_ROOT/tasks/in-progress.yml" ]; then
+  cp "$STACKPILOT_DIR/templates/in-progress.yml" "$PROJECT_ROOT/tasks/in-progress.yml"
+  echo "[stackpilot] Created tasks/in-progress.yml"
+fi
+
 # 4. Create stackpilot.config.yml if missing
 if [ ! -f "$PROJECT_ROOT/stackpilot.config.yml" ]; then
   cp "$STACKPILOT_DIR/templates/stackpilot.config.yml" "$PROJECT_ROOT/stackpilot.config.yml"
@@ -68,6 +73,19 @@ install_hook() {
 
 install_hook "post-checkout"
 install_hook "post-commit"
+
+# Add stackpilot entries to .gitignore
+GITIGNORE="$PROJECT_ROOT/.gitignore"
+if ! grep -q "stackpilot" "$GITIGNORE" 2>/dev/null; then
+  cat >> "$GITIGNORE" << 'EOF'
+
+# Stackpilot runtime files
+tasks/coordinator.log
+tasks/pm-agent.log
+tasks/in-progress.yml
+EOF
+  echo "[stackpilot] Updated .gitignore"
+fi
 
 # 6. Verify gstack is installed
 GSTACK_DIR="${GSTACK_DIR:-$HOME/.claude/skills/gstack}"

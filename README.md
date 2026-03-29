@@ -67,9 +67,9 @@ git clone https://github.com/garrytan/gstack ~/.claude/skills/gstack
 
 ## Keeping gstack up to date
 
-Add to crontab (`crontab -e`):
-```
-0 3 * * 1  bash /path/to/stackpilot/scripts/update-gstack.sh
+Add to crontab (run once after init):
+```bash
+echo "0 3 * * 1 bash $(pwd)/scripts/update-gstack.sh" | crontab -
 ```
 
 Or run manually inside Claude Code: `/update-gstack`
@@ -108,9 +108,10 @@ coordinator:
 ## Repository structure
 
 ```
-agents/          # Claude Code agent definitions (*.md) — copy to ~/.claude/agents/
-skills/
-  stackpilot/    # Slash-command skills for Claude Code — copy to ~/.claude/skills/stackpilot/
+claude-config/
+  agents/        # Claude Code agent definitions (*.md) — copied to ~/.claude/agents/ by restore.sh
+  skills/
+    stackpilot/  # Slash-command skills for Claude Code — copied to ~/.claude/skills/stackpilot/ by restore.sh
 scripts/
   init.sh        # Initialize Stackpilot in a target project (installs git hooks)
   update-gstack.sh  # Pull latest gstack skill from GitHub

@@ -9,5 +9,5 @@ coordinator:
   worktree_limit: 3         # Max parallel Dev Agents (git worktrees)
   timeout_hours: 2          # Hours before in-progress task is marked failed
 
-# Recommended cron (add via: crontab -e)
-# 0 3 * * 1  bash /path/to/stackpilot/scripts/update-gstack.sh
+# Cron setup (run once after init):
+#   echo "0 3 * * 1 bash $(pwd)/scripts/update-gstack.sh" | crontab -
