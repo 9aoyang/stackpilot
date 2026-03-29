@@ -41,14 +41,18 @@ bash ~/Documents/github/stackpilot/scripts/init.sh
 提示用户编辑 `stackpilot.config.yml` 设置 `qa.test_command`，然后回到 Step 1。
 
 ### Sprint 干净（无任务 或 全部 done）
-询问用户想做什么新功能，然后：
-- 想法还没想清楚 → 调用 `superpowers:brainstorming`
-- 想法清晰 → 调用 `superpowers:writing-plans` 生成 spec，保存到 `docs/specs/YYYY-MM-DD-功能名.md`
-- spec 写好后提交触发 PM Agent：
-  ```bash
-  git add docs/specs/ && git commit -m "feat: add [功能] spec"
-  ```
-- 提交后直接运行 Coordinator（见下方）
+询问用户想做什么新功能，然后按以下流程：
+
+1. 想法还没想清楚 → 调用 `superpowers:brainstorming`
+2. brainstorming 结束后判断：**是否涉及 UI？**
+   - 涉及界面设计/组件/页面 → 调用 `ui`（设计模式），把 UI 方案确定后再写 spec
+   - 纯后端/逻辑 → 跳过此步
+3. 调用 `superpowers:writing-plans` 生成 spec（UI 设计已包含在内），保存到 `docs/specs/YYYY-MM-DD-功能名.md`
+4. 提交 spec 触发 PM Agent：
+   ```bash
+   git add docs/specs/ && git commit -m "feat: add [功能] spec"
+   ```
+5. 提交后直接运行 Coordinator（见下方）
 
 ### Sprint 进行中（有 pending / in-progress 任务）
 展示选项：
@@ -83,4 +87,7 @@ REPLY: <决定>
 2. 检查 `tasks/in-progress.yml` 超时任务 → 标记 failed，追加到 NEEDS_REVIEW
 3. 从 `tasks/backlog.yml` 调度满足依赖的 pending 任务，不超过 `worktree_limit`
 4. 按类型分发：`arch` → architect-agent，`dev` → architect-agent + dev-agent，`qa` → qa-agent，`docs` → docs-agent
-5. 若无 pending 且无 in-progress → Sprint 完成，调用 `superpowers:finishing-a-development-branch`
+5. 若无 pending 且无 in-progress → Sprint 完成：
+   - 检查本次 Sprint 是否有 UI 改动（读取已完成任务的描述）
+   - 有 UI 改动 → 先调用 `ui`（polish 模式），确认界面达到发布标准后再继续
+   - 调用 `superpowers:finishing-a-development-branch`
