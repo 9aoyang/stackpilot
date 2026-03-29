@@ -53,10 +53,10 @@ Read `tasks/backlog.yml`:
 
 | Task type | Agent to dispatch | How |
 |-----------|------------------|-----|
-| `arch` | architect-agent | `claude -p "You are the architect-agent. Review task TASK-ID." --allowedTools Read,Glob,Grep,WebSearch` |
-| `dev` | dev-agent | First run architect-agent if no arch review exists, then: `claude -p "You are the dev-agent. Implement task TASK-ID." --allowedTools Read,Edit,Write,Bash,Glob,Grep` |
-| `qa` | qa-agent | `claude -p "You are the qa-agent. Test task TASK-ID." --allowedTools Read,Write,Bash,Glob,Grep` |
-| `docs` | docs-agent | `claude -p "You are the docs-agent. Document task TASK-ID." --allowedTools Read,Edit,Write,Glob` |
+| `arch` | architect-agent | `claude -p "You are the architect-agent. Review task TASK-ID." --allowedTools Read --allowedTools Write --allowedTools Glob --allowedTools Grep --allowedTools WebSearch` |
+| `dev` | dev-agent | First run architect-agent if no arch review exists, then: `claude -p "You are the dev-agent. Implement task TASK-ID." --allowedTools Read --allowedTools Edit --allowedTools Write --allowedTools Bash --allowedTools Glob --allowedTools Grep` |
+| `qa` | qa-agent | `claude -p "You are the qa-agent. Test task TASK-ID." --allowedTools Read --allowedTools Write --allowedTools Bash --allowedTools Glob --allowedTools Grep` |
+| `docs` | docs-agent | `claude -p "You are the docs-agent. Document task TASK-ID." --allowedTools Read --allowedTools Edit --allowedTools Write --allowedTools Glob` |
 
 ### 5. Check for sprint completion
 
