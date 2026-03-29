@@ -48,11 +48,16 @@ bash ~/Documents/github/stackpilot/scripts/init.sh
    - 涉及界面设计/组件/页面 → 调用 `ui`（设计模式），把 UI 方案确定后再写 spec
    - 纯后端/逻辑 → 跳过此步
 3. 调用 `superpowers:writing-plans` 生成 spec（UI 设计已包含在内），保存到 `docs/specs/YYYY-MM-DD-功能名.md`
-4. 提交 spec 触发 PM Agent：
+4. **自动创建 feature 分支**（用户无需手动操作）：
+   ```bash
+   BRANCH="feat/$(date +%Y%m%d)-功能名"
+   git checkout -b "$BRANCH"
+   ```
+5. 提交 spec 触发 PM Agent：
    ```bash
    git add docs/specs/ && git commit -m "feat: add [功能] spec"
    ```
-5. 提交后直接运行 Coordinator（见下方）
+6. 提交后直接运行 Coordinator（见下方）
 
 ### Sprint 进行中（有 pending / in-progress 任务）
 展示选项：
