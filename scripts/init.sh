@@ -90,9 +90,11 @@ fi
 # 6. Verify gstack is installed
 GSTACK_DIR="${GSTACK_DIR:-$HOME/.claude/skills/gstack}"
 if [ ! -d "$GSTACK_DIR" ]; then
-  echo ""
-  echo "[stackpilot] WARNING: gstack not found at $GSTACK_DIR"
-  echo "  Install with: git clone https://github.com/garrytan/gstack $GSTACK_DIR"
+  echo "[stackpilot] gstack not found, installing..."
+  git clone https://github.com/garrytan/gstack "$GSTACK_DIR"
+  echo "[stackpilot] ✓ gstack installed at $GSTACK_DIR"
+else
+  echo "[stackpilot] ✓ gstack already installed"
 fi
 
 echo ""
