@@ -22,24 +22,25 @@ check() {
 echo "=== Stackpilot structural verification ==="
 echo ""
 
-# 1. Agent files in ~/.claude/agents/
-echo "--- Agent files (~/.claude/agents/) ---"
-check "pm-agent.md"          "$HOME/.claude/agents/pm-agent.md"
-check "architect-agent.md"   "$HOME/.claude/agents/architect-agent.md"
-check "dev-agent.md"         "$HOME/.claude/agents/dev-agent.md"
-check "qa-agent.md"          "$HOME/.claude/agents/qa-agent.md"
-check "docs-agent.md"        "$HOME/.claude/agents/docs-agent.md"
-check "coordinator-agent.md" "$HOME/.claude/agents/coordinator-agent.md"
-echo ""
-
-# 2. Skills
-echo "--- Skills (~/.claude/skills/stackpilot/) ---"
-check "coordinator.md"    "$HOME/.claude/skills/stackpilot/coordinator.md"
-check "update-gstack.md"  "$HOME/.claude/skills/stackpilot/update-gstack.md"
-echo ""
-
-# Resolve worktree root relative to this script's location
+# Resolve repo root relative to this script's location
 WORKTREE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# 1. Agent source files in repo
+echo "--- Agent files (claude-config/agents/) ---"
+check "pm-agent.md"          "$WORKTREE_DIR/claude-config/agents/pm-agent.md"
+check "architect-agent.md"   "$WORKTREE_DIR/claude-config/agents/architect-agent.md"
+check "dev-agent.md"         "$WORKTREE_DIR/claude-config/agents/dev-agent.md"
+check "qa-agent.md"          "$WORKTREE_DIR/claude-config/agents/qa-agent.md"
+check "docs-agent.md"        "$WORKTREE_DIR/claude-config/agents/docs-agent.md"
+check "coordinator-agent.md" "$WORKTREE_DIR/claude-config/agents/coordinator-agent.md"
+echo ""
+
+# 2. Skill source files in repo
+echo "--- Skills (claude-config/skills/stackpilot/) ---"
+check "SKILL.md"          "$WORKTREE_DIR/claude-config/skills/stackpilot/SKILL.md"
+check "coordinator.md"    "$WORKTREE_DIR/claude-config/skills/stackpilot/coordinator.md"
+check "update-gstack.md"  "$WORKTREE_DIR/claude-config/skills/stackpilot/update-gstack.md"
+echo ""
 
 # 3. templates/ — expect 4 files
 echo "--- templates/ (expect 4 files) ---"
