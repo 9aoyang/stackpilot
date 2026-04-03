@@ -103,10 +103,8 @@ install_skill() {
   fi
 }
 
-GSTACK_DIR="${GSTACK_DIR:-$HOME/.claude/skills/gstack}"
 AUTORESEARCH_DIR="${AUTORESEARCH_DIR:-$HOME/.claude/skills/autoresearch}"
 
-install_skill "gstack" "https://github.com/garrytan/gstack" "$GSTACK_DIR"
 install_skill "autoresearch" "https://github.com/uditgoenka/autoresearch" "$AUTORESEARCH_DIR"
 
 # Check superpowers plugin

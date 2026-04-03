@@ -13,15 +13,15 @@ echo ""
 
 # --- 1. Clone or update Stackpilot ---
 if [ -d "$STACKPILOT_DIR/.git" ]; then
-  echo "[1/4] Updating Stackpilot..."
+  echo "[1/3] Updating Stackpilot..."
   git -C "$STACKPILOT_DIR" pull --ff-only origin main 2>/dev/null || true
 else
-  echo "[1/4] Installing Stackpilot..."
+  echo "[1/3] Installing Stackpilot..."
   git clone https://github.com/9aoyang/stackpilot.git "$STACKPILOT_DIR"
 fi
 
 # --- 2. Copy agents + skills ---
-echo "[2/4] Installing agents and skills..."
+echo "[2/3] Installing agents and skills..."
 mkdir -p "$CLAUDE_DIR/agents" "$CLAUDE_DIR/skills/stackpilot"
 
 for f in "$STACKPILOT_DIR/claude-config/agents/"*.md; do
@@ -32,8 +32,8 @@ for f in "$STACKPILOT_DIR/claude-config/skills/stackpilot/"*.md; do
   [ -f "$f" ] && cp "$f" "$CLAUDE_DIR/skills/stackpilot/$(basename "$f")"
 done
 
-# --- 3. Install skill dependencies ---
-echo "[3/4] Installing dependencies..."
+# --- 3. Install dependencies ---
+echo "[3/3] Installing dependencies..."
 
 install_skill() {
   local name="$1" url="$2" dir="$3"
@@ -44,18 +44,14 @@ install_skill() {
   fi
 }
 
-install_skill "gstack" "https://github.com/garrytan/gstack" "$CLAUDE_DIR/skills/gstack"
 install_skill "autoresearch" "https://github.com/uditgoenka/autoresearch" "$CLAUDE_DIR/skills/autoresearch"
-
-# --- 4. Install plugins ---
-echo "[4/4] Checking plugins..."
 
 check_plugin() {
   local name="$1"
   if [ -f "$CLAUDE_DIR/plugins/installed_plugins.json" ] && grep -q "\"$name@" "$CLAUDE_DIR/plugins/installed_plugins.json" 2>/dev/null; then
-    echo "  ✓ $name"
+    echo "  ✓ $name plugin"
   else
-    echo "  ⚠ $name — run in Claude Code: /install-plugin $name"
+    echo "  ⚠ $name plugin — run in Claude Code: /install-plugin $name"
   fi
 }
 

@@ -17,7 +17,7 @@ Spec ──► PM Agent ──► Architect ──► Dev ──► QA ──►
 curl -fsSL https://raw.githubusercontent.com/9aoyang/stackpilot/main/install.sh | bash
 ```
 
-Installs Stackpilot and all dependencies ([gstack](https://github.com/garrytan/gstack), [autoresearch](https://github.com/uditgoenka/autoresearch), [superpowers](https://github.com/anthropics/claude-code-plugins) plugin). Requires [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) and git.
+Installs Stackpilot and all dependencies ([autoresearch](https://github.com/uditgoenka/autoresearch), [superpowers](https://github.com/anthropics/claude-code-plugins) plugin). Requires [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) and git.
 
 ## Usage
 
@@ -38,7 +38,6 @@ coordinator:
 
 | Dependency | Required | Description |
 |-----------|----------|-------------|
-| [gstack](https://github.com/garrytan/gstack) | Yes | 28 Claude Code skills by Garry Tan |
 | [superpowers](https://github.com/anthropics/claude-code-plugins) | Yes | Official plugin (brainstorming, writing-plans) |
 | [autoresearch](https://github.com/uditgoenka/autoresearch) | No | Multi-perspective analysis |
 | [frontend-design](https://github.com/anthropics/claude-code-plugins) | No | UI design skill |
@@ -67,7 +66,7 @@ All auto-installed by `install.sh`.
 curl -fsSL https://raw.githubusercontent.com/9aoyang/stackpilot/main/install.sh | bash
 ```
 
-自动安装 Stackpilot 及所有依赖（[gstack](https://github.com/garrytan/gstack)、[autoresearch](https://github.com/uditgoenka/autoresearch)、[superpowers](https://github.com/anthropics/claude-code-plugins) 插件）。需要 [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) 和 git。
+自动安装 Stackpilot 及所有依赖（[autoresearch](https://github.com/uditgoenka/autoresearch)、[superpowers](https://github.com/anthropics/claude-code-plugins) 插件）。需要 [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) 和 git。
 
 ## 使用
 
@@ -88,7 +87,6 @@ coordinator:
 
 | 依赖 | 必需 | 说明 |
 |------|------|------|
-| [gstack](https://github.com/garrytan/gstack) | 是 | Garry Tan 的 28 个 Claude Code skill |
 | [superpowers](https://github.com/anthropics/claude-code-plugins) | 是 | 官方插件（brainstorming、writing-plans） |
 | [autoresearch](https://github.com/uditgoenka/autoresearch) | 否 | 多视角分析 |
 | [frontend-design](https://github.com/anthropics/claude-code-plugins) | 否 | UI 设计 |

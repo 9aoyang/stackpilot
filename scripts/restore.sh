@@ -86,7 +86,6 @@ done
 if ! $SKIP_DEPS; then
   echo ""
   echo "Dependencies (skills):"
-  install_skill "gstack" "https://github.com/garrytan/gstack" "$CLAUDE_DIR/skills/gstack"
   install_skill "autoresearch" "https://github.com/uditgoenka/autoresearch" "$CLAUDE_DIR/skills/autoresearch"
 
   echo ""

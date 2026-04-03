@@ -39,7 +39,6 @@ echo ""
 echo "--- Skills (claude-config/skills/stackpilot/) ---"
 check "SKILL.md"          "$WORKTREE_DIR/claude-config/skills/stackpilot/SKILL.md"
 check "coordinator.md"    "$WORKTREE_DIR/claude-config/skills/stackpilot/coordinator.md"
-check "update-gstack.md"  "$WORKTREE_DIR/claude-config/skills/stackpilot/update-gstack.md"
 echo ""
 
 # 3. templates/ — expect 4 files
@@ -66,10 +65,10 @@ else
 fi
 echo ""
 
-# 5. scripts/ — init.sh and update-gstack.sh
+# 5. scripts/
 echo "--- scripts/ ---"
 check "scripts/init.sh"            "$WORKTREE_DIR/scripts/init.sh"
-check "scripts/update-gstack.sh"   "$WORKTREE_DIR/scripts/update-gstack.sh"
+check "scripts/restore.sh"         "$WORKTREE_DIR/scripts/restore.sh"
 echo ""
 
 # 6. tests/ — 2 existing test files (not counting this one)

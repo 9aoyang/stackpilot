@@ -13,6 +13,3 @@ qa:
 coordinator:
   worktree_limit: 3         # Max parallel agent dispatches
   timeout_hours: 2          # Hours before in-progress task is marked failed
-
-# Cron setup (run once after init):
-#   echo "0 3 * * 1 bash $(pwd)/scripts/update-gstack.sh" | crontab -
