@@ -1,3 +1,9 @@
 # tasks/in-progress.yml — maintained by Coordinator
-# Each entry: task id, agent, started_at timestamp
+# Each entry tracks a dispatched task with its start time for timeout detection
+#
+# Example:
+# tasks:
+#   - id: TASK-001
+#     agent: dev-agent
+#     started_at: "2026-04-01T10:30:00+08:00"
 tasks: []

@@ -10,14 +10,9 @@ Thanks for your interest in contributing! Here's how to get started.
    cd stackpilot
    ```
 
-2. Install agents and skills:
+2. Install agents, skills, and all dependencies:
    ```bash
    bash scripts/restore.sh
-   ```
-
-3. Install the gstack dependency:
-   ```bash
-   git clone https://github.com/garrytan/gstack ~/.claude/skills/gstack
    ```
 
 ## Running Tests

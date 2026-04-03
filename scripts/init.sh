@@ -87,14 +87,34 @@ EOF
   echo "[stackpilot] Updated .gitignore"
 fi
 
-# 6. Verify gstack is installed
+# 6. Verify dependencies
+install_skill() {
+  local name="$1" url="$2" dir="$3"
+  if [ -d "$dir" ]; then
+    echo "[stackpilot] ✓ $name already installed"
+  else
+    echo "[stackpilot] $name not found, installing..."
+    if git clone "$url" "$dir" 2>/dev/null; then
+      echo "[stackpilot] ✓ $name installed at $dir"
+    else
+      echo "[stackpilot] ⚠ Failed to install $name. Install manually:"
+      echo "  git clone $url $dir"
+    fi
+  fi
+}
+
 GSTACK_DIR="${GSTACK_DIR:-$HOME/.claude/skills/gstack}"
-if [ ! -d "$GSTACK_DIR" ]; then
-  echo "[stackpilot] gstack not found, installing..."
-  git clone https://github.com/garrytan/gstack "$GSTACK_DIR"
-  echo "[stackpilot] ✓ gstack installed at $GSTACK_DIR"
+AUTORESEARCH_DIR="${AUTORESEARCH_DIR:-$HOME/.claude/skills/autoresearch}"
+
+install_skill "gstack" "https://github.com/garrytan/gstack" "$GSTACK_DIR"
+install_skill "autoresearch" "https://github.com/uditgoenka/autoresearch" "$AUTORESEARCH_DIR"
+
+# Check superpowers plugin
+if [ -f "$HOME/.claude/plugins/installed_plugins.json" ] && grep -q '"superpowers@' "$HOME/.claude/plugins/installed_plugins.json" 2>/dev/null; then
+  echo "[stackpilot] ✓ superpowers plugin already installed"
 else
-  echo "[stackpilot] ✓ gstack already installed"
+  echo "[stackpilot] ⚠ superpowers plugin not found. Install in Claude Code:"
+  echo "  /install-plugin superpowers"
 fi
 
 echo ""

@@ -20,7 +20,12 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
 
 notify() {
   local title="$1" message="$2"
-  osascript -e "display notification \"$message\" with title \"$title\"" 2>/dev/null || true
+  # macOS
+  osascript -e "display notification \"$message\" with title \"$title\"" 2>/dev/null ||
+  # Linux
+  notify-send "$title" "$message" 2>/dev/null ||
+  # Fallback
+  log "NOTIFICATION: $title — $message"
 }
 
 # Core skills that must exist after update

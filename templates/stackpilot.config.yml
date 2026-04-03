@@ -4,9 +4,14 @@
 qa:
   coverage_threshold: 80    # Minimum test coverage %, adjust per project
   test_command: npm test    # Command to run test suite
+  # Examples for other stacks:
+  #   test_command: pytest
+  #   test_command: go test ./...
+  #   test_command: cargo test
+  #   test_command: bundle exec rspec
 
 coordinator:
-  worktree_limit: 3         # Max parallel Dev Agents (git worktrees)
+  worktree_limit: 3         # Max parallel agent dispatches
   timeout_hours: 2          # Hours before in-progress task is marked failed
 
 # Cron setup (run once after init):

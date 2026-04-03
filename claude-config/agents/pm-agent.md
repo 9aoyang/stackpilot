@@ -33,13 +33,21 @@ Write `tasks/backlog.yml` with this exact structure:
 - id: TASK-001
   title: <imperative title>
   type: dev          # dev | qa | docs | arch
+  complexity: light  # light | standard
   priority: high     # high | medium | low
   status: pending
   depends_on: []
+  attempt_count: 0
+  last_error_summary: null
   description: |
     <3-5 sentences: what to build, where (exact file paths), and how to verify it works>
   assigned_to: null
 ```
+
+## Complexity 判断标准
+
+- `light`: 预计改动 ≤ 3 文件、无架构变更、无新依赖、无新模块
+- `standard`: 多文件改动、新模块、架构变更、涉及新依赖
 
 ## Constraints
 

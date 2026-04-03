@@ -13,6 +13,12 @@ set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 
+# Check if claude CLI is available
+if ! command -v claude >/dev/null 2>&1; then
+  echo "[stackpilot] Warning: claude CLI not found in PATH — skipping Coordinator"
+  exit 0
+fi
+
 echo "[stackpilot] Branch switched — running Coordinator..."
 claude -p "Run the Stackpilot Coordinator for the project at $ROOT. Follow the coordinator skill instructions." \
   --allowedTools Read --allowedTools Write --allowedTools Bash --allowedTools Glob \
