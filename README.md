@@ -21,12 +21,7 @@ Installs Stackpilot and all dependencies ([gstack](https://github.com/garrytan/g
 
 ## Usage
 
-```bash
-cd /your/project
-bash ~/.stackpilot/scripts/init.sh    # one-time setup
-```
-
-Then type `/stackpilot` in Claude Code. It handles everything — from brainstorming to delivery.
+Type `/stackpilot` in Claude Code. It handles everything — init, brainstorming, planning, and delivery.
 
 ## Config
 
@@ -76,12 +71,7 @@ curl -fsSL https://raw.githubusercontent.com/9aoyang/stackpilot/main/install.sh 
 
 ## 使用
 
-```bash
-cd /your/project
-bash ~/.stackpilot/scripts/init.sh    # 一次性初始化
-```
-
-然后在 Claude Code 中输入 `/stackpilot`，从头脑风暴到交付，全程引导。
+在 Claude Code 中输入 `/stackpilot`，从初始化到交付，全程自动引导。
 
 ## 配置
 
