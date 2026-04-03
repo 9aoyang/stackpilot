@@ -39,6 +39,10 @@ check ".git/hooks/post-checkout exists" "[ -f '$TMPDIR/.git/hooks/post-checkout'
 check ".git/hooks/post-checkout is executable" "[ -x '$TMPDIR/.git/hooks/post-checkout' ]"
 check ".git/hooks/post-commit exists" "[ -f '$TMPDIR/.git/hooks/post-commit' ]"
 check ".git/hooks/post-commit is executable" "[ -x '$TMPDIR/.git/hooks/post-commit' ]"
+check ".stackpilot-path exists" "[ -f '$TMPDIR/.stackpilot-path' ]"
+check ".stackpilot-path points to stackpilot dir" "[ \"\$(cat '$TMPDIR/.stackpilot-path')\" = '$STACKPILOT_DIR' ]"
+check "stackpilot.config.yml has provider section" "grep -q 'provider:' '$TMPDIR/stackpilot.config.yml'"
+check ".gitignore has .stackpilot-path" "grep -q '.stackpilot-path' '$TMPDIR/.gitignore'"
 
 # Run init again to verify idempotency (no error on second run)
 echo ""

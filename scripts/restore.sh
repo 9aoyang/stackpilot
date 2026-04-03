@@ -63,33 +63,33 @@ install_plugin() {
   fi
 }
 
-echo "[stackpilot] Restoring Claude Code configuration..."
+echo "[stackpilot] Restoring configuration..."
 $DRY_RUN && echo "[stackpilot] DRY RUN — no files will be written"
 
-# --- 1. Copy agents ---
+# --- 1. Copy agents to ~/.claude/agents/ (Claude Code integration) ---
 echo ""
-echo "Agents:"
+echo "Agents (Claude Code integration — also usable via dispatch.sh for any provider):"
 for f in "$CONFIG_DIR/agents/"*.md; do
   [ -f "$f" ] || continue
   copy "$f" "$CLAUDE_DIR/agents/$(basename "$f")"
 done
 
-# --- 2. Copy skills ---
+# --- 2. Copy skills to ~/.claude/skills/ (Claude Code only) ---
 echo ""
-echo "Skills:"
+echo "Skills (Claude Code only):"
 for f in "$CONFIG_DIR/skills/stackpilot/"*.md; do
   [ -f "$f" ] || continue
   copy "$f" "$CLAUDE_DIR/skills/stackpilot/$(basename "$f")"
 done
 
-# --- 3. Install dependencies ---
+# --- 3. Install dependencies (Claude Code-specific) ---
 if ! $SKIP_DEPS; then
   echo ""
-  echo "Dependencies (skills):"
+  echo "Dependencies (Claude Code skills — skip with --skip-deps if using another provider):"
   install_skill "autoresearch" "https://github.com/uditgoenka/autoresearch" "$CLAUDE_DIR/skills/autoresearch"
 
   echo ""
-  echo "Dependencies (plugins):"
+  echo "Dependencies (Claude Code plugins):"
   install_plugin "superpowers"
   install_plugin "frontend-design"
 else
@@ -102,4 +102,5 @@ echo "[stackpilot] ✓ Restore complete!"
 echo ""
 echo "Next steps:"
 echo "  1. Initialize a project:  bash $REPO_DIR/scripts/init.sh"
-echo "  2. Or type /stackpilot in Claude Code to get started"
+echo "  2. Edit stackpilot.config.yml to set provider (claude/codex/gemini/custom)"
+echo "  3. Or type /stackpilot in Claude Code to get started"

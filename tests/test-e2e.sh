@@ -69,6 +69,8 @@ echo ""
 echo "--- scripts/ ---"
 check "scripts/init.sh"            "$WORKTREE_DIR/scripts/init.sh"
 check "scripts/restore.sh"         "$WORKTREE_DIR/scripts/restore.sh"
+check "scripts/dispatch.sh"        "$WORKTREE_DIR/scripts/dispatch.sh"
+check "scripts/lib/config.sh"      "$WORKTREE_DIR/scripts/lib/config.sh"
 echo ""
 
 # 6. tests/ — 2 existing test files (not counting this one)

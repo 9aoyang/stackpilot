@@ -24,16 +24,17 @@ fi
 
 echo "[stackpilot] New spec detected: $NEW_SPECS"
 
-# Check if claude CLI is available
-if ! command -v claude >/dev/null 2>&1; then
-  echo "[stackpilot] Warning: claude CLI not found in PATH — skipping PM Agent"
+# Locate stackpilot installation
+STACKPILOT_DIR="$(cat "$ROOT/.stackpilot-path" 2>/dev/null || echo "")"
+if [ -z "$STACKPILOT_DIR" ] || [ ! -f "$STACKPILOT_DIR/scripts/dispatch.sh" ]; then
+  echo "[stackpilot] Warning: stackpilot not found — skipping PM Agent"
   exit 0
 fi
 
 echo "[stackpilot] Running PM Agent to decompose tasks..."
-
-claude -p "A new design spec was committed to $ROOT. Run the PM Agent: read all files in docs/specs/ and docs/superpowers/plans/, then decompose the spec into tasks and write them to tasks/backlog.yml. Use append-only semantics if backlog.yml already has tasks." \
-  --allowedTools Read --allowedTools Write --allowedTools Glob \
-  >> "$ROOT/tasks/pm-agent.log" 2>&1 &
-
-echo "[stackpilot] PM Agent started in background (PID $!)"
+"$STACKPILOT_DIR/scripts/dispatch.sh" \
+  --agent pm-agent \
+  --prompt "A new design spec was committed to $ROOT. Run the PM Agent: read all files in docs/specs/ and docs/superpowers/plans/, then decompose the spec into tasks and write them to tasks/backlog.yml. Use append-only semantics if backlog.yml already has tasks." \
+  --tools "Read,Write,Glob" \
+  --project-dir "$ROOT" \
+  --background --log "$ROOT/tasks/pm-agent.log"

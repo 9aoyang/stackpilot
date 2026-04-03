@@ -8,8 +8,8 @@ FAIL=0
 
 HOOKS_DIR="$(cd "$(dirname "$0")/../scripts/hooks" && pwd)"
 
-pass() { echo "PASS: $1"; ((PASS++)); }
-fail() { echo "FAIL: $1"; ((FAIL++)); }
+pass() { echo "PASS: $1"; PASS=$((PASS + 1)); }
+fail() { echo "FAIL: $1"; FAIL=$((FAIL + 1)); }
 
 # Helper: create a temp dir with a fake git repo structure
 make_fake_repo() {
@@ -69,6 +69,19 @@ else
   fail "post-commit: no tasks/ dir — exit=$STATUS output='$OUTPUT'"
 fi
 rm -rf "$T3_DIR"
+
+# ─── Test 4: post-checkout with tasks/ but no .stackpilot-path warns and exits ─
+T4_DIR=$(make_fake_repo)
+mkdir -p "$T4_DIR/tasks"
+export FAKE_ROOT="$T4_DIR"
+OUTPUT=$(PATH="$T4_DIR/bin:$PATH" bash "$HOOKS_DIR/post-checkout.sh" "old-sha" "new-sha" "1" 2>&1)
+STATUS=$?
+if [ $STATUS -eq 0 ] && echo "$OUTPUT" | grep -q "stackpilot not found"; then
+  pass "post-checkout: missing .stackpilot-path warns and exits 0"
+else
+  fail "post-checkout: missing .stackpilot-path — exit=$STATUS output='$OUTPUT'"
+fi
+rm -rf "$T4_DIR"
 
 # ─── Summary ──────────────────────────────────────────────────────────────────
 echo ""

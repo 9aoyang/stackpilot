@@ -52,7 +52,11 @@ if [ ! -f "$PROJECT_ROOT/stackpilot.config.yml" ]; then
   echo "[stackpilot] Created stackpilot.config.yml (edit qa.test_command for your stack)"
 fi
 
-# 5. Install git hooks
+# 5. Write .stackpilot-path so hooks can locate dispatch.sh
+echo "$STACKPILOT_DIR" > "$PROJECT_ROOT/.stackpilot-path"
+echo "[stackpilot] Created .stackpilot-path → $STACKPILOT_DIR"
+
+# 6. Install git hooks
 HOOKS_DIR="$PROJECT_ROOT/.git/hooks"
 mkdir -p "$HOOKS_DIR"
 
@@ -80,6 +84,7 @@ if ! grep -q "stackpilot" "$GITIGNORE" 2>/dev/null; then
   cat >> "$GITIGNORE" << 'EOF'
 
 # Stackpilot runtime files
+.stackpilot-path
 tasks/coordinator.log
 tasks/pm-agent.log
 tasks/in-progress.yml
@@ -87,7 +92,10 @@ EOF
   echo "[stackpilot] Updated .gitignore"
 fi
 
-# 6. Verify dependencies
+# 8. Verify dependencies (Claude Code-specific deps only when provider=claude)
+source "$STACKPILOT_DIR/scripts/lib/config.sh"
+PROVIDER="$(config_get_or "provider.name" "claude" "$PROJECT_ROOT/stackpilot.config.yml")"
+
 install_skill() {
   local name="$1" url="$2" dir="$3"
   if [ -d "$dir" ]; then
@@ -103,16 +111,19 @@ install_skill() {
   fi
 }
 
-AUTORESEARCH_DIR="${AUTORESEARCH_DIR:-$HOME/.claude/skills/autoresearch}"
+if [ "$PROVIDER" = "claude" ]; then
+  AUTORESEARCH_DIR="${AUTORESEARCH_DIR:-$HOME/.claude/skills/autoresearch}"
+  install_skill "autoresearch" "https://github.com/uditgoenka/autoresearch" "$AUTORESEARCH_DIR"
 
-install_skill "autoresearch" "https://github.com/uditgoenka/autoresearch" "$AUTORESEARCH_DIR"
-
-# Check superpowers plugin
-if [ -f "$HOME/.claude/plugins/installed_plugins.json" ] && grep -q '"superpowers@' "$HOME/.claude/plugins/installed_plugins.json" 2>/dev/null; then
-  echo "[stackpilot] ✓ superpowers plugin already installed"
+  # Check superpowers plugin
+  if [ -f "$HOME/.claude/plugins/installed_plugins.json" ] && grep -q '"superpowers@' "$HOME/.claude/plugins/installed_plugins.json" 2>/dev/null; then
+    echo "[stackpilot] ✓ superpowers plugin already installed"
+  else
+    echo "[stackpilot] ⚠ superpowers plugin not found. Install in Claude Code:"
+    echo "  /install-plugin superpowers"
+  fi
 else
-  echo "[stackpilot] ⚠ superpowers plugin not found. Install in Claude Code:"
-  echo "  /install-plugin superpowers"
+  echo "[stackpilot] Provider: $PROVIDER (skipping Claude Code-specific dependencies)"
 fi
 
 echo ""
