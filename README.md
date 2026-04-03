@@ -1,5 +1,8 @@
 # Stackpilot
 
+[![CI](https://github.com/9aoyang/stackpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/9aoyang/stackpilot/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Autonomous AI development team framework for Claude Code. Give it an idea; it delivers production-ready code.
 
 ## How it works
@@ -130,3 +133,11 @@ docs/
   specs/          # Example and real feature specs
   superpowers/    # Implementation plans and planning documents
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## License
+
+[MIT](LICENSE)
