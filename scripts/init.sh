@@ -78,25 +78,18 @@ install_hook() {
 install_hook "post-checkout"
 install_hook "post-commit"
 
-# Add stackpilot entries to .gitignore (ask user — team may want to track .stackpilot/)
+# Add stackpilot runtime state to .gitignore
+# specs/ and plans/ are committed (they trigger the agent pipeline)
+# tasks/ and path are runtime state — always gitignored
 GITIGNORE="$PROJECT_ROOT/.gitignore"
-if ! grep -q "stackpilot" "$GITIGNORE" 2>/dev/null; then
-  echo ""
-  echo "[stackpilot] .stackpilot/ contains runtime task state."
-  echo "  - Ignore (solo): task state stays local, not pushed to remote"
-  echo "  - Track (team):  commit .stackpilot/ so teammates see Sprint status"
-  printf "Add .stackpilot/ to .gitignore? [Y/n] "
-  read -r IGNORE_ANSWER
-  if [[ "$IGNORE_ANSWER" =~ ^[Nn] ]]; then
-    echo "[stackpilot] Skipped .gitignore — .stackpilot/ will be tracked by git"
-  else
-    cat >> "$GITIGNORE" << 'EOF'
+if ! grep -q "\.stackpilot/tasks" "$GITIGNORE" 2>/dev/null; then
+  cat >> "$GITIGNORE" << 'EOF'
 
-# Stackpilot
-.stackpilot/
+# Stackpilot runtime state (auto-generated)
+.stackpilot/tasks/
+.stackpilot/path
 EOF
-    echo "[stackpilot] Updated .gitignore"
-  fi
+  echo "[stackpilot] Updated .gitignore (runtime state excluded; specs/ and plans/ are tracked)"
 fi
 
 # 8. Verify dependencies (Claude Code-specific deps only when provider=claude)
@@ -138,6 +131,6 @@ echo "[stackpilot] ✓ Initialization complete!"
 echo ""
 echo "Next steps:"
 echo "  1. Edit stackpilot.config.yml (set qa.test_command for your stack)"
-echo "  2. Create a design spec:  docs/specs/YYYY-MM-DD-feature-name.md"
-echo "  3. Commit the spec → PM Agent auto-decomposes tasks"
+echo "  2. Create a design spec:  .stackpilot/specs/YYYY-MM-DD-feature-name.md"
+echo "  3. Commit the spec → sp-pm auto-decomposes tasks"
 echo "  4. Switch branches → Coordinator auto-starts Sprint"
