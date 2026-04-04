@@ -1,6 +1,6 @@
 # Stackpilot
 
-[![CI](https://github.com/9aoyang/stackpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/9aoyang/stackpilot/actions/workflows/ci.yml)
+[![CI](https://github.com/silence1amb/stackpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/silence1amb/stackpilot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **English** | [中文](#中文文档)
@@ -8,13 +8,13 @@
 Autonomous AI development team. Write a spec, get production-ready code — with tests, docs, and code review. Works with Claude Code, Codex, Gemini CLI, or any LLM CLI.
 
 ```
-Spec ──► PM Agent ──► Architect ──► Dev ──► QA ──► Docs ──► Delivery
+Spec ──► sp-pm ──► sp-architect ──► sp-dev ──► sp-qa ──► sp-docs ──► Delivery
 ```
 
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/9aoyang/stackpilot/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/silence1amb/stackpilot/main/install.sh | bash
 ```
 
 Installs Stackpilot and all dependencies. Requires git and at least one AI CLI (Claude Code, Codex, Gemini CLI, or a custom tool).
@@ -50,15 +50,9 @@ coordinator:
 | `gemini` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | Uses `-p` prompt mode |
 | `custom` | Any CLI | Set `provider.command` to your tool's invocation |
 
-## Dependencies
+## Architecture
 
-| Dependency | Required | Provider | Description |
-|-----------|----------|----------|-------------|
-| [superpowers](https://github.com/anthropics/claude-code-plugins) | Claude only | claude | Official plugin (brainstorming, writing-plans) |
-| [autoresearch](https://github.com/uditgoenka/autoresearch) | No | claude | Multi-perspective analysis |
-| [frontend-design](https://github.com/anthropics/claude-code-plugins) | No | claude | UI design skill |
-
-Claude Code dependencies are auto-installed by `install.sh`. Other providers need only git and the provider CLI.
+See [docs/architecture.md](docs/architecture.md) for the full system design, agent pipeline, event flow, and task lifecycle.
 
 ## [Contributing](CONTRIBUTING.md) | [License](LICENSE)
 
@@ -73,13 +67,13 @@ Claude Code dependencies are auto-installed by `install.sh`. Other providers nee
 自治 AI 开发团队。写设计文档，交付生产级代码 — 含测试、文档和代码审查。支持 Claude Code、Codex、Gemini CLI 或任意 LLM CLI。
 
 ```
-设计文档 ──► PM ──► 架构师 ──► 开发 ──► 测试 ──► 文档 ──► 交付
+设计文档 ──► sp-pm ──► sp-architect ──► sp-dev ──► sp-qa ──► sp-docs ──► 交付
 ```
 
 ## 安装
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/9aoyang/stackpilot/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/silence1amb/stackpilot/main/install.sh | bash
 ```
 
 自动安装 Stackpilot 及所有依赖。需要 git 和至少一个 AI CLI（Claude Code、Codex、Gemini CLI 或自定义工具）。
@@ -115,14 +109,8 @@ coordinator:
 | `gemini` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | 使用 `-p` 提示模式 |
 | `custom` | 任意 CLI | 设置 `provider.command` 为你的工具命令 |
 
-## 依赖
+## 架构文档
 
-| 依赖 | 必需 | Provider | 说明 |
-|------|------|----------|------|
-| [superpowers](https://github.com/anthropics/claude-code-plugins) | Claude 专用 | claude | 官方插件（brainstorming、writing-plans） |
-| [autoresearch](https://github.com/uditgoenka/autoresearch) | 否 | claude | 多视角分析 |
-| [frontend-design](https://github.com/anthropics/claude-code-plugins) | 否 | claude | UI 设计 |
-
-Claude Code 依赖由 `install.sh` 自动安装。其他 provider 只需 git 和对应 CLI。
+完整的系统设计、Agent 流水线、事件流和任务生命周期，见 [docs/architecture.zh.md](docs/architecture.zh.md)。
 
 ## [贡献指南](CONTRIBUTING.md) | [许可证](LICENSE)

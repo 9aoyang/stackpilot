@@ -25,25 +25,25 @@ PROJECT_ROOT="$(git rev-parse --show-toplevel)"
 
 echo "[stackpilot] Initializing Stackpilot in: $PROJECT_ROOT"
 
-# 1. Create tasks/ directory structure
-mkdir -p "$PROJECT_ROOT/tasks/done"
-mkdir -p "$PROJECT_ROOT/tasks/arch-review"
+# 1. Create .stackpilot/tasks/ directory structure
+mkdir -p "$PROJECT_ROOT/.stackpilot/tasks/done"
+mkdir -p "$PROJECT_ROOT/.stackpilot/tasks/arch-review"
 
-# 2. Create tasks/backlog.yml if missing
-if [ ! -f "$PROJECT_ROOT/tasks/backlog.yml" ]; then
-  cp "$STACKPILOT_DIR/templates/backlog.yml" "$PROJECT_ROOT/tasks/backlog.yml"
-  echo "[stackpilot] Created tasks/backlog.yml"
+# 2. Create .stackpilot/tasks/backlog.yml if missing
+if [ ! -f "$PROJECT_ROOT/.stackpilot/tasks/backlog.yml" ]; then
+  cp "$STACKPILOT_DIR/templates/backlog.yml" "$PROJECT_ROOT/.stackpilot/tasks/backlog.yml"
+  echo "[stackpilot] Created .stackpilot/tasks/backlog.yml"
 fi
 
-# 3. Create tasks/NEEDS_REVIEW.md if missing
-if [ ! -f "$PROJECT_ROOT/tasks/NEEDS_REVIEW.md" ]; then
-  cp "$STACKPILOT_DIR/templates/NEEDS_REVIEW.md" "$PROJECT_ROOT/tasks/NEEDS_REVIEW.md"
-  echo "[stackpilot] Created tasks/NEEDS_REVIEW.md"
+# 3. Create .stackpilot/tasks/NEEDS_REVIEW.md if missing
+if [ ! -f "$PROJECT_ROOT/.stackpilot/tasks/NEEDS_REVIEW.md" ]; then
+  cp "$STACKPILOT_DIR/templates/NEEDS_REVIEW.md" "$PROJECT_ROOT/.stackpilot/tasks/NEEDS_REVIEW.md"
+  echo "[stackpilot] Created .stackpilot/tasks/NEEDS_REVIEW.md"
 fi
 
-if [ ! -f "$PROJECT_ROOT/tasks/in-progress.yml" ]; then
-  cp "$STACKPILOT_DIR/templates/in-progress.yml" "$PROJECT_ROOT/tasks/in-progress.yml"
-  echo "[stackpilot] Created tasks/in-progress.yml"
+if [ ! -f "$PROJECT_ROOT/.stackpilot/tasks/in-progress.yml" ]; then
+  cp "$STACKPILOT_DIR/templates/in-progress.yml" "$PROJECT_ROOT/.stackpilot/tasks/in-progress.yml"
+  echo "[stackpilot] Created .stackpilot/tasks/in-progress.yml"
 fi
 
 # 4. Create stackpilot.config.yml if missing
@@ -52,9 +52,9 @@ if [ ! -f "$PROJECT_ROOT/stackpilot.config.yml" ]; then
   echo "[stackpilot] Created stackpilot.config.yml (edit qa.test_command for your stack)"
 fi
 
-# 5. Write .stackpilot-path so hooks can locate dispatch.sh
-echo "$STACKPILOT_DIR" > "$PROJECT_ROOT/.stackpilot-path"
-echo "[stackpilot] Created .stackpilot-path → $STACKPILOT_DIR"
+# 5. Write .stackpilot/path so hooks can locate dispatch.sh
+echo "$STACKPILOT_DIR" > "$PROJECT_ROOT/.stackpilot/path"
+echo "[stackpilot] Created .stackpilot/path → $STACKPILOT_DIR"
 
 # 6. Install git hooks
 HOOKS_DIR="$PROJECT_ROOT/.git/hooks"
@@ -78,18 +78,25 @@ install_hook() {
 install_hook "post-checkout"
 install_hook "post-commit"
 
-# Add stackpilot entries to .gitignore
+# Add stackpilot entries to .gitignore (ask user — team may want to track .stackpilot/)
 GITIGNORE="$PROJECT_ROOT/.gitignore"
 if ! grep -q "stackpilot" "$GITIGNORE" 2>/dev/null; then
-  cat >> "$GITIGNORE" << 'EOF'
+  echo ""
+  echo "[stackpilot] .stackpilot/ contains runtime task state."
+  echo "  - Ignore (solo): task state stays local, not pushed to remote"
+  echo "  - Track (team):  commit .stackpilot/ so teammates see Sprint status"
+  printf "Add .stackpilot/ to .gitignore? [Y/n] "
+  read -r IGNORE_ANSWER
+  if [[ "$IGNORE_ANSWER" =~ ^[Nn] ]]; then
+    echo "[stackpilot] Skipped .gitignore — .stackpilot/ will be tracked by git"
+  else
+    cat >> "$GITIGNORE" << 'EOF'
 
-# Stackpilot runtime files
-.stackpilot-path
-tasks/coordinator.log
-tasks/pm-agent.log
-tasks/in-progress.yml
+# Stackpilot
+.stackpilot/
 EOF
-  echo "[stackpilot] Updated .gitignore"
+    echo "[stackpilot] Updated .gitignore"
+  fi
 fi
 
 # 8. Verify dependencies (Claude Code-specific deps only when provider=claude)

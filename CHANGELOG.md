@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-05
+
+### Changed
+- Renamed all agent files to `sp-*` prefix (`sp-pm`, `sp-architect`, `sp-dev`, `sp-qa`, `sp-docs`, `sp-coordinator`) — **breaking change** for existing installations
+- Moved task runtime directory from `tasks/` to `.stackpilot/tasks/` — **breaking change** for existing installations
+- Renamed config pointer from `.stackpilot-path` to `.stackpilot/path`
+- Git hooks now watch `.stackpilot/specs/` and `.stackpilot/plans/` instead of `docs/specs/`
+- Updated GitHub org/username references in README and install URL
+- Significant rewrite of `/stackpilot` skill (`SKILL.md`) for improved agent dispatch logic
+- Replaced dependency table in README with link to architecture docs
+
+### Added
+- Architecture documentation: `docs/architecture.md` and `docs/architecture.zh.md`
+- `docs/skill-refs.md` skill reference index
+
+### Removed
+- Old design specs and implementation plan docs (`docs/specs/`, `docs/superpowers/`)
+- Workflow diagram (`docs/workflow.png`, `docs/workflow.html`)
+
 ## [0.1.0] - 2026-03-29
 
 ### Added

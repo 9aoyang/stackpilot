@@ -12,7 +12,7 @@ If you discover a security vulnerability in Stackpilot, please report it respons
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email **9aoyang@gmail.com** with:
+Instead, please email **silence1amb@gmail.com** with:
 
 1. A description of the vulnerability
 2. Steps to reproduce

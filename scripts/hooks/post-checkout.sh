@@ -8,13 +8,13 @@ set -euo pipefail
 # Only run on branch checkouts (not file checkouts)
 [ "${3:-0}" = "1" ] || exit 0
 
-# Only run if tasks/ directory exists (stackpilot initialized)
-[ -d "$(git rev-parse --show-toplevel)/tasks" ] || exit 0
+# Only run if .stackpilot/ directory exists (stackpilot initialized)
+[ -d "$(git rev-parse --show-toplevel)/.stackpilot" ] || exit 0
 
 ROOT="$(git rev-parse --show-toplevel)"
 
 # Locate stackpilot installation
-STACKPILOT_DIR="$(cat "$ROOT/.stackpilot-path" 2>/dev/null || echo "")"
+STACKPILOT_DIR="$(cat "$ROOT/.stackpilot/path" 2>/dev/null || echo "")"
 if [ -z "$STACKPILOT_DIR" ] || [ ! -f "$STACKPILOT_DIR/scripts/dispatch.sh" ]; then
   echo "[stackpilot] Warning: stackpilot not found — skipping Coordinator"
   exit 0
@@ -22,8 +22,8 @@ fi
 
 echo "[stackpilot] Branch switched — running Coordinator..."
 "$STACKPILOT_DIR/scripts/dispatch.sh" \
-  --agent coordinator-agent \
+  --agent sp-coordinator \
   --prompt "Run the Stackpilot Coordinator for the project at $ROOT. Follow the coordinator skill instructions." \
   --tools "Read,Write,Bash,Glob" \
   --project-dir "$ROOT" \
-  --background --log "$ROOT/tasks/coordinator.log"
+  --background --log "$ROOT/.stackpilot/tasks/coordinator.log"

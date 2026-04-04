@@ -12,5 +12,5 @@ chmod +x .git/hooks/post-checkout .git/hooks/post-commit
 
 ## What they do
 
-- **post-checkout**: Triggers the Coordinator when you switch branches (only runs when `tasks/` exists)
+- **post-checkout**: Triggers the Coordinator when you switch branches (only runs when `.stackpilot/` exists)
 - **post-commit**: Triggers the PM Agent when a new `docs/specs/*.md` file is committed

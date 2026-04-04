@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stackpilot one-line installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/9aoyang/stackpilot/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/silence1amb/stackpilot/main/install.sh | bash
 set -euo pipefail
 
 STACKPILOT_DIR="${STACKPILOT_DIR:-$HOME/.stackpilot}"
@@ -17,7 +17,7 @@ if [ -d "$STACKPILOT_DIR/.git" ]; then
   git -C "$STACKPILOT_DIR" pull --ff-only origin main 2>/dev/null || true
 else
   echo "[1/3] Installing Stackpilot..."
-  git clone https://github.com/9aoyang/stackpilot.git "$STACKPILOT_DIR"
+  git clone https://github.com/silence1amb/stackpilot.git "$STACKPILOT_DIR"
 fi
 
 # --- 2. Copy agents + skills ---

@@ -5,90 +5,275 @@ description: Use when starting, resuming, or checking on autonomous development 
 
 # Stackpilot
 
-## Step 1: 展示当前状态（每次必做）
+## Step 1: Show Current State (always run first)
 
 ```bash
-[ -d tasks ] && echo "initialized" || echo "NOT_INITIALIZED"
-cat tasks/backlog.yml 2>/dev/null || echo "NO_BACKLOG"
-cat tasks/NEEDS_REVIEW.md 2>/dev/null
-cat tasks/in-progress.yml 2>/dev/null
-ls docs/specs/*.md 2>/dev/null || echo "NO_SPECS"
+[ -d .stackpilot ] && echo "initialized" || echo "NOT_INITIALIZED"
+cat .stackpilot/tasks/backlog.yml 2>/dev/null || echo "NO_BACKLOG"
+cat .stackpilot/tasks/NEEDS_REVIEW.md 2>/dev/null
+cat .stackpilot/tasks/in-progress.yml 2>/dev/null
+ls .stackpilot/specs/*.md 2>/dev/null || echo "NO_SPECS"
 ```
 
-按以下格式展示状态面板：
+Display the status panel in this format:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-  Stackpilot Sprint 状态
+  Stackpilot Sprint Status
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ TASK-001  实现登录页       done
-🔄 TASK-002  接入支付 API     in-progress
-⏳ TASK-003  写单元测试       pending
-❌ TASK-004  dashboard 布局   failed
-❓ TASK-005  多用户方案        blocked
+✅ TASK-001  implement login page    done
+🔄 TASK-002  integrate payment API   in-progress
+⏳ TASK-003  write unit tests        pending
+❌ TASK-004  dashboard layout        failed
+❓ TASK-005  multi-user approach     blocked
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-待回复问题：1 条
+Pending reviews: 1
 ```
 
-图例：✅ done  🔄 in-progress  ⏳ pending  ❌ failed  ❓ blocked
+Legend: ✅ done  🔄 in-progress  ⏳ pending  ❌ failed  ❓ blocked
 
-## Step 2: 根据状态给出选项
+---
 
-### 未初始化
+## Step 2: Route by State
+
+### Not Initialized
+
 ```bash
 bash ~/Documents/github/stackpilot/scripts/init.sh
 ```
-提示用户编辑 `stackpilot.config.yml` 设置 `qa.test_command`，然后回到 Step 1。
 
-### Sprint 干净（无任务 或 全部 done）
-询问用户想做什么新功能，然后**根据功能规模选择路径**：
+Prompt user to edit `stackpilot.config.yml` and set `qa.test_command`, then return to Step 1.
 
-**轻量功能**（用户明确说"简单改动" / 描述 < 2 句 / 单一明确需求）：
-1. 跳过 brainstorming 和 autoresearch:predict
-2. 直接调用 `superpowers:writing-plans` 生成轻量 spec
-3. 自动创建 feature 分支 → 提交 spec → 运行 Coordinator
+---
 
-**标准功能**（多模块、需求模糊、涉及架构决策）：
-1. 调用 `superpowers:brainstorming` 探索意图
-2. brainstorming 结束后判断是否涉及 UI → 涉及则调用 `ui`（设计模式）
-3. 调用 `superpowers:writing-plans` 生成 spec
-4. 自动创建 feature 分支 → 提交 spec → 运行 Coordinator
+### Sprint Clean (no tasks, or all done)
 
-### Sprint 进行中（有 pending / in-progress 任务）
-展示选项：
+Ask the user what feature they want to build, then **choose path by scope**:
+
+> If the user's request is about **improving / optimizing / fixing degradation** of something measurable (performance, test pass rate, error rate, bundle size, etc.), use the **Optimize Sprint** path below instead of the feature paths.
+
+#### Optimize Sprint (quantifiable improvement goal)
+
+Use when the user says "make X faster", "reduce Y", "improve Z score", "fix the failing tests", etc.
+
+<HARD-GATE>
+Do NOT start any optimization until Goal, Scope, Metric, and Verify are all defined. Vague goals produce wasted iterations.
+</HARD-GATE>
+
+**Step 1 — Define the 4 parameters** (ask all at once if any are missing):
+
 ```
-A. 继续当前 Sprint（运行 Coordinator 推进任务）
-B. 新增一个功能到当前 Sprint
-C. 查看某个任务的详细情况
+Goal:    What should improve? (e.g., "reduce p95 latency of /api/search")
+Scope:   Which files are allowed to change? (glob pattern, e.g., "src/search/**")
+Metric:  How is success measured? (must produce a number: ms, %, bytes, count)
+Verify:  Shell command that outputs the metric as a number (exit 0 on any result)
+---
+Guard:   Optional — command that must still pass (e.g., existing test suite)
+Limit:   Optional — max iterations (default: 10)
 ```
-- A → 运行 Coordinator
-- B → brainstorming / writing-plans → 提交新 spec → 运行 Coordinator
-- C → 读取 `tasks/done/TASK-ID.md` 或 `tasks/arch-review/TASK-ID.md`
 
-### 有 blocked 任务 / NEEDS_REVIEW 有内容（优先处理）
-展示问题，帮助分析选项，引导用户决策。
-用户决定后在 `tasks/NEEDS_REVIEW.md` 末尾追加：
+**Step 2 — Baseline**: Run `Verify` command once and record the baseline number. This is the score to beat.
+
+**Step 3 — Iteration loop** (repeat up to `Limit` times):
+
+1. **Review**: Run `git log --oneline -10` — what has been tried? What improved? What failed?
+2. **Ideate**: Pick the highest-leverage change NOT already tried. Priority:
+   - Fix crashes/errors first
+   - Then exploit successful patterns from prior iterations
+   - Then explore new directions
+   - If stuck (3 consecutive no-improvements): switch to a radically different approach
+3. **Modify**: Make ONE atomic change (describable in one sentence)
+4. **Commit**: `git commit -m "experiment(<scope>): <description>"`
+5. **Verify**: Run the `Verify` command → extract the metric value
+6. **Guard check** (if defined): run Guard command — must still pass
+7. **Decide**:
+   - Metric improved AND Guard passes → **Keep** (log result, continue)
+   - Metric worse OR Guard fails → **Revert** (`git revert HEAD --no-edit`) and log
+8. **Log to `.stackpilot/optimize-log.tsv`**:
+   ```
+   iteration	commit	metric	delta	outcome	description
+   1	abc1234	245ms	-12ms	keep	removed N+1 query in getUserList
+   ```
+
+**Step 4 — Summary**: After loop ends (limit reached or user stops), output:
+- Best result achieved vs baseline
+- Top 3 changes that helped most (from log)
+- Ask: "What would you like to do with the changes?" → same finish options as Sprint Finish
+
+
+
+#### Light Feature (user says "simple change" / single clear requirement / ≤ 2 sentences)
+
+<HARD-GATE>
+Do NOT start any implementation until a plan is written and committed.
+</HARD-GATE>
+
+1. **Map file structure** — list all files that will be touched and what changes each needs
+2. **Write plan** → `.stackpilot/plans/YYYY-MM-DD-<feature>-plan.md`
+   - Decompose into bite-sized tasks (2–5 minutes each)
+   - Every task must include: `title`, `description`, `type`, `complexity: light`, `depends_on`, `relevant_files`
+   - No placeholders — no TBD, TODO, "similar to Task N", or vague descriptions
+   - Every step must contain actual content: specific file paths, specific changes
+3. **Plan self-review:**
+   - Do all steps map to concrete spec requirements?
+   - Any placeholders or vague steps? → fix inline
+   - Are types consistent? (dev / qa / docs)
+4. **Create feature branch** → commit plan → run Coordinator
+
+#### Standard Feature (multi-module, ambiguous requirements, architectural decisions)
+
+**Phase 1: Exploration**
+
+1. Explore current project state: read `CLAUDE.md`, relevant source files, recent commits
+2. Assess scope: if the request spans multiple independent subsystems, flag it immediately and help the user decompose before proceeding
+3. Ask all clarifying questions in **one single message** (not one at a time):
+   - What is the goal?
+   - What are the constraints?
+   - What does success look like?
+   - Does it involve UI? (PC / mobile / primary interaction path)
+
+**Phase 2: Design**
+
+4. Propose the recommended approach (with 1–2 alternatives briefly noted) including:
+   - Architecture overview
+   - Components and data flow
+   - Error handling strategy
+   - Testing approach
+5. Send this as **one message** and wait for a single reply. Revise once if user requests changes, then proceed.
+
+**Phase 3: Spec + Auto-Verify Loop**
+
+6. Write spec → `.stackpilot/specs/YYYY-MM-DD-<topic>-design.md`
+7. **Run mechanical verification** (up to 3 self-fix rounds before escalating):
+
+   ```bash
+   # Check 1 — no placeholders
+   grep -inE "TBD|TODO|FIXME|\bplaceholder\b" .stackpilot/specs/*.md | wc -l
+   # must be 0
+
+   # Check 2 — required sections present
+   grep -c "^## " .stackpilot/specs/*.md
+   # must be >= 4
+
+   # Check 3 — non-trivial content
+   wc -w .stackpilot/specs/*.md | tail -1
+   # must be >= 300 words
+   ```
+
+   For each failing check:
+   - Fix the spec inline
+   - Re-run the check
+   - Increment attempt counter
+
+   **If all 3 checks pass** → print a one-line summary and auto-proceed to Phase 4. No user prompt.
+
+   **If checks still fail after 3 rounds** → stop, show the specific failing checks only, ask the user for targeted input.
+
+**Phase 4: Plan + Auto-Verify Loop**
+
+8. **Map file structure** — list all files that will be touched and what changes each needs
+9. **Write plan** → `.stackpilot/plans/YYYY-MM-DD-<feature>-plan.md`
+    - Decompose into bite-sized tasks (2–5 minutes each)
+    - Every task must include: `title`, `description`, `type`, `complexity`, `depends_on`, `relevant_files`
+    - No placeholders — no TBD, TODO, "similar to Task N", or vague descriptions
+    - Every step must contain actual content: specific file paths, specific changes
+10. **Run mechanical verification** (same pattern as spec):
+
+    ```bash
+    # Check 1 — no placeholders
+    grep -inE "TBD|TODO|FIXME|\bplaceholder\b" .stackpilot/plans/*.md | wc -l
+    # must be 0
+
+    # Check 2 — at least 3 tasks defined
+    grep -c "^### TASK-" .stackpilot/plans/*.md
+    # must be >= 3
+
+    # Check 3 — every task has required fields
+    grep -cE "relevant_files:|depends_on:|complexity:" .stackpilot/plans/*.md
+    # must equal (task_count * 3)
+    ```
+
+    **If all checks pass** → auto-proceed.
+    **If checks fail after 3 rounds** → escalate with specific failures only.
+
+11. **Create feature branch** → commit spec and plan → run Coordinator
+
+---
+
+### Sprint In-Progress (pending / in-progress tasks exist)
+
+Show options:
+
 ```
-REPLY: <决定>
+A. Continue current sprint (run Coordinator to advance tasks)
+B. Add a new feature to the current sprint
+C. View details of a specific task
 ```
-然后运行 Coordinator 解除阻塞。
 
-### 有 failed 任务
-展示失败原因，询问用户：
-- 重试 → 将 backlog.yml 中该任务改回 `pending`，运行 Coordinator
-- 跳过 → 手动标记处理方式
-- 人工介入 → 帮用户分析问题
+- **A** → Run Coordinator
+- **B** → Follow the feature flow above → commit new spec/plan → Run Coordinator
+- **C** → Read `.stackpilot/tasks/done/TASK-ID.md` or `.stackpilot/tasks/arch-review/TASK-ID.md`
 
-## 运行 Coordinator
+---
 
-直接在当前会话中按 coordinator-agent 的 5 步 Entry Checklist 执行（不需要切换分支）：
+### Blocked Tasks / NEEDS_REVIEW Has Content (handle first)
 
-1. 处理 `tasks/NEEDS_REVIEW.md`：有 REPLY → 解除阻塞；无 REPLY 但有内容 → 告知用户并停止
-2. 处理 `soft-blocked` 任务：attempt_count < 3 → 自动重调度；≥ 3 → 转 hard-blocked
-3. 检查超时任务 → 标记 failed
-4. 调度 pending 任务，按 `complexity` 字段路由：
-   - `light`: dev-agent → qa-agent（跳过 architect 和 docs）
-   - `standard`: architect-agent → dev-agent → qa-agent → docs-agent
-5. 若无 pending / in-progress / soft-blocked → Sprint 完成：
-   - 有 UI 改动 → 调用 `ui`（polish 模式）
-   - 调用 `superpowers:finishing-a-development-branch`
+Display the blocking issue, analyze options, and guide the user to a decision.
+
+Once user decides, append to `.stackpilot/tasks/NEEDS_REVIEW.md`:
+
+```
+REPLY: <decision>
+```
+
+Then run Coordinator to unblock.
+
+---
+
+### Failed Tasks
+
+Display failure reason and ask the user:
+
+- **Retry** → set task back to `status: pending` in `backlog.yml`, run Coordinator
+- **Skip** → mark task with a disposition note
+- **Manual intervention** → help user analyze the problem
+
+---
+
+## Run Coordinator
+
+Execute sp-coordinator's Entry Checklist directly in the current session (no branch switch needed):
+
+1. **Process `.stackpilot/tasks/NEEDS_REVIEW.md`**: has `REPLY:` → unblock; has content but no `REPLY:` → tell user, stop
+2. **Process soft-blocked tasks**: `attempt_count < 3` → re-schedule; `≥ 3` → escalate to blocked
+3. **Check timed-out tasks** → mark failed
+4. **Dispatch pending tasks** by `complexity` field:
+   - `light`: sp-dev → sp-qa (skip sp-architect and sp-docs)
+   - `standard`: sp-architect → sp-dev → sp-qa → sp-docs
+5. **If no pending / in-progress / soft-blocked** → Sprint complete:
+
+**Sprint Cleanup:**
+```bash
+rm -f .stackpilot/tasks/done/*.md
+rm -f .stackpilot/tasks/arch-review/*.md
+printf "tasks: []\n" > .stackpilot/tasks/backlog.yml
+printf "" > .stackpilot/tasks/NEEDS_REVIEW.md
+printf "tasks: []\n" > .stackpilot/tasks/in-progress.yml
+```
+
+**Sprint Finish:**
+
+After cleanup, run the test command from `stackpilot.config.yml` to confirm all tests pass, then ask the user:
+
+> "Sprint complete. All tests passing. What would you like to do with the changes?"
+> 
+> A. Merge into base branch (local operation)
+> B. Push and create a PR (auto-generate PR description)
+> C. Leave as-is (handle later)
+> D. Discard all changes (destructive — confirm before proceeding)
+
+Execute the user's choice:
+- **A**: Determine base branch (ask if unclear: main / master / dev), then `git merge`
+- **B**: `git push -u origin <branch>` then create PR with title and summary describing all completed tasks
+- **C**: Do nothing, return sprint status
+- **D**: Confirm once with user, then `git checkout <base-branch> && git branch -D <feature-branch>`

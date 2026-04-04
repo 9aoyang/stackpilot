@@ -6,7 +6,7 @@ Thanks for your interest in contributing! Here's how to get started.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/9aoyang/stackpilot.git
+   git clone https://github.com/silence1amb/stackpilot.git
    cd stackpilot
    ```
 
