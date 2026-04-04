@@ -27,12 +27,12 @@ WORKTREE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # 1. Agent source files in repo
 echo "--- Agent files (claude-config/agents/) ---"
-check "pm-agent.md"          "$WORKTREE_DIR/claude-config/agents/pm-agent.md"
-check "architect-agent.md"   "$WORKTREE_DIR/claude-config/agents/architect-agent.md"
-check "dev-agent.md"         "$WORKTREE_DIR/claude-config/agents/dev-agent.md"
-check "qa-agent.md"          "$WORKTREE_DIR/claude-config/agents/qa-agent.md"
-check "docs-agent.md"        "$WORKTREE_DIR/claude-config/agents/docs-agent.md"
-check "coordinator-agent.md" "$WORKTREE_DIR/claude-config/agents/coordinator-agent.md"
+check "sp-pm.md"          "$WORKTREE_DIR/claude-config/agents/sp-pm.md"
+check "sp-architect.md"   "$WORKTREE_DIR/claude-config/agents/sp-architect.md"
+check "sp-dev.md"         "$WORKTREE_DIR/claude-config/agents/sp-dev.md"
+check "sp-qa.md"          "$WORKTREE_DIR/claude-config/agents/sp-qa.md"
+check "sp-docs.md"        "$WORKTREE_DIR/claude-config/agents/sp-docs.md"
+check "sp-coordinator.md" "$WORKTREE_DIR/claude-config/agents/sp-coordinator.md"
 echo ""
 
 # 2. Skill source files in repo
