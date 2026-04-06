@@ -12,5 +12,6 @@ Thumbs.db
 .idea/
 
 # Runtime
-.stackpilot/
+.stackpilot/tasks/
+.stackpilot/path
 *.log

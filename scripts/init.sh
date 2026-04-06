@@ -29,6 +29,12 @@ echo "[stackpilot] Initializing Stackpilot in: $PROJECT_ROOT"
 mkdir -p "$PROJECT_ROOT/.stackpilot/tasks/done"
 mkdir -p "$PROJECT_ROOT/.stackpilot/tasks/arch-review"
 
+# 2a. Create .stackpilot/.gitignore (defensive: ignores runtime state even if root .gitignore is misconfigured)
+if [ ! -f "$PROJECT_ROOT/.stackpilot/.gitignore" ]; then
+  cp "$STACKPILOT_DIR/templates/stackpilot-inner-gitignore" "$PROJECT_ROOT/.stackpilot/.gitignore"
+  echo "[stackpilot] Created .stackpilot/.gitignore"
+fi
+
 # 2. Create .stackpilot/tasks/backlog.yml if missing
 if [ ! -f "$PROJECT_ROOT/.stackpilot/tasks/backlog.yml" ]; then
   cp "$STACKPILOT_DIR/templates/backlog.yml" "$PROJECT_ROOT/.stackpilot/tasks/backlog.yml"
@@ -82,7 +88,17 @@ install_hook "post-commit"
 # specs/ and plans/ are committed (they trigger the agent pipeline)
 # tasks/ and path are runtime state — always gitignored
 GITIGNORE="$PROJECT_ROOT/.gitignore"
-if ! grep -q "\.stackpilot/tasks" "$GITIGNORE" 2>/dev/null; then
+
+# Step 1: Replace blanket .stackpilot/ ignore with selective rules
+# A blanket ignore blocks specs/ and plans/ from being committed
+if grep -qE '^\.?stackpilot/?$' "$GITIGNORE" 2>/dev/null; then
+  { grep -vE '^\.?stackpilot/?$' "$GITIGNORE" || true; } > "${GITIGNORE}.tmp"
+  mv "${GITIGNORE}.tmp" "$GITIGNORE"
+  echo "[stackpilot] Removed blanket .stackpilot/ ignore (specs/ and plans/ must be trackable)"
+fi
+
+# Step 2: Append selective rules if not already present
+if ! grep -q '\.stackpilot/tasks' "$GITIGNORE" 2>/dev/null; then
   cat >> "$GITIGNORE" << 'EOF'
 
 # Stackpilot runtime state (auto-generated)
