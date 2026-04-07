@@ -53,14 +53,14 @@ else
 fi
 echo ""
 
-# 4. scripts/hooks/ — expect 2 .sh files
-echo "--- scripts/hooks/ (expect 2 .sh files) ---"
+# 4. scripts/hooks/ — expect 3 .sh files (pre-commit, post-checkout, post-commit)
+echo "--- scripts/hooks/ (expect 3 .sh files) ---"
 HOOKS_COUNT=$(find "$WORKTREE_DIR/scripts/hooks" -maxdepth 1 -name "*.sh" -type f | wc -l | tr -d ' ')
-if [ "$HOOKS_COUNT" -eq 2 ]; then
-  echo "  PASS: scripts/hooks/ has 2 .sh files (found $HOOKS_COUNT)"
+if [ "$HOOKS_COUNT" -eq 3 ]; then
+  echo "  PASS: scripts/hooks/ has 3 .sh files (found $HOOKS_COUNT)"
   PASS=$((PASS + 1))
 else
-  echo "  FAIL: scripts/hooks/ should have 2 .sh files, found $HOOKS_COUNT"
+  echo "  FAIL: scripts/hooks/ should have 3 .sh files, found $HOOKS_COUNT"
   FAIL=$((FAIL + 1))
 fi
 echo ""

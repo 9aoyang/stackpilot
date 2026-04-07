@@ -39,20 +39,51 @@ stackpilot_check_version() {
     chmod +x "$dst"
   done
 
-  # --- 2. Re-install agents: wipe old sp-* agents, copy current ---
-  rm -f "$claude_dir/agents/sp-"*.md
+  # --- 2. Re-install agents: preserve user-customized files ---
   mkdir -p "$claude_dir/agents"
   for f in "$stackpilot_dir/claude-config/agents/"*.md; do
     [ -f "$f" ] || continue
-    cp "$f" "$claude_dir/agents/$(basename "$f")"
+    local base_name
+    base_name="$(basename "$f")"
+    local dst="$claude_dir/agents/$base_name"
+    if [ -f "$dst" ] && ! diff -q "$f" "$dst" >/dev/null 2>&1; then
+      # File exists and differs — user may have customized it
+      cp "$dst" "${dst}.pre-upgrade.bak"
+      echo "[stackpilot] Backed up modified agent: $base_name → ${base_name}.pre-upgrade.bak"
+    fi
+    cp "$f" "$dst"
+  done
+  # Clean up agents that no longer exist in source
+  for installed in "$claude_dir/agents/sp-"*.md; do
+    [ -f "$installed" ] || continue
+    local base_name
+    base_name="$(basename "$installed")"
+    if [ ! -f "$stackpilot_dir/claude-config/agents/$base_name" ]; then
+      rm -f "$installed"
+    fi
   done
 
-  # --- 3. Re-install skills: wipe and rebuild stackpilot skill dir ---
-  rm -rf "$claude_dir/skills/stackpilot"
+  # --- 3. Re-install skills: preserve user-customized files ---
   mkdir -p "$claude_dir/skills/stackpilot"
   for f in "$stackpilot_dir/claude-config/skills/stackpilot/"*.md; do
     [ -f "$f" ] || continue
-    cp "$f" "$claude_dir/skills/stackpilot/$(basename "$f")"
+    local base_name
+    base_name="$(basename "$f")"
+    local dst="$claude_dir/skills/stackpilot/$base_name"
+    if [ -f "$dst" ] && ! diff -q "$f" "$dst" >/dev/null 2>&1; then
+      cp "$dst" "${dst}.pre-upgrade.bak"
+      echo "[stackpilot] Backed up modified skill: $base_name → ${base_name}.pre-upgrade.bak"
+    fi
+    cp "$f" "$dst"
+  done
+  # Clean up skills that no longer exist in source
+  for installed in "$claude_dir/skills/stackpilot/"*.md; do
+    [ -f "$installed" ] || continue
+    local base_name
+    base_name="$(basename "$installed")"
+    if [ ! -f "$stackpilot_dir/claude-config/skills/stackpilot/$base_name" ]; then
+      rm -f "$installed"
+    fi
   done
 
   # --- 4. Update inner .gitignore (may have new entries) ---

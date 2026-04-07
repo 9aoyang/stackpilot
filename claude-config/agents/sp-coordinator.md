@@ -43,10 +43,26 @@ Read `.stackpilot/tasks/in-progress.yml`. For each entry:
 
 ### 2.5 Process soft-blocked tasks
 
-Read `.stackpilot/tasks/backlog.yml`. For tasks with `status: soft-blocked`:
-- Read `attempt_count` (default 0 if missing)
-- If `attempt_count < 3`: set `status: pending`, re-dispatch on next cycle
-- If `attempt_count >= 3`: set `status: blocked`, append to `.stackpilot/tasks/NEEDS_REVIEW.md` with `last_error_summary` and attempt history
+Read `.stackpilot/tasks/backlog.yml`. For each task with `status: soft-blocked`:
+
+1. Read `attempt_count` (default 0 if missing)
+2. **If `attempt_count < 3`** (retriable):
+   - Set `status: pending` in `backlog.yml`
+   - Log: `echo "[coordinator] Re-queuing TASK-ID (attempt $attempt_count/3)"`
+   - The task will be picked up on the next dispatch cycle
+3. **If `attempt_count >= 3`** (exhausted):
+   - Set `status: blocked` in `backlog.yml`
+   - Read `last_error_summary` from the task entry
+   - Append to `.stackpilot/tasks/NEEDS_REVIEW.md`:
+     ```
+     [COORDINATOR][TASK-ID] Task failed after 3 attempts
+     Last error: <last_error_summary>
+     Option A: Reset attempt_count and retry with different approach
+     Option B: Skip this task and continue sprint
+     Option C: Manually fix the issue and mark as done
+     Recommendation: Option C — review the error summary above
+     ```
+   - Send notification (see Notification section)
 
 Note: `attempt_count` is incremented by `sp-dev`/`sp-qa`. The Coordinator only reads it to decide retry vs escalate.
 
@@ -80,21 +96,32 @@ Read `.stackpilot/tasks/backlog.yml`:
 
 ### 4. Dispatch rules (by complexity)
 
+**Inline review principle:** Every `dev` task gets an immediate `sp-qa` review upon completion — do NOT batch QA. When sp-dev marks a task `status: done`, immediately dispatch sp-qa for that same task before moving to the next pending task. This catches bugs per-task, not per-sprint.
+
 **light tasks:**
 
-| Task type | Agent |
-|-----------|-------|
-| `dev` | sp-dev (skip sp-architect) |
-| `qa` | sp-qa |
+| Task type | Pipeline |
+|-----------|----------|
+| `dev` | sp-dev → sp-qa (inline, immediate) |
+| `qa` | sp-qa (standalone) |
 
 **standard tasks:**
 
-| Task type | Agent |
-|-----------|-------|
+| Task type | Pipeline |
+|-----------|----------|
 | `arch` | sp-architect |
-| `dev` | sp-architect (review first) → sp-dev |
-| `qa` | sp-qa |
+| `dev` | sp-architect (review first) → sp-dev → sp-qa (inline, immediate) |
+| `qa` | sp-qa (standalone) |
 | `docs` | sp-docs |
+
+**How inline review works:**
+1. Coordinator dispatches sp-dev for TASK-001
+2. sp-dev completes → sets `status: done`
+3. Coordinator detects TASK-001 is done → immediately dispatches sp-qa for TASK-001
+4. sp-qa runs code review + tests → marks QA done
+5. Only then does Coordinator dispatch the next pending dev task
+
+This means the Coordinator should check for newly-completed dev tasks BEFORE dispatching new pending tasks in step 3.
 
 ### 5. Check for sprint completion
 
@@ -106,14 +133,30 @@ Note: Sprint cleanup and the user-facing sprint finish flow (dev server preview 
 
 ## Notification
 
+Send notifications using the best available method. Always write to the log file as well.
+
 ```bash
-# macOS
-osascript -e 'display notification "MESSAGE" with title "TITLE"' 2>/dev/null ||
-# Linux
-notify-send "TITLE" "MESSAGE" 2>/dev/null ||
-# Fallback
-echo "[stackpilot] TITLE: MESSAGE"
+stackpilot_notify() {
+  local title="$1" message="$2"
+  local project_dir="${3:-.}"
+
+  # Always log to file (persistent, cross-platform)
+  local log_file="$project_dir/.stackpilot/tasks/notifications.log"
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $title: $message" >> "$log_file" 2>/dev/null
+
+  # Desktop notification (best-effort)
+  if [ "$(uname)" = "Darwin" ]; then
+    osascript -e "display notification \"$message\" with title \"$title\"" 2>/dev/null || true
+  elif command -v notify-send >/dev/null 2>&1; then
+    notify-send "$title" "$message" 2>/dev/null || true
+  fi
+
+  # Terminal output (always)
+  echo "[stackpilot] $title: $message"
+}
 ```
+
+Call as: `stackpilot_notify "Stackpilot" "TASK-003 timed out" "$PROJECT_DIR"`
 
 ## Recovery
 

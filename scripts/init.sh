@@ -154,9 +154,41 @@ qa:
 coordinator:
   worktree_limit: 3
   timeout_hours: 2
+
+# Per-agent model routing (optional — uncomment to optimize cost)
+# models:
+#   sp-pm: haiku
+#   sp-dev: sonnet
+#   sp-qa: sonnet
+#   sp-architect: opus
+#   sp-docs: haiku
 CFGEOF
 
   echo "[stackpilot] Created stackpilot.config.yml (auto-detected: provider=${DETECTED_PROVIDER}, test_command=${DETECTED_TEST_CMD})"
+
+  # Validate the detected test command actually works
+  echo "[stackpilot] Validating test command: ${DETECTED_TEST_CMD}..."
+  # Extract the binary name from the test command
+  TEST_BIN="${DETECTED_TEST_CMD%% *}"
+  # Handle npx/bunx — the binary exists even if the package doesn't
+  case "$TEST_BIN" in
+    npx|bunx|npm|yarn|pnpm)
+      if ! command -v "$TEST_BIN" >/dev/null 2>&1; then
+        echo "[stackpilot] ⚠ Warning: '$TEST_BIN' not found in PATH — test_command may not work"
+        echo "[stackpilot]   Edit stackpilot.config.yml to set the correct qa.test_command"
+      else
+        echo "[stackpilot] ✓ $TEST_BIN found"
+      fi
+      ;;
+    *)
+      if ! command -v "$TEST_BIN" >/dev/null 2>&1; then
+        echo "[stackpilot] ⚠ Warning: '$TEST_BIN' not found in PATH — test_command may not work"
+        echo "[stackpilot]   Edit stackpilot.config.yml to set the correct qa.test_command"
+      else
+        echo "[stackpilot] ✓ $TEST_BIN found"
+      fi
+      ;;
+  esac
 fi
 
 # 5. Write .stackpilot/path so hooks can locate dispatch.sh
@@ -188,6 +220,7 @@ install_hook() {
   echo "[stackpilot] Installed hook: .git/hooks/$name"
 }
 
+install_hook "pre-commit"
 install_hook "post-checkout"
 install_hook "post-commit"
 

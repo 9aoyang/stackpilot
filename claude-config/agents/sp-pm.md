@@ -39,8 +39,14 @@ Write `.stackpilot/tasks/backlog.yml` with this exact structure:
   depends_on: []
   attempt_count: 0
   last_error_summary: null
+  relevant_files:
+    - path/to/file.ts    # files to create or modify
   description: |
-    <3-5 sentences: what to build, where (exact file paths), and how to verify it works>
+    **What**: <one sentence: the observable behavior to implement>
+    **Where**: <exact file paths and function/class names to create or modify>
+    **How**: <concrete approach — e.g., "add a `validateInput()` function that checks for null/empty string and throws InputError">
+    **Test hint**: <what the failing test should assert — e.g., "calling processOrder(null) should throw InputError">
+    **Verify**: <exact shell command to confirm it works — e.g., "npm test -- --grep 'validateInput'">
   assigned_to: null
 ```
 
@@ -48,6 +54,28 @@ Write `.stackpilot/tasks/backlog.yml` with this exact structure:
 
 - `light`: 预计改动 ≤ 3 文件、无架构变更、无新依赖、无新模块
 - `standard`: 多文件改动、新模块、架构变更、涉及新依赖
+
+## Self-Validation (run before writing backlog)
+
+After decomposing tasks, verify the backlog before writing:
+
+1. **ID uniqueness** — no duplicate task IDs (including existing tasks in backlog)
+2. **depends_on integrity** — every ID in `depends_on` must reference an existing task ID in the same backlog. If TASK-005 depends on TASK-003, TASK-003 must exist
+3. **No circular dependencies** — follow each dependency chain; if it loops back to the starting task, break the cycle by removing the least critical edge
+4. **Type consistency** — if a `qa` task references a `dev` task via `depends_on`, the dev task must exist and come before it in execution order
+
+If any check fails, fix inline before writing to backlog.yml.
+
+## Verification Before Completion
+
+Before writing `backlog.yml`, verify your output:
+
+1. **Read** the backlog you are about to write one more time
+2. **Count** tasks — does the number match your decomposition?
+3. **Spot-check** 2 random tasks — do their descriptions contain all 5 fields (What/Where/How/Test hint/Verify)?
+4. **Run** self-validation checks (see above)
+
+Do NOT claim decomposition is complete without running these checks.
 
 ## Constraints
 

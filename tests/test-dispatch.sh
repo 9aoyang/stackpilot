@@ -126,9 +126,11 @@ else
   fail "custom provider: custom command not invoked"
 fi
 
-# ── Test 5: missing CLI binary exits gracefully ───────────────────────────────
+# ── Test 5: missing CLI binary exits with error and writes NEEDS_REVIEW ──────
 
 make_dispatch_wrapper "claude"
+mkdir -p "$TMPDIR_TEST/project/.stackpilot/tasks"
+: > "$TMPDIR_TEST/project/.stackpilot/tasks/NEEDS_REVIEW.md"
 # Use an isolated PATH with only basic system utils (no claude)
 ISOLATED_PATH="$TMPDIR_TEST/bin:/usr/bin:/bin"
 rm -f "$TMPDIR_TEST/bin/claude"
@@ -136,10 +138,16 @@ rm -f "$TMPDIR_TEST/bin/claude"
 OUTPUT=$(PATH="$ISOLATED_PATH" "$TMPDIR_TEST/stackpilot/scripts/dispatch.sh" \
   --agent test-agent --prompt "Do the task" --project-dir "$TMPDIR_TEST/project" 2>&1)
 STATUS=$?
-if [ $STATUS -eq 0 ] && echo "$OUTPUT" | grep -qi "not found"; then
-  pass "missing CLI: graceful exit with warning"
+if [ $STATUS -ne 0 ] && echo "$OUTPUT" | grep -qi "not found"; then
+  pass "missing CLI: exits with error"
 else
-  fail "missing CLI: exit=$STATUS output='$OUTPUT'"
+  fail "missing CLI: expected exit 1 with 'not found', got exit=$STATUS output='$OUTPUT'"
+fi
+
+if grep -q "DISPATCH" "$TMPDIR_TEST/project/.stackpilot/tasks/NEEDS_REVIEW.md" 2>/dev/null; then
+  pass "missing CLI: wrote to NEEDS_REVIEW.md"
+else
+  fail "missing CLI: NEEDS_REVIEW.md not updated"
 fi
 
 # ── Test 6: frontmatter is stripped from prompt ───────────────────────────────
@@ -188,6 +196,41 @@ if echo "$OUTPUT" | grep -q "background"; then
   pass "background mode: reports PID"
 else
   fail "background mode: no background message in '$OUTPUT'"
+fi
+
+# ── Test 10: background mode includes timeout info ──────────────────────────
+
+make_mock_cli "claude"
+make_dispatch_wrapper "claude" '
+coordinator:
+  timeout_hours: 1'
+
+OUTPUT=$(run_dispatch --agent test-agent --prompt "Task" --project-dir "$TMPDIR_TEST/project" --background --log "$TMPDIR_TEST/bg2.log")
+sleep 0.2
+if echo "$OUTPUT" | grep -q "timeout=1h"; then
+  pass "background mode: reports timeout from config"
+else
+  fail "background mode: no timeout info in '$OUTPUT'"
+fi
+
+# ── Test 11: PID file written for background agents ─────────────────────────
+
+if [ -f "$TMPDIR_TEST/project/.stackpilot/.locks/test-agent.pid" ]; then
+  pass "background mode: PID file created"
+else
+  fail "background mode: PID file not found"
+fi
+
+# ── Test 12: locked_write helper works ──────────────────────────────────────
+
+source "$REPO_DIR/scripts/lib/config.sh"
+STACKPILOT_LOCK_DIR="$TMPDIR_TEST/locks"
+TEST_FILE="$TMPDIR_TEST/lock_test.txt"
+locked_write "test-lock" bash -c "echo hello > '$TEST_FILE'"
+if [ -f "$TEST_FILE" ] && grep -q "hello" "$TEST_FILE" 2>/dev/null; then
+  pass "locked_write: executes command under lock"
+else
+  fail "locked_write: command did not execute"
 fi
 
 # ── Summary ──────────────────────────────────────────────────────────────────

@@ -1,6 +1,41 @@
 #!/usr/bin/env bash
-# Stackpilot config helpers — pure bash YAML reader and frontmatter parser
+# Stackpilot config helpers — pure bash YAML reader, frontmatter parser, and file locking
 # Source this file: source "$(dirname "$0")/lib/config.sh"
+
+# locked_write <lock_name> <command...>
+# Executes a command while holding an exclusive lock on the named resource.
+# Uses flock when available, falls back to mkdir-based spinlock.
+# Example: locked_write "backlog" cp temp.yml backlog.yml
+locked_write() {
+  local lock_name="$1"; shift
+  local lock_base="${STACKPILOT_LOCK_DIR:-.stackpilot/.locks}"
+  mkdir -p "$lock_base" 2>/dev/null || true
+
+  if command -v flock >/dev/null 2>&1; then
+    local lock_file="$lock_base/${lock_name}.lock"
+    (
+      flock -w 30 200 || { echo "[stackpilot] Warning: failed to acquire lock '$lock_name' after 30s" >&2; return 1; }
+      "$@"
+    ) 200>"$lock_file"
+  else
+    # mkdir-based spinlock fallback (atomic on all POSIX systems)
+    local lock_dir="$lock_base/${lock_name}.lk"
+    local attempts=0
+    while ! mkdir "$lock_dir" 2>/dev/null; do
+      attempts=$((attempts + 1))
+      if [ "$attempts" -ge 60 ]; then
+        echo "[stackpilot] Warning: failed to acquire lock '$lock_name' after 30s — removing stale lock" >&2
+        rm -rf "$lock_dir"
+      fi
+      sleep 0.5
+    done
+    # Ensure lock is released on exit
+    trap 'rm -rf "'"$lock_dir"'"' EXIT
+    "$@"
+    rm -rf "$lock_dir"
+    trap - EXIT
+  fi
+}
 
 # config_get <key> <config_file>
 # Read a value from a simple YAML file. Supports dotted keys for one level of nesting.

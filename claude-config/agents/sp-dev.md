@@ -29,9 +29,29 @@ Before writing any code, trace the execution path relevant to this task:
 
 This is for your understanding only — do not write it to any file.
 
-## Implementation Rules
+## Implementation: Test-Driven Development (mandatory)
 
-- Write the minimum code that satisfies the task description — no extras
+Follow the RED-GREEN-REFACTOR cycle for every unit of work. No exceptions.
+
+### RED — Write a failing test first
+
+1. Before touching any production code, write a test that describes the expected behavior
+2. Run the test — it **must fail**. If it passes, your test is not testing anything new
+3. If you cannot write a test (e.g., pure config change), document why in the completion report
+
+### GREEN — Write minimal code to pass
+
+4. Write the **minimum production code** that makes the failing test pass
+5. Run all tests — the new test passes, all existing tests still pass
+6. Do not add code "just in case" — only what the test demands
+
+### REFACTOR — Clean up without changing behavior
+
+7. If the code works but is messy, refactor now (while tests protect you)
+8. Run tests again after refactoring — must still pass
+
+### Rules
+
 - Do not modify files outside the task's stated scope
 - Do not introduce new dependencies without writing to `.stackpilot/tasks/NEEDS_REVIEW.md` first
 - If the task description has two valid interpretations, stop and write to `.stackpilot/tasks/NEEDS_REVIEW.md`
@@ -57,16 +77,32 @@ After implementation, before marking done, run all four checks:
 
 1. **BUILD** — project compiles / parses without errors
 2. **LINT** — no new lint errors (if a lint tool exists)
-3. **TEST** — all existing tests pass (run `test_command` from `stackpilot.config.yml`)
+3. **TEST** — all tests pass, including your new TDD tests (run `test_command` from `stackpilot.config.yml`)
 4. **SCOPE** — number of changed files is within task expectations
 
-Rules:
-- Any check fails → apply ONE atomic fix (a single logical change you can describe in one sentence) → re-run all checks
-- Each fix must be different from the previous round — read `git diff HEAD~1` before fixing to avoid repeating yourself
-- Max 3 rounds
-- Rounds 1-2: fix autonomously, no escalation
-- **Stuck detection**: if the error message in round 2 is identical to round 1 → switch to a fundamentally different approach before round 3
-- Round 3 still failing → set `status: soft-blocked`, record `last_error_summary` with exact error text + what was tried in each round
+### On Failure: Root Cause Investigation (mandatory before any fix)
+
+**Do NOT blindly fix.** When any check fails, run this investigation first:
+
+**Phase 1 — Observe**: Read the FULL error output. Copy the exact error message. Identify which file and line.
+
+**Phase 2 — Reproduce**: Run the failing command again to confirm the error is consistent (not a flake).
+
+**Phase 3 — Trace**: Follow the data/control flow from the error location backwards:
+- What function called this? What arguments were passed?
+- Is there a working similar path in the codebase? What's different?
+- Check `git diff` — did your change break an assumption?
+
+**Phase 4 — Hypothesize**: Form ONE specific hypothesis ("the error happens because X passes null where Y expects a string"). Test this hypothesis with a targeted check (add a log, read the caller, check the type).
+
+**Only after Phase 4 confirms your hypothesis**, apply ONE atomic fix.
+
+### Fix Loop Rules
+
+- Max 3 rounds (each round = investigation + one fix + re-verify)
+- Each fix must target the root cause identified by investigation, not the symptom
+- **Stuck detection**: if round 2 error is identical to round 1 → the root cause hypothesis was wrong. Go back to Phase 3, trace a different path
+- Round 3 still failing → soft-block (see On Failure section)
 
 ## On Completion
 
@@ -78,6 +114,11 @@ Rules:
 
 ## What was built
 <1-2 sentences>
+
+## TDD Cycle
+- Test written first: Yes / No (if No, explain why)
+- Test file: `path/to/test.ts`
+- RED confirmed (test failed before implementation): Yes / No
 
 ## Files changed
 - `path/to/file.ts` — what changed
@@ -91,13 +132,33 @@ PASS | PASS_AFTER_FIX
 ## Fix Rounds
 0-3
 
+## Root Cause (if fixes were needed)
+<what investigation revealed + one-line root cause per round>
+
 ## Fix Summary
 <what was fixed each round, or N/A>
 ```
 
 ## On Failure (after 3 verify/fix rounds)
 
-1. Set task `status: soft-blocked` in `.stackpilot/tasks/backlog.yml`
-2. Record `last_error_summary` with what failed and why
-3. Increment `attempt_count` by 1
-4. The Coordinator will decide whether to retry or escalate to `blocked`
+1. **Revert all uncommitted changes** to leave the codebase clean for the next attempt:
+   ```bash
+   git checkout -- .
+   git clean -fd
+   ```
+   This ensures the next agent (or retry) starts from a known-good state, not a half-broken one.
+2. Set task `status: soft-blocked` in `.stackpilot/tasks/backlog.yml`
+3. Record `last_error_summary` with:
+   - The exact error text from the last round
+   - A one-sentence summary of each approach tried (round 1, 2, 3)
+   - Which files were involved
+4. Increment `attempt_count` by 1
+5. The Coordinator will decide whether to retry or escalate to `blocked`
+
+### "Fundamentally different approach" examples
+
+When stuck detection fires (round 2 error = round 1 error), consider:
+- **Different algorithm**: if you tried fixing in-place, try rebuilding from scratch
+- **Different abstraction level**: if you're patching a function, extract it to a new module
+- **Different dependency**: if a library is causing issues, try native implementation (or vice versa)
+- **Different entry point**: if the fix isn't working in file A, check if the real problem is in file B (the caller)

@@ -2,3 +2,5 @@
 /tasks/
 /path
 /version
+/.locks/
+/.worktrees/

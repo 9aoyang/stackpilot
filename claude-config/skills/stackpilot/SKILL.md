@@ -38,11 +38,13 @@ Legend: ✅ done  🔄 in-progress  ⏳ pending  ❌ failed  ❓ blocked
 
 ### Not Initialized
 
+**Auto-initialize** — no manual steps needed:
+
 ```bash
-bash ~/Documents/github/stackpilot/scripts/init.sh
+bash ~/Documents/github/stackpilot/scripts/init.sh 2>&1
 ```
 
-Config is auto-detected during init. If `qa.test_command` looks wrong for this project, ask the user if they want to adjust it — otherwise proceed to Step 1.
+If init succeeds, immediately re-run Step 1 to show status. Do NOT ask the user to configure anything — config is auto-detected. Only mention `stackpilot.config.yml` if the detected `test_command` binary was not found (init will warn about this).
 
 ---
 

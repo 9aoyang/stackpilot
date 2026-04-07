@@ -19,3 +19,13 @@ qa:
 coordinator:
   worktree_limit: 3         # Max parallel agent dispatches
   timeout_hours: 2          # Hours before in-progress task is marked failed
+
+# Per-agent model routing (optional)
+# Use cheaper models for simple agents, capable models for complex ones.
+# Agent-specific model takes priority over provider.model.
+# models:
+#   sp-pm: haiku            # PM: fast decomposition, cheap
+#   sp-dev: sonnet           # Dev: balanced cost/quality
+#   sp-qa: sonnet            # QA: needs to understand code
+#   sp-architect: opus       # Architect: complex reasoning
+#   sp-docs: haiku           # Docs: mechanical updates

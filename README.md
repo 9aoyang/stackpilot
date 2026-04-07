@@ -100,7 +100,14 @@ qa:
   coverage_threshold: 80
   test_command: npm test    # auto-detected from project files
 coordinator:
+  worktree_limit: 3        # max parallel agents
   timeout_hours: 2
+
+# Per-agent model routing (optimize cost vs quality)
+# models:
+#   sp-pm: haiku           # fast, cheap decomposition
+#   sp-dev: sonnet          # balanced implementation
+#   sp-architect: opus      # complex architectural reasoning
 ```
 
 Auto-detection supports: Node.js, Python, Go, Rust, Ruby, Java/Kotlin (Maven & Gradle), Elixir, PHP, and .NET.
@@ -226,7 +233,14 @@ qa:
   coverage_threshold: 80
   test_command: npm test    # 根据项目文件自动探测
 coordinator:
+  worktree_limit: 3        # 最大并行 agent 数
   timeout_hours: 2
+
+# 按 Agent 分配模型（优化成本 vs 质量）
+# models:
+#   sp-pm: haiku           # 快速分解，低成本
+#   sp-dev: sonnet          # 均衡实现
+#   sp-architect: opus      # 复杂架构推理
 ```
 
 自动探测支持：Node.js、Python、Go、Rust、Ruby、Java/Kotlin（Maven & Gradle）、Elixir、PHP、.NET。
