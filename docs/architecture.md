@@ -1,6 +1,6 @@
 # Stackpilot Architecture
 
-> Last updated: 2026-04-04
+> Last updated: 2026-04-07
 
 Stackpilot is a git-hook-driven multi-agent sprint orchestration framework. It turns a specification file into working code by dispatching a pipeline of AI agents — automatically, without manual handoffs.
 
@@ -42,8 +42,11 @@ stackpilot/                        ← framework installation
 │   ├── init.sh                    ← project setup
 │   ├── dispatch.sh                ← provider-agnostic agent launcher
 │   ├── restore.sh                 ← reset runtime state
-│   ├── lib/config.sh              ← YAML config reader
+│   ├── lib/
+│   │   ├── config.sh              ← YAML config reader
+│   │   └── version.sh             ← auto-upgrade with user-customization preservation
 │   └── hooks/
+│       ├── pre-commit.sh          ← validates spec/plan format before commit
 │       ├── post-commit.sh         ← triggers sp-pm on new spec/plan
 │       └── post-checkout.sh       ← triggers sp-coordinator on branch switch
 ├── templates/
@@ -57,6 +60,8 @@ stackpilot/                        ← framework installation
 ├── stackpilot.config.yml          ← provider, qa, coordinator settings
 └── .stackpilot/                   ← runtime state (gitignore optional)
     ├── path                       ← path to stackpilot installation
+    ├── .locks/                    ← file-based locking for concurrent agents
+    ├── .worktrees/                ← git worktree isolation for background agents
     ├── specs/                     ← design documents
     ├── plans/                     ← implementation plans
     └── tasks/
@@ -85,18 +90,20 @@ sp-pm → sp-dev → sp-qa
 
 sp-architect and sp-docs are skipped for light tasks.
 
+> **Note:** sp-qa dispatches immediately after each sp-dev task completes (inline review, not batch).
+
 ---
 
 ## Agent Responsibilities
 
 | Agent | Role | Key Protocol |
 |-------|------|-------------|
-| **sp-pm** | Reads spec/plan from `.stackpilot/`, writes tasks to `backlog.yml` | Append-only; sets `complexity: light\|standard` per task |
+| **sp-pm** | Reads spec/plan from `.stackpilot/`, writes tasks to `backlog.yml` | Append-only; sets `complexity: light\|standard` per task; self-validation (ID uniqueness, depends_on integrity, circular deps); 5-field task descriptions (What/Where/How/Test hint/Verify); verification before completion |
 | **sp-architect** | Reviews task against codebase; writes `arch-review/TASK-ID.md` | Analyzes existing patterns first; one decisive architecture choice; full implementation blueprint; multi-persona adversarial review (Security/Performance/Reliability) for HIGH-risk tasks |
-| **sp-dev** | Implements the task | Reads `git log` before starting to avoid repeating failed approaches; traces entry point and call chain before writing; atomic-change verify/fix loop (BUILD/LINT/TEST/SCOPE) with stuck detection; soft-blocked after 3 failed rounds |
-| **sp-qa** | Reviews code changes, writes and runs tests | Code review via `git diff` (confidence ≥ 80 to report); 12-dimension scenario testing matrix; verify/fix loop max 3 rounds; scoped production fixes allowed |
-| **sp-docs** | Updates README, inline comments, API docs | Runs after QA passes; documentation only, never changes logic |
-| **sp-coordinator** | Orchestrates the full pipeline | Reads NEEDS_REVIEW → handles timeouts → retries soft-blocked → dispatches pending tasks → checks sprint completion |
+| **sp-dev** | Implements the task | Reads `git log` before starting to avoid repeating failed approaches; traces entry point and call chain before writing; enforces TDD (RED-GREEN-REFACTOR mandatory); 4-phase root cause investigation before fixes (observe/reproduce/trace/hypothesize); atomic-change verify/fix loop (BUILD/LINT/TEST/SCOPE) with stuck detection; reverts uncommitted changes on failure; soft-blocked after 3 failed rounds |
+| **sp-qa** | Reviews code changes, writes and runs tests | Two-stage code review (spec compliance + code quality); receiving-review protocol with technical pushback; 12-dimension scenario testing matrix; verify/fix loop max 3 rounds; scoped production fixes allowed |
+| **sp-docs** | Updates README, inline comments, API docs | Runs after QA passes; documentation only, never changes logic; verification before completion |
+| **sp-coordinator** | Orchestrates the full pipeline | Per-task inline review (dev→qa immediately, not batch); complete soft-blocked retry logic with attempt counting; reads NEEDS_REVIEW → handles timeouts → retries soft-blocked → dispatches pending tasks → checks sprint completion |
 
 ---
 
@@ -141,10 +148,12 @@ post-checkout.sh
 **Standard Feature — human intervention points:**
 
 ```
-Phase 1: clarifying questions (1 message, 1 reply)
-Phase 2: design proposal (1 message, 1 reply; 1 revision allowed)
-Phase 3: spec auto-verify loop → only escalates if mechanical checks fail after 3 rounds
-Phase 4: plan auto-verify loop → only escalates if mechanical checks fail after 3 rounds
+Phase 1: clarifying questions (one at a time, deep exploration)
+Phase 2: design proposal (sectioned, user approves each)
+Phase 3: spec auto-verify loop (self-fix, escalates only on 3x failure)
+Phase 4: plan auto-verify loop (self-fix, escalates only on 3x failure)
+Pre-coding: confirm to start
+Coding: autonomous with per-task progress reporting (pauses only on block/critical/new-dep)
 Sprint finish: merge / PR / leave / discard choice
 ```
 
@@ -186,16 +195,23 @@ pending → in-progress → done
 `scripts/dispatch.sh` is provider-agnostic. It:
 
 1. Reads `provider.name` from `stackpilot.config.yml`
-2. Loads the agent's system prompt from `claude-config/agents/<name>.md`
-3. Strips frontmatter; appends task-specific prompt
-4. Builds provider-specific CLI command:
+2. Resolves per-provider model routing via `models.<provider>.<agent>` (3-level config keys: agent-specific → provider default → global)
+3. Loads the agent's system prompt from `claude-config/agents/<name>.md`
+4. Strips frontmatter; appends task-specific prompt
+5. Builds provider-specific CLI command:
    - `claude` — `claude -p <prompt> --allowedTools ...`
    - `codex` — `codex --approval-mode full-auto <prompt>`
    - `gemini` — `gemini -p <prompt>`
    - `custom` — `<provider.command> <prompt>`
-5. Runs in background (hooks) or foreground (interactive use)
+6. Creates git worktree isolation for background agents (auto-create in `.stackpilot/.worktrees/`, auto-cleanup after completion)
+7. Enforces timeout via `timeout`/`gtimeout` wrapper
+8. Tracks agent PID in `.stackpilot/.locks/<agent>.pid`
+9. Uses file-based locking (`locked_write` in config.sh, flock + mkdir fallback) for concurrent state updates
+10. Runs in background (hooks) or foreground (interactive use)
 
 Tools per agent are declared in frontmatter (`tools: Read, Write, Bash, Glob`) and passed as `--allowedTools` flags for Claude.
+
+If the required CLI is missing, dispatch writes the issue to `NEEDS_REVIEW.md` instead of exiting silently.
 
 ---
 
@@ -205,17 +221,30 @@ Tools per agent are declared in frontmatter (`tools: Read, Write, Bash, Glob`) a
 
 ```yaml
 provider:
-  name: claude          # claude | codex | gemini | custom
-  model: ~              # optional model override
-  command: ~            # required when name=custom
+  name: claude
+  # model: ~
+  # command: ~
 
 qa:
   coverage_threshold: 80
-  test_command: npm test
+  test_command: npm test    # auto-detected by init.sh
 
 coordinator:
-  worktree_limit: 3     # max parallel agent dispatches
-  timeout_hours: 2      # task timeout before marking failed
+  worktree_limit: 3
+  timeout_hours: 2
+
+models:
+  claude:
+    default: sonnet
+    sp-pm: haiku
+    sp-architect: opus
+    sp-docs: haiku
+  codex:
+    default: o4-mini
+    sp-architect: o3
+  gemini:
+    default: gemini-2.5-flash
+    sp-architect: gemini-2.5-pro
 ```
 
 ---
@@ -252,12 +281,25 @@ coordinator:
 
 **Optimize Sprint.** A purpose-built sprint type for quantifiable improvement goals (performance, error rate, bundle size, etc.). Requires Goal + Scope + Metric + Verify before starting. Runs an autonomous iteration loop with TSV logging and automatic git revert on regression. Inspired by autoresearch (uditgoenka/autoresearch).
 
+**Test-Driven Development.** sp-dev enforces RED-GREEN-REFACTOR. Tests are written before implementation code. Each completion report records whether TDD was followed.
+
+**Root cause investigation before fixes.** sp-dev runs 4-phase investigation (observe → reproduce → trace → hypothesize) before applying any fix. Prevents symptom-level patching.
+
+**Per-provider model routing.** Config supports `models.<provider>.<agent>` so the same project can use Claude and Codex simultaneously with different model assignments per agent. Lookup: agent-specific → provider default → global.
+
+**Git worktree isolation.** Background agents run in isolated git worktrees, preventing interference between parallel agents and the user's working directory. Worktrees auto-cleanup after agent completion.
+
+**Safe version upgrades.** version.sh diffs before overwriting — user-customized agent/skill files get `.pre-upgrade.bak` backups. Removed agents are cleaned up.
+
+**Auto-detected project configuration.** init.sh detects project language, test framework, and available AI CLI. Supports Node.js, Python, Go, Rust, Ruby, Java/Kotlin, Elixir, PHP, .NET.
+
 ---
 
 ## Evolution Notes
 
 | Date | Change |
 |------|--------|
+| 2026-04-07 | Auto-detect project stack in init.sh; TDD enforcement + root cause investigation in sp-dev; per-task inline review in coordinator; two-stage code review in sp-qa; per-provider model routing (models.\<provider\>.\<agent\>); git worktree isolation in dispatch; pre-commit hook for spec validation; file-based locking (flock/mkdir); timeout enforcement; safe version upgrades with .bak preservation; coding phase runs autonomously with per-task progress reporting |
 | 2026-04-07 | Standard Feature: clarifying questions changed to one-at-a-time deep exploration (from batch); added Phase 1.5 Visual Companion (browser-based mockup/diagram server from superpowers brainstorming); compete skill upgraded with 12-dimension iterative exploration loop + 5-persona debate with consensus scoring and Devil's Advocate dissent |
 | 2026-04-04 | Integrated autoresearch patterns: git-as-memory in sp-dev, atomic change + stuck detection in verify/fix loop, 12-dimension scenario testing in sp-qa, multi-persona adversarial review in sp-architect (HIGH risk), Optimize Sprint mode in SKILL.md; added docs/sync.md |
 | 2026-04-04 | Renamed all agents to `sp-*` prefix; moved runtime state to `.stackpilot/`; removed all external skill dependencies; inlined brainstorming, writing-plans, finishing, code-architect, code-explorer, code-reviewer protocols |

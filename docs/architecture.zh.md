@@ -1,6 +1,6 @@
 # Stackpilot 架构文档
 
-> 最后更新：2026-04-04
+> 最后更新：2026-04-07
 
 Stackpilot 是一个由 git hook 驱动的多 Agent Sprint 编排框架。它将一份设计文档转化为可运行的代码，通过自动调度 AI Agent 流水线完成，无需任何人工交接。
 
@@ -43,7 +43,9 @@ stackpilot/                        ← 框架安装目录
 │   ├── dispatch.sh                ← 与 AI provider 无关的 Agent 启动器
 │   ├── restore.sh                 ← 重置运行时状态
 │   ├── lib/config.sh              ← YAML 配置读取工具
+│   ├── lib/version.sh             ← 自动升级，保留用户自定义
 │   └── hooks/
+│       ├── pre-commit.sh          ← 提交前校验 spec/plan 格式
 │       ├── post-commit.sh         ← 新 spec/plan 提交时触发 sp-pm
 │       └── post-checkout.sh       ← 切换分支时触发 sp-coordinator
 ├── templates/
@@ -64,7 +66,9 @@ stackpilot/                        ← 框架安装目录
         ├── in-progress.yml        ← 当前运行中任务 + 开始时间
         ├── NEEDS_REVIEW.md        ← 人工审阅收件箱（用户读这里）
         ├── done/                  ← 完成报告（TASK-ID.md）
-        └── arch-review/           ← 架构审查输出（TASK-ID.md）
+        ├── arch-review/           ← 架构审查输出（TASK-ID.md）
+        ├── .locks/                ← 并发 agent 文件锁
+        └── .worktrees/            ← 后台 agent 的 git worktree 隔离
 ```
 
 ---
@@ -85,18 +89,20 @@ sp-pm → sp-dev → sp-qa
 
 轻量任务跳过 sp-architect 和 sp-docs，节省约 60% 的 Agent 开销。
 
+> sp-qa 在每个 sp-dev 完成后立即调度（即时 review，非批量）。
+
 ---
 
 ## Agent 职责
 
 | Agent | 职责 | 核心协议 |
 |-------|------|---------|
-| **sp-pm** | 读取 `.stackpilot/` 中的 spec/plan，写入任务到 `backlog.yml` | 追加写入；为每个任务设置 `complexity: light\|standard` |
+| **sp-pm** | 读取 `.stackpilot/` 中的 spec/plan，写入任务到 `backlog.yml` | 自检（ID 唯一、depends_on 完整性、循环依赖检测）；5 字段任务描述（What/Where/How/Test hint/Verify）；追加写入；为每个任务设置 `complexity: light\|standard`；完成前验证 |
 | **sp-architect** | 对照代码库审查任务；输出 `arch-review/TASK-ID.md` | 先分析现有代码模式；给出唯一的架构决策；完整实现蓝图；HIGH 风险任务额外进行 Security/Performance/Reliability 三角色对抗分析 |
-| **sp-dev** | 实现任务 | 开始前读 `git log` 避免重蹈失败路径；定位入口点+追踪调用链；原子变更 verify/fix 循环（含卡住检测）；3 轮失败后进入 soft-blocked |
-| **sp-qa** | 审查代码变更、编写并运行测试 | 基于 `git diff` 做代码审查（置信度 ≥ 80 才上报）；12 维场景测试矩阵；verify/fix 循环最多 3 轮；允许有限范围的生产代码修复 |
-| **sp-docs** | 更新 README、内联注释、API 文档 | 在 QA 通过后运行；只更新文档，不改任何逻辑 |
-| **sp-coordinator** | 编排整个流水线 | 读取 NEEDS_REVIEW → 处理超时 → 重试 soft-blocked → 调度 pending 任务 → 检查 Sprint 完成 |
+| **sp-dev** | 实现任务 | 强制 TDD（RED-GREEN-REFACTOR）；4 阶段根因调查（观察→复现→追溯→假设）；开始前读 `git log` 避免重蹈失败路径；定位入口点+追踪调用链；原子变更 verify/fix 循环（含卡住检测）；3 轮失败后进入 soft-blocked；失败后回滚未提交变更 |
+| **sp-qa** | 审查代码变更、编写并运行测试 | 两阶段代码审查（spec 合规 + 代码质量）；收到反馈时技术评估不盲从；基于 `git diff` 做代码审查（置信度 ≥ 80 才上报）；12 维场景测试矩阵；verify/fix 循环最多 3 轮；允许有限范围的生产代码修复 |
+| **sp-docs** | 更新 README、内联注释、API 文档 | 在 QA 通过后运行；只更新文档，不改任何逻辑；完成前验证 |
+| **sp-coordinator** | 编排整个流水线 | 每 task 即时 review（dev→qa 串联，非批量）；完整 soft-blocked 重试逻辑；读取 NEEDS_REVIEW → 处理超时 → 重试 soft-blocked → 调度 pending 任务 → 检查 Sprint 完成 |
 
 ---
 
@@ -164,16 +170,23 @@ pending → in-progress → done
 `scripts/dispatch.sh` 与 AI provider 无关，执行流程：
 
 1. 从 `stackpilot.config.yml` 读取 `provider.name`
-2. 从 `claude-config/agents/<name>.md` 加载 Agent 系统提示词
-3. 去除 frontmatter；追加任务相关 prompt
-4. 构建对应 provider 的 CLI 命令：
+2. Per-provider model routing：通过 `models.<provider>.<agent>` 三层配置键选择模型
+3. 从 `claude-config/agents/<name>.md` 加载 Agent 系统提示词
+4. 去除 frontmatter；追加任务相关 prompt
+5. 构建对应 provider 的 CLI 命令：
    - `claude` — `claude -p <prompt> --allowedTools ...`
    - `codex` — `codex --approval-mode full-auto <prompt>`
    - `gemini` — `gemini -p <prompt>`
    - `custom` — `<provider.command> <prompt>`
-5. 后台运行（hooks）或前台运行（交互式使用）
+6. 后台 agent 的 git worktree 隔离（自动创建、自动清理）
+7. 超时强制执行（timeout/gtimeout 包裹）
+8. 文件锁（locked_write，flock + mkdir 回退）
+9. 后台运行（hooks）或前台运行（交互式使用）
+10. PID 跟踪
 
 每个 Agent 在 frontmatter 中声明工具列表（`tools: Read, Write, Bash, Glob`），Claude provider 下作为 `--allowedTools` 传入。
+
+CLI 缺失时自动写入 `NEEDS_REVIEW.md`，提示用户安装对应 provider CLI。
 
 ---
 
@@ -183,17 +196,27 @@ pending → in-progress → done
 
 ```yaml
 provider:
-  name: claude          # claude | codex | gemini | custom
-  model: ~              # 可选，覆盖默认模型
-  command: ~            # name=custom 时必填，如 "aider --yes-always"
+  name: claude
 
 qa:
   coverage_threshold: 80
-  test_command: npm test
+  test_command: npm test    # init.sh 自动探测
 
 coordinator:
-  worktree_limit: 3     # 最大并行 Agent 数
-  timeout_hours: 2      # 任务超时时间（小时）
+  worktree_limit: 3
+  timeout_hours: 2
+
+models:
+  claude:
+    default: sonnet
+    sp-pm: haiku
+    sp-architect: opus
+  codex:
+    default: o4-mini
+    sp-architect: o3
+  gemini:
+    default: gemini-2.5-flash
+    sp-architect: gemini-2.5-pro
 ```
 
 ---
@@ -228,6 +251,18 @@ coordinator:
 
 **原子变更原则。** sp-dev verify/fix 循环和 Optimize Sprint 中，每次修复只做一个逻辑变更（一句话能描述清楚）。因果关系清晰，便于回滚，也让卡住信号变得明确（同样的错误出现两次 = 换思路）。
 
+**测试驱动开发。** sp-dev 强制 RED-GREEN-REFACTOR，先写测试再写实现代码。
+
+**根因调查优先于修复。** sp-dev 在修复前执行 4 阶段调查（观察→复现→追溯→假设），防止治标不治本。
+
+**按 Provider 路由模型。** 配置支持 `models.<provider>.<agent>`，同一项目可同时用 Claude 和 Codex，每个 agent 独立配置模型。
+
+**Git worktree 隔离。** 后台 agent 在独立 worktree 中运行，防止并行 agent 互相干扰。
+
+**安全版本升级。** version.sh 升级前 diff 检测，用户自定义的 agent/skill 自动备份为 `.pre-upgrade.bak`。
+
+**自动探测项目配置。** init.sh 自动识别项目语言、测试框架和可用 CLI。支持 Node.js、Python、Go、Rust、Ruby、Java/Kotlin、Elixir、PHP、.NET。
+
 **Optimize Sprint。** 专为可量化改进目标设计的 Sprint 类型（性能、错误率、包体积等）。开工前需定义 Goal + Scope + Metric + Verify 四参数。自主迭代循环，TSV 格式记录每轮结果，回归时自动 `git revert`。灵感来源：autoresearch（uditgoenka/autoresearch）。
 
 ---
@@ -236,6 +271,7 @@ coordinator:
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-07 | init.sh 自动探测项目栈；sp-dev 强制 TDD + 根因调查；coordinator 每 task 即时 review；sp-qa 两阶段代码审查；per-provider model routing（models.\<provider\>.\<agent\>）；dispatch git worktree 隔离；pre-commit hook 校验 spec 格式；文件锁（flock/mkdir）；超时强制执行；安全版本升级（.bak 保留）；coding 阶段自动执行 + 每 task 进度简报 |
 | 2026-04-07 | Standard Feature：澄清问题改为逐个深入（不再一次性批量提问）；新增 Phase 1.5 Visual Companion（来自 superpowers brainstorming 的浏览器 mockup/图表服务器）；compete skill 升级为 12 维度迭代探索循环 + 5 角色辩论共识机制（含 Devil's Advocate 少数意见保留） |
 | 2026-04-04 | 集成 autoresearch 核心模式：sp-dev 增加 git 即记忆 + 原子变更 + 卡住检测；sp-qa 增加 12 维场景测试矩阵；sp-architect 增加 HIGH 风险多角色对抗分析；SKILL.md 新增 Optimize Sprint 模式；新增 docs/sync.md |
 | 2026-04-04 | 所有 Agent 重命名为 `sp-*` 前缀；运行时状态迁移到 `.stackpilot/`；移除所有外部 skill 依赖；内联 brainstorming、writing-plans、finishing、code-architect、code-explorer、code-reviewer 协议 |
