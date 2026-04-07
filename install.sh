@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stackpilot one-line installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/silence1amb/stackpilot/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/9aoyang/stackpilot/main/install.sh | bash
 set -euo pipefail
 
 STACKPILOT_DIR="${STACKPILOT_DIR:-$HOME/.stackpilot}"
@@ -17,19 +17,25 @@ if [ -d "$STACKPILOT_DIR/.git" ]; then
   git -C "$STACKPILOT_DIR" pull --ff-only origin main 2>/dev/null || true
 else
   echo "[1/3] Installing Stackpilot..."
-  git clone https://github.com/silence1amb/stackpilot.git "$STACKPILOT_DIR"
+  git clone https://github.com/9aoyang/stackpilot.git "$STACKPILOT_DIR"
 fi
 
 # --- 2. Copy agents + skills ---
 echo "[2/3] Installing agents and skills..."
-mkdir -p "$CLAUDE_DIR/agents" "$CLAUDE_DIR/skills/stackpilot"
+mkdir -p "$CLAUDE_DIR/agents"
 
 for f in "$STACKPILOT_DIR/claude-config/agents/"*.md; do
   [ -f "$f" ] && cp "$f" "$CLAUDE_DIR/agents/$(basename "$f")"
 done
 
-for f in "$STACKPILOT_DIR/claude-config/skills/stackpilot/"*.md; do
-  [ -f "$f" ] && cp "$f" "$CLAUDE_DIR/skills/stackpilot/$(basename "$f")"
+# Install skills — each subdirectory under claude-config/skills/ becomes a skill
+for skill_dir in "$STACKPILOT_DIR/claude-config/skills/"*/; do
+  [ -d "$skill_dir" ] || continue
+  skill_name="$(basename "$skill_dir")"
+  mkdir -p "$CLAUDE_DIR/skills/$skill_name"
+  for f in "$skill_dir"*.md; do
+    [ -f "$f" ] && cp "$f" "$CLAUDE_DIR/skills/$skill_name/$(basename "$f")"
+  done
 done
 
 # --- 3. Install dependencies ---

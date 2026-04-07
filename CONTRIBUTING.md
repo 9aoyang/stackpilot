@@ -6,7 +6,7 @@ Thanks for your interest in contributing! Here's how to get started.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/silence1amb/stackpilot.git
+   git clone https://github.com/9aoyang/stackpilot.git
    cd stackpilot
    ```
 
@@ -64,7 +64,7 @@ When changing agent behavior, update the corresponding test in `tests/` and docu
 
 ### Adding New Skills
 
-Skills live in `claude-config/skills/stackpilot/`. Follow the existing `SKILL.md` format with proper frontmatter.
+Skills live in `claude-config/skills/`. Each skill gets its own directory (e.g., `stackpilot-auto/SKILL.md`). Use `name: stackpilot:<subcommand>` in frontmatter to register under the `stackpilot:` namespace. Support files (non-slash-command) stay in the main `stackpilot/` directory.
 
 ## Code Review
 

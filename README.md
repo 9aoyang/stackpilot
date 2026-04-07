@@ -1,8 +1,8 @@
 # Stackpilot
 
-[![CI](https://github.com/silence1amb/stackpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/silence1amb/stackpilot/actions/workflows/ci.yml)
+[![CI](https://github.com/9aoyang/stackpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/9aoyang/stackpilot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![GitHub release](https://img.shields.io/github/v/release/silence1amb/stackpilot)](https://github.com/silence1amb/stackpilot/releases)
+[![GitHub release](https://img.shields.io/github/v/release/9aoyang/stackpilot)](https://github.com/9aoyang/stackpilot/releases)
 
 **English** | [中文](#中文文档)
 
@@ -67,14 +67,21 @@ See [examples/specs/](examples/specs/) for real spec examples.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/silence1amb/stackpilot/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/9aoyang/stackpilot/main/install.sh | bash
 ```
 
 Installs Stackpilot and all dependencies. Requires git and at least one AI CLI (Claude Code, Codex, Gemini CLI, or a custom tool).
 
 ## Usage
 
-**Claude Code:** Type `/stackpilot` — it handles init, brainstorming, planning, and delivery.
+**Claude Code:**
+
+| Command | Description |
+|---------|-------------|
+| `/stackpilot` | Main entry point — init, brainstorming, planning, and delivery. Shows sprint status, guides next action. |
+| `/stackpilot:auto` | Full-auto mode — same workflow but skips all confirmations. Ends with code on feature branch ready for review. |
+| `/stackpilot:sync` | Manage external skill references inlined into agents. `add` to extract a new skill, `check` to detect updates. |
+| `/stackpilot:compete` | Competitive gap analysis — assume persona of a competing product's power user and identify what would make them switch. |
 
 **Other providers:** Run `bash ~/.stackpilot/scripts/init.sh` in your project, then set the provider in `stackpilot.config.yml`.
 
@@ -115,9 +122,9 @@ See [docs/architecture.md](docs/architecture.md) for the full system design, age
 
 # 中文文档
 
-[![CI](https://github.com/silence1amb/stackpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/silence1amb/stackpilot/actions/workflows/ci.yml)
+[![CI](https://github.com/9aoyang/stackpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/9aoyang/stackpilot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![GitHub release](https://img.shields.io/github/v/release/silence1amb/stackpilot)](https://github.com/silence1amb/stackpilot/releases)
+[![GitHub release](https://img.shields.io/github/v/release/9aoyang/stackpilot)](https://github.com/9aoyang/stackpilot/releases)
 
 **[English](#stackpilot)** | 中文
 
@@ -182,14 +189,21 @@ $ git checkout -b feat/user-search
 ## 安装
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/silence1amb/stackpilot/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/9aoyang/stackpilot/main/install.sh | bash
 ```
 
 自动安装 Stackpilot 及所有依赖。需要 git 和至少一个 AI CLI（Claude Code、Codex、Gemini CLI 或自定义工具）。
 
 ## 使用
 
-**Claude Code:** 输入 `/stackpilot`，从初始化到交付，全程自动引导。
+**Claude Code:**
+
+| 命令 | 说明 |
+|------|------|
+| `/stackpilot` | 主入口 — 初始化、头脑风暴、规划、交付。显示 sprint 状态，引导下一步操作。 |
+| `/stackpilot:auto` | 全自动模式 — 跳过所有确认环节，代码直接提交到功能分支等待审查。 |
+| `/stackpilot:sync` | 管理外部技能引用。`add` 提取新技能，`check` 检测已引用技能的更新。 |
+| `/stackpilot:compete` | 竞品差距分析 — 以竞品重度用户视角，找出让用户转向的关键因素。 |
 
 **其他 Provider:** 在项目中运行 `bash ~/.stackpilot/scripts/init.sh`，然后在 `stackpilot.config.yml` 中设置 provider。
 
