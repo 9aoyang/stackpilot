@@ -299,6 +299,7 @@ models:
 
 | Date | Change |
 |------|--------|
+| 2026-04-07 | Tightened stackpilot interaction flow: Step 1 now summarizes sprint state instead of echoing raw command output, and Visual Companion is invoked inline for specific design questions instead of via a separate permission prompt |
 | 2026-04-07 | Auto-detect project stack in init.sh; TDD enforcement + root cause investigation in sp-dev; per-task inline review in coordinator; two-stage code review in sp-qa; per-provider model routing (models.\<provider\>.\<agent\>); git worktree isolation in dispatch; pre-commit hook for spec validation; file-based locking (flock/mkdir); timeout enforcement; safe version upgrades with .bak preservation; coding phase runs autonomously with per-task progress reporting |
 | 2026-04-07 | Standard Feature: clarifying questions changed to one-at-a-time deep exploration (from batch); added Phase 1.5 Visual Companion (browser-based mockup/diagram server from superpowers brainstorming); compete skill upgraded with 12-dimension iterative exploration loop + 5-persona debate with consensus scoring and Devil's Advocate dissent |
 | 2026-04-04 | Integrated autoresearch patterns: git-as-memory in sp-dev, atomic change + stuck detection in verify/fix loop, 12-dimension scenario testing in sp-qa, multi-persona adversarial review in sp-architect (HIGH risk), Optimize Sprint mode in SKILL.md; added docs/sync.md |

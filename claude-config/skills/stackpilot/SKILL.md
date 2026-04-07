@@ -15,7 +15,16 @@ cat .stackpilot/tasks/in-progress.yml 2>/dev/null
 ls .stackpilot/specs/*.md 2>/dev/null || echo "NO_SPECS"
 ```
 
-Display the status panel in this format:
+Run the checks silently. Do NOT paste raw command output, `Ran` / `Explored` logs, or long file lists back to the user unless they explicitly ask for them.
+
+Default user-facing output should be a concise state summary plus the routing decision in 1-3 lines. Example:
+
+```
+Current sprint is clean: no backlog, no pending review, specs exist.
+Treat this as a new design task and move directly into the first substantive design question.
+```
+
+If a detailed status readout is actually needed (active tasks, blockers, failures, or the user asked for full status), use this format:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -51,6 +60,8 @@ If init succeeds, immediately re-run Step 1 to show status. Do NOT ask the user 
 ### Sprint Clean (no tasks, or all done)
 
 Ask the user what feature they want to build, then **choose path by scope**:
+
+After the concise state summary, move directly into feature or design discussion. Do NOT narrate the exploration steps or ask for permission to begin the discussion.
 
 > If the user's request is about **improving / optimizing / fixing degradation** of something measurable (performance, test pass rate, error rate, bundle size, etc.), use the **Optimize Sprint** path below instead of the feature paths.
 
@@ -135,19 +146,19 @@ Do NOT start any implementation until a plan is written and committed.
    - If a topic needs more exploration, break it into multiple questions
    - Continue until you have a clear picture of what to build
 
-**Phase 1.5: Offer Visual Companion** (if upcoming design involves visual content)
+**Phase 1.5: Visual Companion Use** (only when a specific design question benefits from visualization)
 
-When the feature involves UI, layout, or any visual design decisions, offer the browser-based visual companion as **its own separate message** (do not combine with other content):
+Do NOT send a separate permission-seeking message before starting design discussion.
 
-> "接下来的设计讨论可能涉及视觉内容。我可以在浏览器里展示 mockup、布局对比、架构图等可视化方案，帮你更直观地做决策。这个功能还比较新，会消耗较多 token。要试试吗？（需要打开一个本地 URL）"
+- Start the design discussion immediately after exploration.
+- Decide **per question** whether browser or terminal communicates the issue better. The test: **would the user understand this better by seeing it than reading it?**
+- If browser is clearly better, start the visual companion server and include the visual in the same message as the design question. Do not add a preamble asking whether the user wants visual mode first.
+- If terminal is sufficient, stay in terminal.
+- If the user explicitly asks to stay text-only, keep the rest of the discussion in terminal.
+- **Use browser**: UI mockups, wireframes, layout comparisons, architecture diagrams, side-by-side visual designs
+- **Use terminal**: requirements, conceptual choices, tradeoff lists, scope decisions, technical decisions
 
-- If user accepts → start the visual companion server, then use it **per-question** during Phase 2
-- If user declines → proceed with text-only design in terminal
-- **Per-question decision**: even after user accepts, decide FOR EACH question whether to use browser or terminal. The test: **would the user understand this better by seeing it than reading it?**
-  - **Use browser**: UI mockups, wireframes, layout comparisons, architecture diagrams, side-by-side visual designs
-  - **Use terminal**: requirements, conceptual choices, tradeoff lists, scope decisions, technical decisions
-
-**Visual Companion Server Setup** (only when user accepts):
+**Visual Companion Server Setup** (only when a question clearly benefits from visuals):
 
 ```bash
 # Start preview server (HTML goes to /tmp, auto-cleaned when server stops)
@@ -190,7 +201,7 @@ bash ~/Documents/github/stackpilot/scripts/preview/start-server.sh
    - Components and data flow
    - Error handling strategy
    - Testing approach
-5. **Present design in sections scaled to complexity** — get user approval after each section. Use visual companion for sections that benefit from visual treatment. <!-- CONFIRM-GATE: design review -->
+5. **Present design in sections scaled to complexity** — get user approval after each section. When a section benefits from visual treatment, inline the visual companion in that section instead of adding a separate setup/permission message. <!-- CONFIRM-GATE: design review -->
 6. When visual companion was used, stop the server after design is finalized:
    ```bash
    bash ~/Documents/github/stackpilot/scripts/preview/stop-server.sh $SESSION_DIR

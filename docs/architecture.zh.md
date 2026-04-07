@@ -271,6 +271,7 @@ models:
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-07 | 收敛 stackpilot 交互：Step 1 改为只对外输出 sprint 状态摘要，不再回显原始命令输出；Visual Companion 改为在具体设计问题中内联启用，不再单独弹出确认提示 |
 | 2026-04-07 | init.sh 自动探测项目栈；sp-dev 强制 TDD + 根因调查；coordinator 每 task 即时 review；sp-qa 两阶段代码审查；per-provider model routing（models.\<provider\>.\<agent\>）；dispatch git worktree 隔离；pre-commit hook 校验 spec 格式；文件锁（flock/mkdir）；超时强制执行；安全版本升级（.bak 保留）；coding 阶段自动执行 + 每 task 进度简报 |
 | 2026-04-07 | Standard Feature：澄清问题改为逐个深入（不再一次性批量提问）；新增 Phase 1.5 Visual Companion（来自 superpowers brainstorming 的浏览器 mockup/图表服务器）；compete skill 升级为 12 维度迭代探索循环 + 5 角色辩论共识机制（含 Devil's Advocate 少数意见保留） |
 | 2026-04-04 | 集成 autoresearch 核心模式：sp-dev 增加 git 即记忆 + 原子变更 + 卡住检测；sp-qa 增加 12 维场景测试矩阵；sp-architect 增加 HIGH 风险多角色对抗分析；SKILL.md 新增 Optimize Sprint 模式；新增 docs/sync.md |
