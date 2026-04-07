@@ -32,23 +32,24 @@ git init --quiet
 bash "$INIT_SCRIPT" --stackpilot-dir "$STACKPILOT_DIR"
 
 # Verify all expected files/directories exist
-check "tasks/backlog.yml exists" "[ -f '$TMPDIR/tasks/backlog.yml' ]"
-check "tasks/NEEDS_REVIEW.md exists" "[ -f '$TMPDIR/tasks/NEEDS_REVIEW.md' ]"
+check "tasks/backlog.yml exists" "[ -f '$TMPDIR/.stackpilot/tasks/backlog.yml' ]"
+check "tasks/NEEDS_REVIEW.md exists" "[ -f '$TMPDIR/.stackpilot/tasks/NEEDS_REVIEW.md' ]"
+check "tasks/in-progress.yml exists" "[ -f '$TMPDIR/.stackpilot/tasks/in-progress.yml' ]"
 check "stackpilot.config.yml exists" "[ -f '$TMPDIR/stackpilot.config.yml' ]"
 check ".git/hooks/post-checkout exists" "[ -f '$TMPDIR/.git/hooks/post-checkout' ]"
 check ".git/hooks/post-checkout is executable" "[ -x '$TMPDIR/.git/hooks/post-checkout' ]"
 check ".git/hooks/post-commit exists" "[ -f '$TMPDIR/.git/hooks/post-commit' ]"
 check ".git/hooks/post-commit is executable" "[ -x '$TMPDIR/.git/hooks/post-commit' ]"
-check ".stackpilot-path exists" "[ -f '$TMPDIR/.stackpilot-path' ]"
-check ".stackpilot-path points to stackpilot dir" "[ \"\$(cat '$TMPDIR/.stackpilot-path')\" = '$STACKPILOT_DIR' ]"
+check ".stackpilot/path exists" "[ -f '$TMPDIR/.stackpilot/path' ]"
+check ".stackpilot/path points to stackpilot dir" "[ \"\$(cat '$TMPDIR/.stackpilot/path')\" = '$STACKPILOT_DIR' ]"
 check "stackpilot.config.yml has provider section" "grep -q 'provider:' '$TMPDIR/stackpilot.config.yml'"
-check ".gitignore has .stackpilot-path" "grep -q '.stackpilot-path' '$TMPDIR/.gitignore'"
+check ".gitignore has .stackpilot/tasks" "grep -q '.stackpilot/tasks' '$TMPDIR/.gitignore'"
 
 # Run init again to verify idempotency (no error on second run)
 echo ""
 echo "--- Running init.sh again (idempotency check) ---"
 bash "$INIT_SCRIPT" --stackpilot-dir "$STACKPILOT_DIR"
-check "idempotent: tasks/backlog.yml still exists" "[ -f '$TMPDIR/tasks/backlog.yml' ]"
+check "idempotent: tasks/backlog.yml still exists" "[ -f '$TMPDIR/.stackpilot/tasks/backlog.yml' ]"
 check "idempotent: .git/hooks/post-checkout still executable" "[ -x '$TMPDIR/.git/hooks/post-checkout' ]"
 check "idempotent: .git/hooks/post-commit still executable" "[ -x '$TMPDIR/.git/hooks/post-commit' ]"
 

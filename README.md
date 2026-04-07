@@ -25,42 +25,48 @@ Without Stackpilot, shipping a feature with AI means:
 - Run each step yourself → check results → re-prompt for fixes
 - Context is lost between sessions; no one tracks what's done
 
-With Stackpilot:
-
-```bash
-# Write a spec and commit it — that's all you do
-echo "# Add JWT auth\n\n..." > .stackpilot/specs/2026-04-05-jwt-auth.md
-git add . && git commit -m "spec: add JWT auth"
-
-# ↑ This single commit triggers the full pipeline automatically:
-# sp-pm decomposes tasks → sp-architect reviews design
-# → sp-dev implements → sp-qa writes tests → sp-docs updates docs
-```
-
-Agents run headlessly via git hooks. You review results in `NEEDS_REVIEW.md`.
+With Stackpilot, just type `/stackpilot` in Claude Code and describe what you want:
 
 ## Demo
 
 ```
-$ git commit -m "spec: add user search feature"
-[stackpilot] New spec detected: .stackpilot/specs/2026-04-05-user-search.md
-[stackpilot] Dispatching sp-pm...
+> /stackpilot
 
-  sp-pm → Created 4 tasks in .stackpilot/tasks/backlog.yml
-    TASK-001: Design search API schema          [pending]
-    TASK-002: Implement /users/search endpoint  [pending]
-    TASK-003: Write integration tests           [pending]
-    TASK-004: Update API docs                   [pending]
+━━━━━━━━━━━━━━━━━━━━━━━━━
+  Stackpilot Sprint Status
+━━━━━━━━━━━━━━━━━━━━━━━━━
+  No active sprint.
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
-$ git checkout -b feat/user-search
-[stackpilot] Branch switched — running Coordinator...
-[stackpilot] Dispatching sp-architect for TASK-001...
-[stackpilot] Dispatching sp-dev for TASK-002...
+What feature would you like to build?
 
-  ✓ TASK-001 complete — arch review in .stackpilot/tasks/arch-review/
-  ✓ TASK-002 complete — implementation committed
-  ! TASK-003 needs review → see .stackpilot/tasks/NEEDS_REVIEW.md
+> Add user search with fuzzy matching
+
+Phase 1: Exploring codebase...
+Phase 2: Design proposal ready — approve? (Y/n)
+Phase 3: Writing spec → .stackpilot/specs/2026-04-05-user-search-design.md ✓
+Phase 4: Writing plan → .stackpilot/plans/2026-04-05-user-search-plan.md ✓
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+  Stackpilot Sprint Status
+━━━━━━━━━━━━━━━━━━━━━━━━━
+⏳ TASK-001  Design search API schema          pending
+⏳ TASK-002  Implement /users/search endpoint  pending
+⏳ TASK-003  Write integration tests           pending
+⏳ TASK-004  Update API docs                   pending
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Plan is ready. Proceed with coding? (Y/n)
+
+  🔄 TASK-001 → sp-architect reviewing...  ✅ done
+  🔄 TASK-002 → sp-dev implementing...     ✅ done
+  🔄 TASK-003 → sp-qa writing tests...     ✅ done
+  🔄 TASK-004 → sp-docs updating...        ✅ done
+
+Sprint complete. All tests passing.
 ```
+
+Use `/stackpilot:auto` to skip all confirmations and run fully unattended.
 
 See [examples/specs/](examples/specs/) for real spec examples.
 
@@ -147,42 +153,48 @@ graph LR
 - 亲自跑每个步骤 → 看结果 → 再补充提示修复
 - 会话间上下文丢失，没有人追踪进度
 
-有了 Stackpilot：
-
-```bash
-# 写一个设计文档并提交 — 这就是你要做的全部
-echo "# 增加 JWT 认证\n\n..." > .stackpilot/specs/2026-04-05-jwt-auth.md
-git add . && git commit -m "spec: add JWT auth"
-
-# ↑ 这次提交自动触发完整流水线：
-# sp-pm 拆解任务 → sp-architect 评审设计
-# → sp-dev 实现 → sp-qa 写测试 → sp-docs 更新文档
-```
-
-Agents 通过 git hooks 无人值守运行。你只需查看 `NEEDS_REVIEW.md` 审批关键决策。
+有了 Stackpilot，在 Claude Code 中输入 `/stackpilot` 并描述你想要的功能：
 
 ## 演示
 
 ```
-$ git commit -m "spec: 增加用户搜索功能"
-[stackpilot] 检测到新 spec: .stackpilot/specs/2026-04-05-user-search.md
-[stackpilot] 正在派发 sp-pm...
+> /stackpilot
 
-  sp-pm → 在 .stackpilot/tasks/backlog.yml 中创建了 4 个任务
-    TASK-001: 设计搜索 API schema          [pending]
-    TASK-002: 实现 /users/search 接口       [pending]
-    TASK-003: 编写集成测试                  [pending]
-    TASK-004: 更新 API 文档                 [pending]
+━━━━━━━━━━━━━━━━━━━━━━━━━
+  Stackpilot Sprint Status
+━━━━━━━━━━━━━━━━━━━━━━━━━
+  No active sprint.
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
-$ git checkout -b feat/user-search
-[stackpilot] 分支切换 — 正在运行 Coordinator...
-[stackpilot] 派发 sp-architect 处理 TASK-001...
-[stackpilot] 派发 sp-dev 处理 TASK-002...
+你想构建什么功能？
 
-  ✓ TASK-001 完成 — 架构评审在 .stackpilot/tasks/arch-review/
-  ✓ TASK-002 完成 — 实现已提交
-  ! TASK-003 需要审批 → 查看 .stackpilot/tasks/NEEDS_REVIEW.md
+> 增加用户搜索，支持模糊匹配
+
+Phase 1: 探索代码库...
+Phase 2: 设计方案就绪 — 确认？(Y/n)
+Phase 3: 写入 spec → .stackpilot/specs/2026-04-05-user-search-design.md ✓
+Phase 4: 写入 plan → .stackpilot/plans/2026-04-05-user-search-plan.md ✓
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+  Stackpilot Sprint Status
+━━━━━━━━━━━━━━━━━━━━━━━━━
+⏳ TASK-001  设计搜索 API schema          pending
+⏳ TASK-002  实现 /users/search 接口       pending
+⏳ TASK-003  编写集成测试                  pending
+⏳ TASK-004  更新 API 文档                 pending
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+计划就绪，开始编码？(Y/n)
+
+  🔄 TASK-001 → sp-architect 评审中...  ✅ 完成
+  🔄 TASK-002 → sp-dev 实现中...        ✅ 完成
+  🔄 TASK-003 → sp-qa 写测试中...       ✅ 完成
+  🔄 TASK-004 → sp-docs 更新文档中...   ✅ 完成
+
+Sprint 完成，所有测试通过。
 ```
+
+使用 `/stackpilot:auto` 可跳过所有确认环节，全自动运行。
 
 真实 spec 示例见 [examples/specs/](examples/specs/)。
 
