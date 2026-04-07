@@ -70,7 +70,14 @@ echo "--- scripts/ ---"
 check "scripts/init.sh"            "$WORKTREE_DIR/scripts/init.sh"
 check "scripts/restore.sh"         "$WORKTREE_DIR/scripts/restore.sh"
 check "scripts/dispatch.sh"        "$WORKTREE_DIR/scripts/dispatch.sh"
+check "scripts/release.sh"         "$WORKTREE_DIR/scripts/release.sh"
 check "scripts/lib/config.sh"      "$WORKTREE_DIR/scripts/lib/config.sh"
+echo ""
+
+# 6. workflows/
+echo "--- .github/workflows/ ---"
+check ".github/workflows/ci.yml"       "$WORKTREE_DIR/.github/workflows/ci.yml"
+check ".github/workflows/release.yml"  "$WORKTREE_DIR/.github/workflows/release.yml"
 echo ""
 
 # 6. tests/ — 2 existing test files (not counting this one)

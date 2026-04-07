@@ -22,5 +22,8 @@ jobs:
       - name: Run hook tests
         run: bash tests/test-hooks.sh
 
+      - name: Run release tests
+        run: bash tests/test-release.sh
+
       - name: Run e2e tests
         run: bash tests/test-e2e.sh

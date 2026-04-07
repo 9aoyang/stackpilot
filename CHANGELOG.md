@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-07
+
+### Added
+- Automated GitHub Release workflow triggered by `v*` tags
+- Release helper script for validating tag and `VERSION` consistency
+
+### Changed
+- CI now runs release automation tests
+
 ## [0.2.0] - 2026-04-05
 
 ### Changed

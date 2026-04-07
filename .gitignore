@@ -15,3 +15,6 @@ Thumbs.db
 .stackpilot/tasks/
 .stackpilot/path
 *.log
+
+# Local design/spec drafts
+docs/superpowers/
