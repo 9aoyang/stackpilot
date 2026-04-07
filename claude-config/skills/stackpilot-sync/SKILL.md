@@ -1,6 +1,6 @@
 ---
-name: skill-refs
-description: Manage external skill references for stackpilot. Use /skill-refs add to extract and track a new skill, /skill-refs check to detect updates in previously referenced skills.
+name: stackpilot:sync
+description: Manage external skill references inlined into stackpilot agents. Use /stackpilot:sync add to extract and track a new skill, /stackpilot:sync check to detect updates in previously referenced skills.
 ---
 
 # Skill Refs
@@ -8,12 +8,12 @@ description: Manage external skill references for stackpilot. Use /skill-refs ad
 Internal skill for tracking and syncing external skills that have been referenced and inlined into stackpilot agents or SKILL.md.
 
 Triggered explicitly via slash commands:
-- `/skill-refs add` — Mode A: add and extract a new skill
-- `/skill-refs check` — Mode B: check for updates in all tracked skills
+- `/stackpilot:sync add` — Mode A: add and extract a new skill
+- `/stackpilot:sync check` — Mode B: check for updates in all tracked skills
 
 ---
 
-## Mode A: Add (`/skill-refs add`)
+## Mode A: Add (`/stackpilot:sync add`)
 
 **Step 1: Identify the source**
 
@@ -45,7 +45,7 @@ Decide which stackpilot file is the best home for this protocol:
 
 **Step 5: Update tracking table**
 
-Append a row to `docs/skill-refs.md` (create the file if it doesn't exist):
+Append a row to `docs/sync.md` (create the file if it doesn't exist):
 
 ```markdown
 | Skill | Inline Target | Core Contribution | Status | Last Checked |
@@ -60,15 +60,15 @@ Output:
 - Estimated scope of change (which sections in the target file, roughly how many lines)
 - Ask: "Should I inline this now, or just track it for later?"
 
-If user says yes → make the change to the target file, update `docs/skill-refs.md` status to `inlined`.
+If user says yes → make the change to the target file, update `docs/sync.md` status to `inlined`.
 
 ---
 
-## Mode B: Check (`/skill-refs check`)
+## Mode B: Check (`/stackpilot:sync check`)
 
 **Step 1: Read tracking table**
 
-Read `docs/skill-refs.md`. Find all rows where status is not `removed`.
+Read `docs/sync.md`. Find all rows where status is not `removed`.
 
 **Step 2: Re-read each skill**
 
@@ -95,11 +95,11 @@ For each skill:
 For each skill flagged with `⚠️`, ask the user:
 > "Do you want to sync these changes into `<inline-target>`?"
 
-If yes → update the target file with the new logic, update the "Core Contribution" summary and "Last Checked" date in `docs/skill-refs.md`.
+If yes → update the target file with the new logic, update the "Core Contribution" summary and "Last Checked" date in `docs/sync.md`.
 
 ---
 
-## Tracking File Format (`docs/skill-refs.md`)
+## Tracking File Format (`docs/sync.md`)
 
 ```markdown
 # Skill References

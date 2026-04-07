@@ -118,6 +118,7 @@ Do NOT start any implementation until a plan is written and committed.
    - Do all steps map to concrete spec requirements?
    - Any placeholders or vague steps? → fix inline
    - Are types consistent? (dev / qa / docs)
+   - **Type consistency**: do the types, method signatures, and property names used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 2 but `clearFullLayers()` in Task 3 is a bug — fix it inline
 4. **Create feature branch** → commit plan → run Coordinator
 
 #### Standard Feature (multi-module, ambiguous requirements, architectural decisions)
@@ -126,24 +127,77 @@ Do NOT start any implementation until a plan is written and committed.
 
 1. Explore current project state: read `CLAUDE.md`, relevant source files, recent commits
 2. Assess scope: if the request spans multiple independent subsystems, flag it immediately and help the user decompose before proceeding
-3. Ask all clarifying questions in **one single message** (not one at a time):
-   - What is the goal?
-   - What are the constraints?
-   - What does success look like?
-   - Does it involve UI? (PC / mobile / primary interaction path)
+3. **Ask clarifying questions one at a time** — each message only问一个问题，深入理解后再问下一个:
+   - Prefer multiple choice questions when possible (easier to answer)
+   - Focus on: purpose, constraints, success criteria, target platform (PC / mobile)
+   - If a topic needs more exploration, break it into multiple questions
+   - Continue until you have a clear picture of what to build
+
+**Phase 1.5: Offer Visual Companion** (if upcoming design involves visual content)
+
+When the feature involves UI, layout, or any visual design decisions, offer the browser-based visual companion as **its own separate message** (do not combine with other content):
+
+> "接下来的设计讨论可能涉及视觉内容。我可以在浏览器里展示 mockup、布局对比、架构图等可视化方案，帮你更直观地做决策。这个功能还比较新，会消耗较多 token。要试试吗？（需要打开一个本地 URL）"
+
+- If user accepts → start the visual companion server, then use it **per-question** during Phase 2
+- If user declines → proceed with text-only design in terminal
+- **Per-question decision**: even after user accepts, decide FOR EACH question whether to use browser or terminal. The test: **would the user understand this better by seeing it than reading it?**
+  - **Use browser**: UI mockups, wireframes, layout comparisons, architecture diagrams, side-by-side visual designs
+  - **Use terminal**: requirements, conceptual choices, tradeoff lists, scope decisions, technical decisions
+
+**Visual Companion Server Setup** (only when user accepts):
+
+```bash
+# Start server with persistence
+~/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh --project-dir $(pwd)
+
+# Returns JSON: {"port":52341,"url":"http://localhost:52341","screen_dir":"...","state_dir":"..."}
+# Save screen_dir and state_dir for the session
+```
+
+**Visual Companion Loop** (for each visual question):
+
+1. Write HTML content fragment to a new file in `screen_dir` (semantic name like `layout.html`, never reuse names)
+2. Tell user what's on screen, remind them of the URL, ask for feedback
+3. On next turn, read `$STATE_DIR/events` for browser click data (JSON lines), merge with terminal text
+4. Iterate (e.g. `layout-v2.html`) or advance to next question
+5. When returning to terminal questions, push a waiting screen to clear stale content
+
+**HTML Content Fragments** — write content only, server auto-wraps in frame template:
+
+```html
+<!-- Available CSS classes: .options, .cards, .mockup, .split, .pros-cons -->
+<!-- Mock elements: .mock-nav, .mock-sidebar, .mock-content, .mock-button, .mock-input -->
+<h2>Which layout works better?</h2>
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Single Column</h3><p>Clean, focused reading</p></div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Two Column</h3><p>Sidebar + main content</p></div>
+  </div>
+</div>
+```
 
 **Phase 2: Design**
 
-4. Propose the recommended approach (with 1–2 alternatives briefly noted) including:
+4. Propose 2–3 approaches with trade-offs and your recommendation, including:
    - Architecture overview
    - Components and data flow
    - Error handling strategy
    - Testing approach
-5. Send this as **one message** and **wait for user reply**. Revise once if user requests changes, then proceed. <!-- CONFIRM-GATE: design review -->
+5. **Present design in sections scaled to complexity** — get user approval after each section. Use visual companion for sections that benefit from visual treatment. <!-- CONFIRM-GATE: design review -->
+6. When visual companion was used, stop the server after design is finalized:
+   ```bash
+   ~/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/stop-server.sh $SESSION_DIR
+   ```
 
 **Phase 3: Spec + Auto-Verify Loop**
 
 6. Write spec → `.stackpilot/specs/YYYY-MM-DD-<topic>-design.md`
+   - **Design for isolation**: break the system into smaller units with one clear purpose each, communicating through well-defined interfaces. Each unit should be understandable and testable independently. If a file grows large, it's doing too much — split by responsibility.
 7. **Run mechanical verification** (up to 3 self-fix rounds before escalating):
 
    ```bash
@@ -192,6 +246,9 @@ Do NOT start any implementation until a plan is written and committed.
     grep -cE "relevant_files:|depends_on:|complexity:" .stackpilot/plans/*.md
     # must equal (task_count * 3)
     ```
+
+    **Check 4 — type consistency** (manual scan, not bash):
+    Verify that types, method signatures, and property names used in later tasks match definitions in earlier tasks. A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug — fix inline.
 
     **If all checks pass** → auto-proceed.
     **If checks fail after 3 rounds** → escalate with specific failures only.

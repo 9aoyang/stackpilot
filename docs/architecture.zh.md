@@ -28,10 +28,16 @@ stackpilot/                        ← 框架安装目录
 │   │   ├── sp-dev.md
 │   │   ├── sp-qa.md
 │   │   └── sp-docs.md
-│   └── skills/stackpilot/
-│       ├── SKILL.md               ← 用户入口（slash command）
-│       ├── skill-refs.md          ← 跟踪/同步外部 skill 引用
-│       └── coordinator.md         ← coordinator 意图摘要
+│   └── skills/
+│       ├── stackpilot/
+│       │   ├── SKILL.md           ← /stackpilot 主入口
+│       │   └── coordinator.md     ← coordinator 意图摘要（支持文件）
+│       ├── stackpilot-auto/
+│       │   └── SKILL.md           ← /stackpilot:auto 全自动模式
+│       ├── stackpilot-compete/
+│       │   └── SKILL.md           ← /stackpilot:compete 竞品差距分析
+│       └── stackpilot-sync/
+│           └── SKILL.md           ← /stackpilot:sync 外部 skill 同步
 ├── scripts/
 │   ├── init.sh                    ← 项目初始化
 │   ├── dispatch.sh                ← 与 AI provider 无关的 Agent 启动器
@@ -194,11 +200,13 @@ coordinator:
 
 ## Skill 入口
 
-| Slash Command | 文件 | 用途 |
+| Slash Command | 目录 | 用途 |
 |--------------|------|------|
-| `/stackpilot` | `SKILL.md` | 主入口：状态面板 + 功能流程 + coordinator 运行 |
-| `/skill-refs add` | `skill-refs.md` | 新增并提炼一个外部 skill |
-| `/skill-refs check` | `skill-refs.md` | 检查已跟踪 skill 是否有更新 |
+| `/stackpilot` | `stackpilot/` | 主入口：状态面板 + 功能流程 + coordinator 运行 |
+| `/stackpilot:auto` | `stackpilot-auto/` | 全自动模式：跳过所有确认，代码停在 feature branch |
+| `/stackpilot:compete` | `stackpilot-compete/` | 以竞品重度用户视角做差距分析 |
+| `/stackpilot:sync add` | `stackpilot-sync/` | 新增并提炼一个外部 skill |
+| `/stackpilot:sync check` | `stackpilot-sync/` | 检查已跟踪 skill 是否有更新 |
 
 ---
 
@@ -228,7 +236,8 @@ coordinator:
 
 | 日期 | 变更 |
 |------|------|
-| 2026-04-04 | 集成 autoresearch 核心模式：sp-dev 增加 git 即记忆 + 原子变更 + 卡住检测；sp-qa 增加 12 维场景测试矩阵；sp-architect 增加 HIGH 风险多角色对抗分析；SKILL.md 新增 Optimize Sprint 模式；新增 docs/skill-refs.md |
+| 2026-04-07 | Standard Feature：澄清问题改为逐个深入（不再一次性批量提问）；新增 Phase 1.5 Visual Companion（来自 superpowers brainstorming 的浏览器 mockup/图表服务器）；compete skill 升级为 12 维度迭代探索循环 + 5 角色辩论共识机制（含 Devil's Advocate 少数意见保留） |
+| 2026-04-04 | 集成 autoresearch 核心模式：sp-dev 增加 git 即记忆 + 原子变更 + 卡住检测；sp-qa 增加 12 维场景测试矩阵；sp-architect 增加 HIGH 风险多角色对抗分析；SKILL.md 新增 Optimize Sprint 模式；新增 docs/sync.md |
 | 2026-04-04 | 所有 Agent 重命名为 `sp-*` 前缀；运行时状态迁移到 `.stackpilot/`；移除所有外部 skill 依赖；内联 brainstorming、writing-plans、finishing、code-architect、code-explorer、code-reviewer 协议 |
 | 2026-04-01 | 新增复杂度路由（light/standard）、sp-dev verify/fix 循环、coordinator soft-blocked 重试机制 |
 | 2026-03-29 | 初始实现：coordinator + pm + architect + dev + qa + docs Agent |

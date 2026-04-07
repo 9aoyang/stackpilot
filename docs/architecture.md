@@ -28,10 +28,16 @@ stackpilot/                        ← framework installation
 │   │   ├── sp-dev.md
 │   │   ├── sp-qa.md
 │   │   └── sp-docs.md
-│   └── skills/stackpilot/
-│       ├── SKILL.md               ← user-facing entry point (slash command)
-│       ├── skill-refs.md          ← track/sync referenced external skills
-│       └── coordinator.md         ← coordinator intent summary
+│   └── skills/
+│       ├── stackpilot/
+│       │   ├── SKILL.md           ← /stackpilot main entry point
+│       │   └── coordinator.md     ← coordinator intent summary (support file)
+│       ├── stackpilot-auto/
+│       │   └── SKILL.md           ← /stackpilot:auto full-auto mode
+│       ├── stackpilot-compete/
+│       │   └── SKILL.md           ← /stackpilot:compete competitive gap analysis
+│       └── stackpilot-sync/
+│           └── SKILL.md           ← /stackpilot:sync external skill tracking
 ├── scripts/
 │   ├── init.sh                    ← project setup
 │   ├── dispatch.sh                ← provider-agnostic agent launcher
@@ -216,11 +222,13 @@ coordinator:
 
 ## Skill Entry Points
 
-| Slash Command | File | Purpose |
-|--------------|------|---------|
-| `/stackpilot` | `SKILL.md` | Main entry: status panel + feature flow + coordinator run |
-| `/skill-refs add` | `skill-refs.md` | Add a new external skill to track/inline |
-| `/skill-refs check` | `skill-refs.md` | Check tracked skills for updates |
+| Slash Command | Directory | Purpose |
+|--------------|-----------|---------|
+| `/stackpilot` | `stackpilot/` | Main entry: status panel + feature flow + coordinator run |
+| `/stackpilot:auto` | `stackpilot-auto/` | Full-auto mode: skip all confirmations, end on feature branch |
+| `/stackpilot:compete` | `stackpilot-compete/` | Competitive gap analysis from power-user persona |
+| `/stackpilot:sync add` | `stackpilot-sync/` | Add a new external skill to track/inline |
+| `/stackpilot:sync check` | `stackpilot-sync/` | Check tracked skills for updates |
 
 ---
 
@@ -250,7 +258,8 @@ coordinator:
 
 | Date | Change |
 |------|--------|
-| 2026-04-04 | Integrated autoresearch patterns: git-as-memory in sp-dev, atomic change + stuck detection in verify/fix loop, 12-dimension scenario testing in sp-qa, multi-persona adversarial review in sp-architect (HIGH risk), Optimize Sprint mode in SKILL.md; added docs/skill-refs.md |
+| 2026-04-07 | Standard Feature: clarifying questions changed to one-at-a-time deep exploration (from batch); added Phase 1.5 Visual Companion (browser-based mockup/diagram server from superpowers brainstorming); compete skill upgraded with 12-dimension iterative exploration loop + 5-persona debate with consensus scoring and Devil's Advocate dissent |
+| 2026-04-04 | Integrated autoresearch patterns: git-as-memory in sp-dev, atomic change + stuck detection in verify/fix loop, 12-dimension scenario testing in sp-qa, multi-persona adversarial review in sp-architect (HIGH risk), Optimize Sprint mode in SKILL.md; added docs/sync.md |
 | 2026-04-04 | Renamed all agents to `sp-*` prefix; moved runtime state to `.stackpilot/`; removed all external skill dependencies; inlined brainstorming, writing-plans, finishing, code-architect, code-explorer, code-reviewer protocols |
 | 2026-04-01 | Added complexity routing (light/standard), verify/fix loop in sp-dev, soft-blocked retry in coordinator |
 | 2026-03-29 | Initial implementation: coordinator + pm + architect + dev + qa + docs agents |

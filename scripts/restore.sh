@@ -82,19 +82,25 @@ else
   done
 fi
 
-# --- 2. Install skills to ~/.claude/skills/stackpilot/ ---
+# --- 2. Install skills to ~/.claude/skills/ ---
 echo ""
 echo "Skills (Claude Code only):"
 if $DRY_RUN; then
-  echo "[dry-run] rm -rf $CLAUDE_DIR/skills/stackpilot/"
-  echo "[dry-run] cp skills from $CONFIG_DIR/skills/stackpilot/"
+  echo "[dry-run] rm -rf stackpilot* skills from $CLAUDE_DIR/skills/"
+  echo "[dry-run] cp skills from $CONFIG_DIR/skills/"
 else
-  rm -rf "$CLAUDE_DIR/skills/stackpilot"
-  mkdir -p "$CLAUDE_DIR/skills/stackpilot"
-  for f in "$CONFIG_DIR/skills/stackpilot/"*.md; do
-    [ -f "$f" ] || continue
-    cp "$f" "$CLAUDE_DIR/skills/stackpilot/$(basename "$f")"
-    echo "  ✓ $(basename "$f")"
+  # Remove old stackpilot skills (flat and sub-skill directories)
+  rm -rf "$CLAUDE_DIR/skills/stackpilot" "$CLAUDE_DIR/skills/stackpilot-"*
+  # Install each skill directory
+  for skill_dir in "$CONFIG_DIR/skills/"*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name="$(basename "$skill_dir")"
+    mkdir -p "$CLAUDE_DIR/skills/$skill_name"
+    for f in "$skill_dir"*.md; do
+      [ -f "$f" ] || continue
+      cp "$f" "$CLAUDE_DIR/skills/$skill_name/$(basename "$f")"
+    done
+    echo "  ✓ $skill_name"
   done
 fi
 
