@@ -150,11 +150,11 @@ When the feature involves UI, layout, or any visual design decisions, offer the 
 **Visual Companion Server Setup** (only when user accepts):
 
 ```bash
-# Start server with persistence
-~/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh --project-dir $(pwd)
+# Start preview server (HTML goes to /tmp, auto-cleaned when server stops)
+bash ~/Documents/github/stackpilot/scripts/preview/start-server.sh
 
-# Returns JSON: {"port":52341,"url":"http://localhost:52341","screen_dir":"...","state_dir":"..."}
-# Save screen_dir and state_dir for the session
+# Returns JSON: {"port":52341,"url":"http://localhost:52341","screen_dir":"/tmp/brainstorm-.../content","state_dir":"/tmp/brainstorm-.../state"}
+# Save screen_dir, state_dir, and the full session_dir from the response
 ```
 
 **Visual Companion Loop** (for each visual question):
@@ -193,7 +193,7 @@ When the feature involves UI, layout, or any visual design decisions, offer the 
 5. **Present design in sections scaled to complexity** — get user approval after each section. Use visual companion for sections that benefit from visual treatment. <!-- CONFIRM-GATE: design review -->
 6. When visual companion was used, stop the server after design is finalized:
    ```bash
-   ~/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/stop-server.sh $SESSION_DIR
+   bash ~/Documents/github/stackpilot/scripts/preview/stop-server.sh $SESSION_DIR
    ```
 
 **Phase 3: Spec + Auto-Verify Loop**
