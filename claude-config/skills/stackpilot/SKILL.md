@@ -321,6 +321,22 @@ Execute sp-coordinator's Entry Checklist directly in the current session (no bra
 5. **Dispatch pending tasks** by `complexity` field:
    - `light`: sp-dev → sp-qa (skip sp-architect and sp-docs)
    - `standard`: sp-architect → sp-dev → sp-qa → sp-docs
+
+   **Progress reporting during coding** — after each task completes (dev + QA pair), print a one-line status update. Do NOT wait for user reply — just keep going.
+
+   ```
+   ✅ TASK-001  add user model          dev done → QA passed     (1/5)
+   ✅ TASK-002  add auth middleware      dev done → QA passed     (2/5)
+   ❌ TASK-003  payment integration      dev soft-blocked         (3/5)
+   ```
+
+   **Pause rules** — stop and ask the user ONLY when:
+   - A task is `soft-blocked` after 3 attempts (needs human decision)
+   - QA review found a critical issue (security or spec mismatch flagged in NEEDS_REVIEW.md)
+   - A task would introduce a new external dependency
+
+   For everything else (QA minor fixes, retry within 3 attempts, docs updates) — handle silently and report the one-liner.
+
 6. **If no pending / in-progress / soft-blocked** → Sprint complete:
 
 **Sprint Finish:**

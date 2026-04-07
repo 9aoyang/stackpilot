@@ -21,5 +21,9 @@ Follow the exact same workflow as the main stackpilot skill (SKILL.md), with the
 
 ## Summary
 
-`/stackpilot` = interactive, confirms at each gate
-`/stackpilot:auto` = full auto, no stops, ends with code on feature branch ready for user review
+```
+/stackpilot      = exploration + design 跟你对齐，coding 自动跑（出问题才暂停），finish 等你决策
+/stackpilot:auto = 全自动，设计也不问，coding 不问，结束留在 feature branch
+```
+
+The key difference is that `/stackpilot` pauses during exploration and design phases to align with you, while `/stackpilot:auto` skips those too. Both modes run coding autonomously with progress reporting.
