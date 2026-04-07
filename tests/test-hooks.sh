@@ -33,7 +33,7 @@ EOF
 
 # ─── Test 1: post-checkout with $3=0 (file checkout) exits 0 silently ───────
 T1_DIR=$(make_fake_repo)
-mkdir -p "$T1_DIR/tasks"
+mkdir -p "$T1_DIR/.stackpilot/tasks"
 export FAKE_ROOT="$T1_DIR"
 OUTPUT=$(PATH="$T1_DIR/bin:$PATH" bash "$HOOKS_DIR/post-checkout.sh" "old-sha" "new-sha" "0" 2>&1)
 STATUS=$?
@@ -70,16 +70,16 @@ else
 fi
 rm -rf "$T3_DIR"
 
-# ─── Test 4: post-checkout with tasks/ but no .stackpilot-path warns and exits ─
+# ─── Test 4: post-checkout with .stackpilot/ but no path file warns and exits ─
 T4_DIR=$(make_fake_repo)
-mkdir -p "$T4_DIR/tasks"
+mkdir -p "$T4_DIR/.stackpilot"
 export FAKE_ROOT="$T4_DIR"
 OUTPUT=$(PATH="$T4_DIR/bin:$PATH" bash "$HOOKS_DIR/post-checkout.sh" "old-sha" "new-sha" "1" 2>&1)
 STATUS=$?
 if [ $STATUS -eq 0 ] && echo "$OUTPUT" | grep -q "stackpilot not found"; then
-  pass "post-checkout: missing .stackpilot-path warns and exits 0"
+  pass "post-checkout: missing .stackpilot/path warns and exits 0"
 else
-  fail "post-checkout: missing .stackpilot-path — exit=$STATUS output='$OUTPUT'"
+  fail "post-checkout: missing .stackpilot/path — exit=$STATUS output='$OUTPUT'"
 fi
 rm -rf "$T4_DIR"
 
