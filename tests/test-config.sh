@@ -128,6 +128,52 @@ VAL=$(get_frontmatter_field "$TMPDIR_TEST/agent.md" "tools")
 VAL=$(get_frontmatter_field "$TMPDIR_TEST/agent.md" "missing" 2>/dev/null)
 [ -z "$VAL" ] && pass "get_frontmatter_field missing field" || fail "get_frontmatter_field missing got '$VAL'"
 
+# ── Three-level nested key tests ─────────────────────────────────────────────
+
+cat > "$TMPDIR_TEST/config-models.yml" <<'EOF'
+provider:
+  name: claude
+
+models:
+  claude:
+    default: sonnet
+    sp-pm: haiku
+    sp-architect: opus
+    sp-docs: haiku
+  codex:
+    default: o4-mini
+    sp-architect: o3
+  gemini:
+    default: gemini-2.5-flash
+    sp-architect: gemini-2.5-pro
+EOF
+
+VAL=$(config_get "models.claude.sp-pm" "$TMPDIR_TEST/config-models.yml")
+[ "$VAL" = "haiku" ] && pass "3-level: models.claude.sp-pm = haiku" || fail "3-level: models.claude.sp-pm got '$VAL'"
+
+VAL=$(config_get "models.claude.default" "$TMPDIR_TEST/config-models.yml")
+[ "$VAL" = "sonnet" ] && pass "3-level: models.claude.default = sonnet" || fail "3-level: models.claude.default got '$VAL'"
+
+VAL=$(config_get "models.claude.sp-architect" "$TMPDIR_TEST/config-models.yml")
+[ "$VAL" = "opus" ] && pass "3-level: models.claude.sp-architect = opus" || fail "3-level: models.claude.sp-architect got '$VAL'"
+
+VAL=$(config_get "models.codex.default" "$TMPDIR_TEST/config-models.yml")
+[ "$VAL" = "o4-mini" ] && pass "3-level: models.codex.default = o4-mini" || fail "3-level: models.codex.default got '$VAL'"
+
+VAL=$(config_get "models.codex.sp-architect" "$TMPDIR_TEST/config-models.yml")
+[ "$VAL" = "o3" ] && pass "3-level: models.codex.sp-architect = o3" || fail "3-level: models.codex.sp-architect got '$VAL'"
+
+VAL=$(config_get "models.gemini.sp-architect" "$TMPDIR_TEST/config-models.yml")
+[ "$VAL" = "gemini-2.5-pro" ] && pass "3-level: models.gemini.sp-architect = gemini-2.5-pro" || fail "3-level: models.gemini.sp-architect got '$VAL'"
+
+# Missing 3-level key returns empty
+VAL=$(config_get "models.claude.sp-nonexistent" "$TMPDIR_TEST/config-models.yml")
+[ -z "$VAL" ] && pass "3-level: missing key returns empty" || fail "3-level: missing key got '$VAL'"
+
+# 2-level still works alongside 3-level
+VAL=$(config_get "provider.name" "$TMPDIR_TEST/config-models.yml")
+[ "$VAL" = "claude" ] && pass "2-level still works with 3-level config" || fail "2-level got '$VAL'"
+
 # ── Summary ──────────────────────────────────────────────────────────────────
 echo ""
 echo "Results: $PASS passed, $FAIL failed"

@@ -38,40 +38,69 @@ locked_write() {
 }
 
 # config_get <key> <config_file>
-# Read a value from a simple YAML file. Supports dotted keys for one level of nesting.
-# Example: config_get "provider.name" stackpilot.config.yml → "claude"
+# Read a value from a simple YAML file. Supports dotted keys up to 3 levels deep.
+# Examples:
+#   config_get "provider.name" config.yml              → "claude"
+#   config_get "models.claude.sp-dev" config.yml       → "sonnet"
+#   config_get "models.claude.default" config.yml      → "sonnet"
 config_get() {
   local key="$1" file="$2"
   [ -f "$file" ] || return 1
 
-  local parent child
-  if [[ "$key" == *.* ]]; then
-    parent="${key%%.*}"
-    child="${key#*.}"
+  # Split key into segments
+  local depth=0 seg1="" seg2="" seg3=""
+  IFS='.' read -r seg1 seg2 seg3 <<< "$key"
+
+  if [ -n "$seg3" ]; then
+    depth=3
+  elif [ -n "$seg2" ]; then
+    depth=2
   else
-    parent=""
-    child="$key"
+    depth=1
   fi
 
-  if [ -z "$parent" ]; then
-    # Top-level key: match "key: value" not indented, strip inline comments
-    sed -n "s/^${child}:[[:space:]]*//p" "$file" | head -1 | sed 's/[[:space:]]*#.*$//'
-  else
-    # Nested key: find parent block, then match indented child
-    awk -v parent="$parent" -v child="$child" '
-      BEGIN { in_block = 0 }
-      /^[^ #]/ {
-        if ($0 ~ "^" parent ":") { in_block = 1; next }
-        else { in_block = 0 }
-      }
-      in_block && $0 ~ "^[[:space:]]+" child ":" {
-        sub(/^[[:space:]]*[^:]+:[[:space:]]*/, "")
-        sub(/[[:space:]]*#.*$/, "")
-        print
-        exit
-      }
-    ' "$file"
-  fi
+  case "$depth" in
+    1)
+      # Top-level key: match "key: value" not indented
+      sed -n "s/^${seg1}:[[:space:]]*//p" "$file" | head -1 | sed 's/[[:space:]]*#.*$//'
+      ;;
+    2)
+      # Two-level: parent.child (e.g., provider.name)
+      awk -v parent="$seg1" -v child="$seg2" '
+        BEGIN { in_block = 0 }
+        /^[^ #]/ {
+          if ($0 ~ "^" parent ":") { in_block = 1; next }
+          else { in_block = 0 }
+        }
+        in_block && $0 ~ "^[[:space:]]+" child ":" {
+          sub(/^[[:space:]]*[^:]+:[[:space:]]*/, "")
+          sub(/[[:space:]]*#.*$/, "")
+          print
+          exit
+        }
+      ' "$file"
+      ;;
+    3)
+      # Three-level: grandparent.parent.child (e.g., models.claude.sp-dev)
+      awk -v gp="$seg1" -v parent="$seg2" -v child="$seg3" '
+        BEGIN { in_gp = 0; in_parent = 0 }
+        /^[^ #]/ {
+          if ($0 ~ "^" gp ":") { in_gp = 1; in_parent = 0; next }
+          else { in_gp = 0; in_parent = 0 }
+        }
+        in_gp && /^  [^ #]/ {
+          if ($0 ~ "^  " parent ":") { in_parent = 1; next }
+          else { in_parent = 0 }
+        }
+        in_gp && in_parent && $0 ~ "^    " child ":" {
+          sub(/^[[:space:]]*[^:]+:[[:space:]]*/, "")
+          sub(/[[:space:]]*#.*$/, "")
+          print
+          exit
+        }
+      ' "$file"
+      ;;
+  esac
 }
 
 # config_get_or <key> <default> <config_file>

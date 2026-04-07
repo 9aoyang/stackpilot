@@ -86,7 +86,26 @@ ${PROMPT}"
 
 # ── Build provider-specific command ──────────────────────────────────────────
 
+# resolve_model <provider> <agent> <config_file>
+# Lookup order: models.<provider>.<agent> → models.<provider>.default → provider.model
+resolve_model() {
+  local prov="$1" agent="$2" cfg="$3"
+  local model=""
+  # 1. Per-provider per-agent: models.claude.sp-dev
+  model="$(config_get_or "models.${prov}.${agent}" "" "$cfg")"
+  # 2. Per-provider default: models.claude.default
+  if [ -z "$model" ]; then
+    model="$(config_get_or "models.${prov}.default" "" "$cfg")"
+  fi
+  # 3. Global fallback: provider.model
+  if [ -z "$model" ]; then
+    model="$(config_get_or "provider.model" "" "$cfg")"
+  fi
+  echo "$model"
+}
+
 build_cmd() {
+  local model
   case "$PROVIDER" in
     claude)
       CMD=(claude -p "$FULL_PROMPT")
@@ -97,12 +116,7 @@ build_cmd() {
           CMD+=(--allowedTools "$tool")
         done
       fi
-      # Model: per-agent override > global override > default
-      local model
-      model="$(config_get_or "models.${AGENT}" "" "${CONFIG_FILE:-/dev/null}")"
-      if [ -z "$model" ]; then
-        model="$(config_get_or "provider.model" "" "${CONFIG_FILE:-/dev/null}")"
-      fi
+      model="$(resolve_model "$PROVIDER" "$AGENT" "${CONFIG_FILE:-/dev/null}")"
       if [ -n "$model" ]; then
         CMD+=(--model "$model")
       fi
@@ -111,22 +125,14 @@ build_cmd() {
       local approval
       approval="$(config_get_or "provider.codex.approval_mode" "full-auto" "${CONFIG_FILE:-/dev/null}")"
       CMD=(codex --quiet "--approval-mode" "$approval" "$FULL_PROMPT")
-      local model
-      model="$(config_get_or "models.${AGENT}" "" "${CONFIG_FILE:-/dev/null}")"
-      if [ -z "$model" ]; then
-        model="$(config_get_or "provider.model" "" "${CONFIG_FILE:-/dev/null}")"
-      fi
+      model="$(resolve_model "$PROVIDER" "$AGENT" "${CONFIG_FILE:-/dev/null}")"
       if [ -n "$model" ]; then
         CMD+=(--model "$model")
       fi
       ;;
     gemini)
       CMD=(gemini -p "$FULL_PROMPT")
-      local model
-      model="$(config_get_or "models.${AGENT}" "" "${CONFIG_FILE:-/dev/null}")"
-      if [ -z "$model" ]; then
-        model="$(config_get_or "provider.model" "" "${CONFIG_FILE:-/dev/null}")"
-      fi
+      model="$(resolve_model "$PROVIDER" "$AGENT" "${CONFIG_FILE:-/dev/null}")"
       if [ -n "$model" ]; then
         CMD+=(--model "$model")
       fi

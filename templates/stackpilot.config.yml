@@ -20,14 +20,20 @@ coordinator:
   worktree_limit: 3         # Max parallel agent dispatches
   timeout_hours: 2          # Hours before in-progress task is marked failed
 
-# Per-agent model routing
-# Use cheaper models for simple agents, capable models for complex ones.
-# Agent-specific model takes priority over provider.model.
-# Works with all providers: claude, codex, gemini.
+# Per-agent model routing — grouped by provider
+# Lookup: models.<provider>.<agent> → models.<provider>.default → provider.model
+# You can configure multiple providers simultaneously.
 models:
-  sp-pm: haiku              # PM: fast decomposition, cheap
-  sp-dev: sonnet            # Dev: balanced cost/quality
-  sp-qa: sonnet             # QA: needs to understand code
-  sp-architect: opus        # Architect: complex reasoning
-  sp-docs: haiku            # Docs: mechanical updates
-  sp-coordinator: sonnet    # Coordinator: orchestration logic
+  claude:
+    default: sonnet                  # fallback for any claude agent
+    sp-pm: haiku                     # PM: fast decomposition, cheap
+    sp-dev: sonnet                   # Dev: balanced cost/quality
+    sp-qa: sonnet                    # QA: needs to understand code
+    sp-architect: opus               # Architect: complex reasoning
+    sp-docs: haiku                   # Docs: mechanical updates
+  codex:
+    default: o4-mini                 # fallback for any codex agent
+    sp-architect: o3                 # Architect: complex reasoning
+  gemini:
+    default: gemini-2.5-flash        # fallback for any gemini agent
+    sp-architect: gemini-2.5-pro     # Architect: complex reasoning

@@ -155,14 +155,20 @@ coordinator:
   worktree_limit: 3
   timeout_hours: 2
 
-# Per-agent model routing (works with all providers: claude, codex, gemini)
+# Per-agent model routing — grouped by provider
+# Lookup: models.<provider>.<agent> → models.<provider>.default → provider.model
 models:
-  sp-pm: haiku
-  sp-dev: sonnet
-  sp-qa: sonnet
-  sp-architect: opus
-  sp-docs: haiku
-  sp-coordinator: sonnet
+  claude:
+    default: sonnet
+    sp-pm: haiku
+    sp-architect: opus
+    sp-docs: haiku
+  codex:
+    default: o4-mini
+    sp-architect: o3
+  gemini:
+    default: gemini-2.5-flash
+    sp-architect: gemini-2.5-pro
 CFGEOF
 
   echo "[stackpilot] Created stackpilot.config.yml (auto-detected: provider=${DETECTED_PROVIDER}, test_command=${DETECTED_TEST_CMD})"

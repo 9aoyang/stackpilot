@@ -103,11 +103,18 @@ coordinator:
   worktree_limit: 3        # max parallel agents
   timeout_hours: 2
 
-# Per-agent model routing (optimize cost vs quality)
-# models:
-#   sp-pm: haiku           # fast, cheap decomposition
-#   sp-dev: sonnet          # balanced implementation
-#   sp-architect: opus      # complex architectural reasoning
+# Per-agent model routing — grouped by provider
+# Use multiple providers on the same project simultaneously
+models:
+  claude:
+    default: sonnet
+    sp-pm: haiku
+    sp-architect: opus
+  codex:
+    default: o4-mini
+    sp-architect: o3
+  gemini:
+    default: gemini-2.5-flash
 ```
 
 Auto-detection supports: Node.js, Python, Go, Rust, Ruby, Java/Kotlin (Maven & Gradle), Elixir, PHP, and .NET.
@@ -236,11 +243,17 @@ coordinator:
   worktree_limit: 3        # 最大并行 agent 数
   timeout_hours: 2
 
-# 按 Agent 分配模型（优化成本 vs 质量）
-# models:
-#   sp-pm: haiku           # 快速分解，低成本
-#   sp-dev: sonnet          # 均衡实现
-#   sp-architect: opus      # 复杂架构推理
+# 按 Provider 分组的 Agent 模型路由 — 同一项目可同时用多个 Provider
+models:
+  claude:
+    default: sonnet
+    sp-pm: haiku
+    sp-architect: opus
+  codex:
+    default: o4-mini
+    sp-architect: o3
+  gemini:
+    default: gemini-2.5-flash
 ```
 
 自动探测支持：Node.js、Python、Go、Rust、Ruby、Java/Kotlin（Maven & Gradle）、Elixir、PHP、.NET。
