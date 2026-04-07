@@ -8,14 +8,8 @@
 
 Autonomous AI development team. Write a spec, get production-ready code — with tests, docs, and code review. Works with Claude Code, Codex, Gemini CLI, or any LLM CLI.
 
-```mermaid
-graph LR
-    S[📄 Spec] --> PM[sp-pm]
-    PM --> AR[sp-architect]
-    AR --> DV[sp-dev]
-    DV --> QA[sp-qa]
-    QA --> DC[sp-docs]
-    DC --> D[✅ Delivery]
+```
+ Spec → sp-pm → sp-architect → sp-dev → sp-qa → sp-docs → Delivery
 ```
 
 ## Why Stackpilot
@@ -136,14 +130,8 @@ See [docs/architecture.md](docs/architecture.md) for the full system design, age
 
 自治 AI 开发团队。写设计文档，交付生产级代码 — 含测试、文档和代码审查。支持 Claude Code、Codex、Gemini CLI 或任意 LLM CLI。
 
-```mermaid
-graph LR
-    S[📄 设计文档] --> PM[sp-pm]
-    PM --> AR[sp-architect]
-    AR --> DV[sp-dev]
-    DV --> QA[sp-qa]
-    QA --> DC[sp-docs]
-    DC --> D[✅ 交付]
+```
+ 设计文档 → sp-pm → sp-architect → sp-dev → sp-qa → sp-docs → 交付
 ```
 
 ## 为什么选 Stackpilot
