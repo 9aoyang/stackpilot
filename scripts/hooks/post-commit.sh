@@ -31,6 +31,10 @@ if [ -z "$STACKPILOT_DIR" ] || [ ! -f "$STACKPILOT_DIR/scripts/dispatch.sh" ]; t
   exit 0
 fi
 
+# Auto-upgrade if stackpilot has been updated
+source "$STACKPILOT_DIR/scripts/lib/version.sh"
+stackpilot_check_version "$ROOT" "$STACKPILOT_DIR"
+
 echo "[stackpilot] Running PM Agent to decompose tasks..."
 "$STACKPILOT_DIR/scripts/dispatch.sh" \
   --agent sp-pm \

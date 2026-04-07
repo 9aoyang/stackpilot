@@ -66,21 +66,37 @@ install_plugin() {
 echo "[stackpilot] Restoring configuration..."
 $DRY_RUN && echo "[stackpilot] DRY RUN — no files will be written"
 
-# --- 1. Copy agents to ~/.claude/agents/ (Claude Code integration) ---
+# --- 1. Install agents to ~/.claude/agents/ ---
 echo ""
 echo "Agents (Claude Code integration — also usable via dispatch.sh for any provider):"
-for f in "$CONFIG_DIR/agents/"*.md; do
-  [ -f "$f" ] || continue
-  copy "$f" "$CLAUDE_DIR/agents/$(basename "$f")"
-done
+if $DRY_RUN; then
+  echo "[dry-run] rm sp-*.md from $CLAUDE_DIR/agents/"
+  echo "[dry-run] cp agents from $CONFIG_DIR/agents/"
+else
+  rm -f "$CLAUDE_DIR/agents/sp-"*.md
+  mkdir -p "$CLAUDE_DIR/agents"
+  for f in "$CONFIG_DIR/agents/"*.md; do
+    [ -f "$f" ] || continue
+    cp "$f" "$CLAUDE_DIR/agents/$(basename "$f")"
+    echo "  ✓ $(basename "$f")"
+  done
+fi
 
-# --- 2. Copy skills to ~/.claude/skills/ (Claude Code only) ---
+# --- 2. Install skills to ~/.claude/skills/stackpilot/ ---
 echo ""
 echo "Skills (Claude Code only):"
-for f in "$CONFIG_DIR/skills/stackpilot/"*.md; do
-  [ -f "$f" ] || continue
-  copy "$f" "$CLAUDE_DIR/skills/stackpilot/$(basename "$f")"
-done
+if $DRY_RUN; then
+  echo "[dry-run] rm -rf $CLAUDE_DIR/skills/stackpilot/"
+  echo "[dry-run] cp skills from $CONFIG_DIR/skills/stackpilot/"
+else
+  rm -rf "$CLAUDE_DIR/skills/stackpilot"
+  mkdir -p "$CLAUDE_DIR/skills/stackpilot"
+  for f in "$CONFIG_DIR/skills/stackpilot/"*.md; do
+    [ -f "$f" ] || continue
+    cp "$f" "$CLAUDE_DIR/skills/stackpilot/$(basename "$f")"
+    echo "  ✓ $(basename "$f")"
+  done
+fi
 
 # --- 3. Install dependencies (Claude Code-specific) ---
 if ! $SKIP_DEPS; then

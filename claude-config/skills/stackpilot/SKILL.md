@@ -139,7 +139,7 @@ Do NOT start any implementation until a plan is written and committed.
    - Components and data flow
    - Error handling strategy
    - Testing approach
-5. Send this as **one message** and wait for a single reply. Revise once if user requests changes, then proceed.
+5. Send this as **one message** and **wait for user reply**. Revise once if user requests changes, then proceed. <!-- CONFIRM-GATE: design review -->
 
 **Phase 3: Spec + Auto-Verify Loop**
 
@@ -247,12 +247,75 @@ Execute sp-coordinator's Entry Checklist directly in the current session (no bra
 1. **Process `.stackpilot/tasks/NEEDS_REVIEW.md`**: has `REPLY:` → unblock; has content but no `REPLY:` → tell user, stop
 2. **Process soft-blocked tasks**: `attempt_count < 3` → re-schedule; `≥ 3` → escalate to blocked
 3. **Check timed-out tasks** → mark failed
-4. **Dispatch pending tasks** by `complexity` field:
+4. **Pre-coding confirmation** — Before dispatching any dev/qa agents, show the task list and ask:
+
+> "Plan is ready. Proceed with coding in this session?"
+>
+> A. Yes, start coding (continue in current session)
+> B. I'll handle it elsewhere (stop here, tasks stay pending for another tool to pick up)
+
+   - **A** → continue to step 5
+   - **B** → stop. Do NOT dispatch agents. Tasks remain `pending` in backlog.yml for the user to execute with other tools.
+
+   **Skip this gate when running via `/stackpilot:auto` or triggered by git hook / background dispatch.** <!-- CONFIRM-GATE: pre-coding -->
+
+5. **Dispatch pending tasks** by `complexity` field:
    - `light`: sp-dev → sp-qa (skip sp-architect and sp-docs)
    - `standard`: sp-architect → sp-dev → sp-qa → sp-docs
-5. **If no pending / in-progress / soft-blocked** → Sprint complete:
+6. **If no pending / in-progress / soft-blocked** → Sprint complete:
 
-**Sprint Cleanup:**
+**Sprint Finish:**
+
+After all tasks are done, run the test command from `stackpilot.config.yml` to confirm all tests pass, then **start the dev server for user preview before cleanup or merge**.
+
+**Step 1 — Detect dev server command** (auto-detect from project files, no config needed):
+
+Only detect when there is a clear web server signal. CLI tools, daemons, and batch programs should NOT be started.
+
+```
+Check in order, use the first match:
+1. package.json exists → read scripts:
+   a. Has "dev" script AND dependencies include vite/next/nuxt/webpack/remix/astro/svelte → npm run dev
+   b. Has "dev" script with no web framework signal → skip (could be non-web tooling)
+   c. No "dev" script → skip
+2. manage.py exists + contains "django" → python manage.py runserver
+3. Gemfile exists + config/routes.rb exists → bundle exec rails server
+4. No match → skip preview, go directly to Step 3
+```
+
+Do NOT blindly run `cargo run`, `go run .`, `python app.py`, or `npm start` — these are too ambiguous.
+
+**Step 2 — Start server and present preview URL**:
+
+1. Start the detected command in the background, capture its PID: `<command> & echo $!`
+2. Wait for output containing `http://localhost:` or similar URL (timeout 15s)
+3. If no URL detected within timeout, kill the process and skip preview
+4. Present to user:
+
+> "Sprint complete. All tests passing. Dev server running at:"
+>
+> `http://localhost:XXXX`  (PID: XXXX)
+>
+> "Please review the changes in your browser, then tell me how to proceed."
+
+**Wait for user to finish reviewing before continuing.**
+
+**Step 3 — After user confirms review is done**, present options:
+
+> A. Merge into base branch
+> B. Push and create a PR
+> C. Leave as-is (handle later)
+> D. Discard all changes (destructive — confirm first)
+
+**Step 4 — Execute user's choice, THEN cleanup:**
+
+- **A**: Determine base branch (ask if unclear: main / master / dev), then `git merge`
+- **B**: `git push -u origin <branch>` then create PR with title and summary describing all completed tasks
+- **C**: Do nothing, return sprint status
+- **D**: Confirm once with user, then `git checkout <base-branch> && git branch -D <feature-branch>`
+
+**Step 5 — Sprint Cleanup** (only after user's choice is executed, NOT before):
+
 ```bash
 rm -f .stackpilot/tasks/done/*.md
 rm -f .stackpilot/tasks/arch-review/*.md
@@ -261,19 +324,4 @@ printf "" > .stackpilot/tasks/NEEDS_REVIEW.md
 printf "tasks: []\n" > .stackpilot/tasks/in-progress.yml
 ```
 
-**Sprint Finish:**
-
-After cleanup, run the test command from `stackpilot.config.yml` to confirm all tests pass, then ask the user:
-
-> "Sprint complete. All tests passing. What would you like to do with the changes?"
-> 
-> A. Merge into base branch (local operation)
-> B. Push and create a PR (auto-generate PR description)
-> C. Leave as-is (handle later)
-> D. Discard all changes (destructive — confirm before proceeding)
-
-Execute the user's choice:
-- **A**: Determine base branch (ask if unclear: main / master / dev), then `git merge`
-- **B**: `git push -u origin <branch>` then create PR with title and summary describing all completed tasks
-- **C**: Do nothing, return sprint status
-- **D**: Confirm once with user, then `git checkout <base-branch> && git branch -D <feature-branch>`
+Stop the dev server if it was started: `kill <PID> 2>/dev/null`

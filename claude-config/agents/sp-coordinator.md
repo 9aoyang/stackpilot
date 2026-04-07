@@ -100,16 +100,9 @@ Read `.stackpilot/tasks/backlog.yml`:
 
 If `.stackpilot/tasks/backlog.yml` has zero tasks with `status` of `pending`, `in-progress`, or `soft-blocked`:
 
-**Sprint Cleanup:**
-```bash
-rm -f .stackpilot/tasks/done/*.md
-rm -f .stackpilot/tasks/arch-review/*.md
-printf "tasks: []\n" > .stackpilot/tasks/backlog.yml
-printf "" > .stackpilot/tasks/NEEDS_REVIEW.md
-printf "tasks: []\n" > .stackpilot/tasks/in-progress.yml
-```
+Report: "Sprint complete. All tasks delivered."
 
-Report: "Sprint complete. All tasks delivered. Runtime files cleaned up."
+Note: Sprint cleanup and the user-facing sprint finish flow (dev server preview + merge options) are handled by the stackpilot skill AFTER user review. The coordinator does NOT run cleanup — task records must remain available until the user has reviewed and chosen how to proceed.
 
 ## Notification
 

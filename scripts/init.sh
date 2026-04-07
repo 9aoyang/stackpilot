@@ -62,6 +62,12 @@ fi
 echo "$STACKPILOT_DIR" > "$PROJECT_ROOT/.stackpilot/path"
 echo "[stackpilot] Created .stackpilot/path → $STACKPILOT_DIR"
 
+# 5b. Write version stamp for auto-upgrade
+if [ -f "$STACKPILOT_DIR/VERSION" ]; then
+  cp "$STACKPILOT_DIR/VERSION" "$PROJECT_ROOT/.stackpilot/version"
+  echo "[stackpilot] Wrote version: $(cat "$STACKPILOT_DIR/VERSION" | tr -d '\n')"
+fi
+
 # 6. Install git hooks
 HOOKS_DIR="$PROJECT_ROOT/.git/hooks"
 mkdir -p "$HOOKS_DIR"
@@ -104,6 +110,7 @@ if ! grep -q '\.stackpilot/tasks' "$GITIGNORE" 2>/dev/null; then
 # Stackpilot runtime state (auto-generated)
 .stackpilot/tasks/
 .stackpilot/path
+.stackpilot/version
 EOF
   echo "[stackpilot] Updated .gitignore (runtime state excluded; specs/ and plans/ are tracked)"
 fi
