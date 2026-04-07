@@ -42,7 +42,7 @@ Legend: ✅ done  🔄 in-progress  ⏳ pending  ❌ failed  ❓ blocked
 bash ~/Documents/github/stackpilot/scripts/init.sh
 ```
 
-Prompt user to edit `stackpilot.config.yml` and set `qa.test_command`, then return to Step 1.
+Config is auto-detected during init. If `qa.test_command` looks wrong for this project, ask the user if they want to adjust it — otherwise proceed to Step 1.
 
 ---
 

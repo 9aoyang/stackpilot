@@ -52,10 +52,111 @@ if [ ! -f "$PROJECT_ROOT/.stackpilot/tasks/in-progress.yml" ]; then
   echo "[stackpilot] Created .stackpilot/tasks/in-progress.yml"
 fi
 
-# 4. Create stackpilot.config.yml if missing
+# 4. Create stackpilot.config.yml if missing — auto-detect project stack
 if [ ! -f "$PROJECT_ROOT/stackpilot.config.yml" ]; then
-  cp "$STACKPILOT_DIR/templates/stackpilot.config.yml" "$PROJECT_ROOT/stackpilot.config.yml"
-  echo "[stackpilot] Created stackpilot.config.yml (edit qa.test_command for your stack)"
+  # Auto-detect test command from project files
+  detect_test_command() {
+    local dir="$1"
+    # Node.js / JS / TS — check package.json for test script
+    if [ -f "$dir/package.json" ]; then
+      # Check if there's a test script defined
+      if grep -q '"test"' "$dir/package.json" 2>/dev/null; then
+        echo "npm test"
+      else
+        echo "npx vitest run"
+      fi
+      return
+    fi
+    # Python
+    if [ -f "$dir/pyproject.toml" ] || [ -f "$dir/setup.py" ] || [ -f "$dir/setup.cfg" ]; then
+      if [ -f "$dir/pyproject.toml" ] && grep -q 'pytest' "$dir/pyproject.toml" 2>/dev/null; then
+        echo "pytest"
+      elif [ -d "$dir/tests" ] || [ -d "$dir/test" ]; then
+        echo "pytest"
+      else
+        echo "python -m pytest"
+      fi
+      return
+    fi
+    if [ -f "$dir/requirements.txt" ] || [ -f "$dir/Pipfile" ]; then
+      echo "pytest"; return
+    fi
+    # Go
+    if [ -f "$dir/go.mod" ]; then
+      echo "go test ./..."; return
+    fi
+    # Rust
+    if [ -f "$dir/Cargo.toml" ]; then
+      echo "cargo test"; return
+    fi
+    # Ruby
+    if [ -f "$dir/Gemfile" ]; then
+      if grep -q 'rspec' "$dir/Gemfile" 2>/dev/null; then
+        echo "bundle exec rspec"
+      else
+        echo "bundle exec rake test"
+      fi
+      return
+    fi
+    # Java / Kotlin (Maven)
+    if [ -f "$dir/pom.xml" ]; then
+      echo "mvn test"; return
+    fi
+    # Java / Kotlin (Gradle)
+    if [ -f "$dir/build.gradle" ] || [ -f "$dir/build.gradle.kts" ]; then
+      echo "./gradlew test"; return
+    fi
+    # Elixir
+    if [ -f "$dir/mix.exs" ]; then
+      echo "mix test"; return
+    fi
+    # PHP
+    if [ -f "$dir/composer.json" ]; then
+      echo "./vendor/bin/phpunit"; return
+    fi
+    # .NET
+    if ls "$dir"/*.csproj >/dev/null 2>&1 || ls "$dir"/*.sln >/dev/null 2>&1; then
+      echo "dotnet test"; return
+    fi
+    # Fallback
+    echo "npm test"
+  }
+
+  # Auto-detect provider from available CLI tools
+  detect_provider() {
+    if command -v claude >/dev/null 2>&1; then
+      echo "claude"
+    elif command -v codex >/dev/null 2>&1; then
+      echo "codex"
+    elif command -v gemini >/dev/null 2>&1; then
+      echo "gemini"
+    else
+      echo "claude"
+    fi
+  }
+
+  DETECTED_TEST_CMD="$(detect_test_command "$PROJECT_ROOT")"
+  DETECTED_PROVIDER="$(detect_provider)"
+
+  cat > "$PROJECT_ROOT/stackpilot.config.yml" << CFGEOF
+# Stackpilot project configuration (auto-generated)
+# Auto-detected from project files — edit to customize
+
+provider:
+  name: ${DETECTED_PROVIDER}             # claude | codex | gemini | custom
+  # model: ~               # Override model (optional)
+  # command: ~             # Required when name=custom
+
+qa:
+  coverage_threshold: 80
+  test_command: ${DETECTED_TEST_CMD}
+
+coordinator:
+  worktree_limit: 3
+  timeout_hours: 2
+CFGEOF
+
+  echo "[stackpilot] Created stackpilot.config.yml (auto-detected: provider=${DETECTED_PROVIDER}, test_command=${DETECTED_TEST_CMD})"
 fi
 
 # 5. Write .stackpilot/path so hooks can locate dispatch.sh
@@ -153,7 +254,7 @@ echo ""
 echo "[stackpilot] ✓ Initialization complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Edit stackpilot.config.yml (set qa.test_command for your stack)"
+echo "  1. Review stackpilot.config.yml (auto-configured — customize if needed)"
 echo "  2. Create a design spec:  .stackpilot/specs/YYYY-MM-DD-feature-name.md"
 echo "  3. Commit the spec → sp-pm auto-decomposes tasks"
 echo "  4. Switch branches → Coordinator auto-starts Sprint"

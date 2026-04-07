@@ -83,23 +83,27 @@ Installs Stackpilot and all dependencies. Requires git and at least one AI CLI (
 | `/stackpilot:sync` | Manage external skill references inlined into agents. `add` to extract a new skill, `check` to detect updates. |
 | `/stackpilot:compete` | Competitive gap analysis — assume persona of a competing product's power user and identify what would make them switch. |
 
-**Other providers:** Run `bash ~/.stackpilot/scripts/init.sh` in your project, then set the provider in `stackpilot.config.yml`.
+**Other providers:** Run `bash ~/.stackpilot/scripts/init.sh` in your project — the provider and test command are auto-detected.
 
 ## Config
 
+`stackpilot.config.yml` is **auto-generated** by `init.sh` — it detects your project's language, test framework, and available AI CLI. You only need to edit it if the defaults are wrong.
+
 ```yaml
-# stackpilot.config.yml
+# stackpilot.config.yml (auto-generated example for a Node.js project)
 provider:
-  name: claude             # claude | codex | gemini | custom
+  name: claude             # auto-detected: claude | codex | gemini | custom
   # model: ~               # Override model (optional)
   # command: ~             # Required when name=custom
 
 qa:
   coverage_threshold: 80
-  test_command: npm test    # pytest / go test ./... / cargo test
+  test_command: npm test    # auto-detected from project files
 coordinator:
   timeout_hours: 2
 ```
+
+Auto-detection supports: Node.js, Python, Go, Rust, Ruby, Java/Kotlin (Maven & Gradle), Elixir, PHP, and .NET.
 
 ### Supported Providers
 
@@ -205,23 +209,27 @@ curl -fsSL https://raw.githubusercontent.com/9aoyang/stackpilot/main/install.sh 
 | `/stackpilot:sync` | 管理外部技能引用。`add` 提取新技能，`check` 检测已引用技能的更新。 |
 | `/stackpilot:compete` | 竞品差距分析 — 以竞品重度用户视角，找出让用户转向的关键因素。 |
 
-**其他 Provider:** 在项目中运行 `bash ~/.stackpilot/scripts/init.sh`，然后在 `stackpilot.config.yml` 中设置 provider。
+**其他 Provider:** 在项目中运行 `bash ~/.stackpilot/scripts/init.sh`，provider 和测试命令会自动探测。
 
 ## 配置
 
+`stackpilot.config.yml` 由 `init.sh` **自动生成** — 会探测项目语言、测试框架和可用的 AI CLI。只有默认值不对时才需要手动修改。
+
 ```yaml
-# stackpilot.config.yml
+# stackpilot.config.yml（自动生成示例，Node.js 项目）
 provider:
-  name: claude             # claude | codex | gemini | custom
+  name: claude             # 自动探测：claude | codex | gemini | custom
   # model: ~               # 覆盖模型（可选）
   # command: ~             # name=custom 时必填
 
 qa:
   coverage_threshold: 80
-  test_command: npm test    # pytest / go test ./... / cargo test
+  test_command: npm test    # 根据项目文件自动探测
 coordinator:
   timeout_hours: 2
 ```
+
+自动探测支持：Node.js、Python、Go、Rust、Ruby、Java/Kotlin（Maven & Gradle）、Elixir、PHP、.NET。
 
 ### 支持的 Provider
 
