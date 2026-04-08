@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-04-08
+
+### Added
+- New portable skill: `systematic-debugging` — 4-phase root cause investigation
+- TDD rationalization blockers in `tdd-development` (7 common excuses countered)
+
+### Changed
+- Updated all docs for v1.0 completeness (README, architecture, sync, CONTRIBUTING)
+
 ## [1.0.0] - 2026-04-08
 
 ### Changed — Architecture Rewrite

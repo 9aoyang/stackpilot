@@ -4,7 +4,7 @@ description: Structured 4-phase debugging methodology with root cause investigat
 license: Apache-2.0
 metadata:
   author: stackpilot
-  version: "1.0"
+  version: "1.0.1"
 ---
 
 # Systematic Debugging

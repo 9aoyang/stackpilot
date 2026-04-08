@@ -4,7 +4,7 @@ description: Enforces Test-Driven Development with a rigorous verify/fix loop an
 license: Apache-2.0
 metadata:
   author: stackpilot
-  version: "1.0"
+  version: "1.0.1"
 ---
 
 # TDD Development
