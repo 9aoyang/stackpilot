@@ -183,4 +183,6 @@ Agent(description="QA: TASK-NNN", prompt="<qa-12-dimensions skill instructions> 
 
 ### Sprint Complete
 
-Read [references/sprint-finish.md](references/sprint-finish.md) and follow the Sprint Finish flow.
+**YOU MUST complete the Sprint Finish flow before ending the conversation. Do NOT stop after printing a summary.**
+
+Read [references/sprint-finish.md](references/sprint-finish.md) and follow every step. You MUST present the A/B/C/D branch options and wait for user input.
