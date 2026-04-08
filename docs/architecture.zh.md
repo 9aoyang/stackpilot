@@ -35,8 +35,10 @@ stackpilot/                        ← 框架安装目录
 │       │   └── SKILL.md           ← /stackpilot-resume 中断恢复
 │       ├── stackpilot-compete/
 │       │   └── SKILL.md           ← /stackpilot-compete 竞品差距分析
-│       └── stackpilot-sync/
-│           └── SKILL.md           ← /stackpilot-sync 外部 skill 同步
+│       ├── stackpilot-sync/
+│       │   └── SKILL.md           ← /stackpilot-sync 外部 skill 同步
+│       └── systematic-debugging/
+│           └── SKILL.md           ← /systematic-debugging（便携式）
 ├── scripts/
 │   ├── init.sh                    ← 项目初始化（精简：目录 + 测试命令检测）
 │   ├── lib/
@@ -184,9 +186,10 @@ qa:
 | `/stackpilot-resume` | 恢复中断的 Sprint（从 plan + git log 重建状态） |
 | `/stackpilot-compete` | 以竞品重度用户视角做差距分析 |
 | `/stackpilot-sync` | 外部 skill 追踪和同步 |
-| `/tdd-development` | **便携式** — TDD + verify/fix + 根因调查 |
+| `/tdd-development` | **便携式** — TDD + verify/fix + 合理化阻断 |
 | `/qa-12-dimensions` | **便携式** — 12 维测试覆盖 + 代码审查 |
 | `/architecture-review` | **便携式** — 代码库模式分析 + 实现蓝图 |
+| `/systematic-debugging` | **便携式** — 4 阶段根因调查 + 红旗检测 |
 
 ---
 
@@ -198,9 +201,10 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | Skill | 功能 | 便携？ |
 |-------|------|--------|
-| `tdd-development` | TDD 循环 + verify/fix + 根因调查 | 是 |
+| `tdd-development` | TDD 循环 + verify/fix + 合理化阻断 | 是 |
 | `qa-12-dimensions` | 两阶段代码审查 + 12 维测试覆盖 | 是 |
 | `architecture-review` | 模式分析 + 唯一架构决策 + 蓝图 | 是 |
+| `systematic-debugging` | 4 阶段根因调查 + 红旗检测 | 是 |
 
 **编排 Skills** — Claude Code 专用：
 

@@ -1,7 +1,7 @@
 # Todo App — Feature Spec
 
-> This is a sample Stackpilot spec. Drop a file like this into `.stackpilot/specs/` and commit it.
-> sp-pm will decompose it into tasks automatically.
+> This is a sample Stackpilot spec. Drop a file like this into `.stackpilot/specs/` and run `/stackpilot`.
+> The sprint orchestrator will decompose it into tasks and execute them automatically.
 
 ## Overview
 

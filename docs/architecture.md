@@ -35,8 +35,10 @@ stackpilot/                        ← framework installation
 │       │   └── SKILL.md           ← /stackpilot-resume interrupted sprint recovery
 │       ├── stackpilot-compete/
 │       │   └── SKILL.md           ← /stackpilot-compete competitive gap analysis
-│       └── stackpilot-sync/
-│           └── SKILL.md           ← /stackpilot-sync external skill tracking
+│       ├── stackpilot-sync/
+│       │   └── SKILL.md           ← /stackpilot-sync external skill tracking
+│       └── systematic-debugging/
+│           └── SKILL.md           ← /systematic-debugging (portable)
 ├── scripts/
 │   ├── init.sh                    ← project setup (minimal: dirs + test command detection)
 │   ├── lib/
@@ -184,9 +186,10 @@ Model routing is handled by Claude Code natively (agent frontmatter `model:` fie
 | `/stackpilot-resume` | Resume interrupted sprint from plan + git log |
 | `/stackpilot-compete` | Competitive gap analysis from power-user persona |
 | `/stackpilot-sync` | External skill tracking and sync |
-| `/tdd-development` | **Portable** — TDD + verify/fix + root cause investigation |
+| `/tdd-development` | **Portable** — TDD + verify/fix + rationalization blockers |
 | `/qa-12-dimensions` | **Portable** — 12-dimension test coverage + code review |
 | `/architecture-review` | **Portable** — Codebase pattern analysis + blueprint |
+| `/systematic-debugging` | **Portable** — 4-phase root cause investigation + red flags |
 
 ---
 
@@ -198,9 +201,10 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Skill | What it does | Portable? |
 |-------|-------------|-----------|
-| `tdd-development` | TDD cycle + verify/fix loop + root cause investigation | Yes |
+| `tdd-development` | TDD cycle + verify/fix loop + rationalization blockers | Yes |
 | `qa-12-dimensions` | Two-stage code review + 12-dimension test coverage | Yes |
 | `architecture-review` | Pattern analysis + decisive architecture choice + blueprint | Yes |
+| `systematic-debugging` | 4-phase root cause investigation + red flag detection | Yes |
 
 **Orchestration skills** — Claude Code-specific (use native Agent tool, TaskCreate):
 

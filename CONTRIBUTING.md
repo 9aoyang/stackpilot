@@ -64,7 +64,15 @@ When changing agent behavior, update the corresponding test in `tests/` and docu
 
 ### Adding New Skills
 
-Skills live in `claude-config/skills/`. Each skill gets its own directory (e.g., `stackpilot-auto/SKILL.md`). Use `name: stackpilot:<subcommand>` in frontmatter to register under the `stackpilot:` namespace. Support files (non-slash-command) stay in the main `stackpilot/` directory.
+Skills live in `claude-config/skills/`. Each skill gets its own directory with a `SKILL.md` file.
+
+Two types of skills:
+- **Orchestration skills** (Claude Code-specific): prefix with `stackpilot-` (e.g., `stackpilot-auto/SKILL.md`)
+- **Portable methodology skills** (Agent Skills standard): use descriptive names without prefix (e.g., `tdd-development/SKILL.md`)
+
+All `name` fields in frontmatter must follow the [Agent Skills spec](https://agentskills.io/specification): lowercase letters, numbers, and hyphens only. Must match the directory name.
+
+Portable skills should include `license: Apache-2.0` and `metadata` fields. Keep SKILL.md under 500 lines; use `references/` for detailed content.
 
 ## Code Review
 
