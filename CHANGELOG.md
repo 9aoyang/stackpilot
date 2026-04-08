@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-04-08
+
+### Changed — Architecture Rewrite
+- **Agent dispatch**: replaced `dispatch.sh` (272 lines bash) with Claude Code native Agent tool — Fork pattern cache sharing, automatic worktree isolation
+- **Task tracking**: replaced `backlog.yml` + `in-progress.yml` with Claude Code native `TaskCreate`/`TaskUpdate`
+- **Inter-agent communication**: replaced file exchange (`arch-review/`, `done/`) with prompt-level passing
+- **Coordinator**: inlined into SKILL.md "Run Sprint" section (was separate `sp-coordinator` agent)
+- **Task decomposition**: inlined into skill Phase 4 (was separate `sp-pm` agent)
+- **Config**: simplified from 40-line multi-provider to 5-line qa-only (`stackpilot.config.yml`)
+- **SKILL.md**: restructured with progressive disclosure — 482→186 lines, heavy content moved to `references/`
+- **All skill names**: migrated from colon syntax (`stackpilot:auto`) to hyphen syntax (`stackpilot-auto`) for Agent Skills spec compliance
+
+### Added
+- **Portable methodology skills** (Agent Skills standard, work in Cursor/Copilot/Gemini CLI/Codex/25+ products):
+  - `tdd-development` — TDD cycle + verify/fix loop + 4-phase root cause investigation
+  - `qa-12-dimensions` — two-stage code review + 12-dimension scenario test coverage
+  - `architecture-review` — codebase pattern analysis → decisive choice → implementation blueprint
+- **`/stackpilot-resume`** skill — recover interrupted sprints from plan + git log
+- **Claude Plugin manifest** (`.claude-plugin/plugin.json`) — installable via marketplace
+- **Progressive disclosure references**: `references/visual-companion.md`, `references/optimize-sprint.md`, `references/sprint-finish.md`
+
+### Removed
+- `scripts/dispatch.sh` — replaced by Claude Code native Agent tool
+- `scripts/hooks/pre-commit.sh`, `post-commit.sh`, `post-checkout.sh` — validation and triggers inlined into skill
+- `claude-config/agents/sp-pm.md` — task decomposition inlined into skill
+- `claude-config/agents/sp-coordinator.md` — orchestration inlined into skill
+- `templates/backlog.yml`, `templates/in-progress.yml` — replaced by TaskCreate
+- Cross-provider support (Codex/Gemini/custom) — now Claude Code-only
+- Provider detection, model routing matrix, worktree management, file locking from init.sh
+
 ## [0.3.0] - 2026-04-07
 
 ### Added
