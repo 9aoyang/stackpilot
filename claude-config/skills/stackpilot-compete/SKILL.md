@@ -1,5 +1,5 @@
 ---
-name: stackpilot:compete
+name: stackpilot-compete
 description: Competitive gap analysis from the perspective of a heavy user of a competing product. Identifies what would make users switch and never go back. Use when asked to analyze competitive positioning, find product gaps, or generate improvement specs.
 ---
 
@@ -45,7 +45,7 @@ for d in claude-config/skills/stackpilot*/; do for f in "$d"*.md; do echo "=== $
 cat stackpilot.config.yml 2>/dev/null || cat templates/stackpilot.config.yml 2>/dev/null
 
 # Scripts and hooks
-for f in scripts/hooks/*.sh scripts/dispatch.sh scripts/init.sh; do echo "=== $f ==="; cat "$f" 2>/dev/null; done
+for f in scripts/init.sh scripts/lib/config.sh; do echo "=== $f ==="; cat "$f" 2>/dev/null; done
 
 # State layer
 cat .stackpilot/tasks/backlog.yml 2>/dev/null
@@ -203,7 +203,7 @@ Append analysis metadata to `.stackpilot/compete-log.md` (create if not exists):
 - Specs generated: [list or "none"]
 ```
 
-This enables periodic re-runs: `/stackpilot:compete` → see what's changed since last analysis.
+This enables periodic re-runs: `/stackpilot-compete` → see what's changed since last analysis.
 
 ---
 

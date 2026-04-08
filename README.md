@@ -3,23 +3,35 @@
 [![CI](https://github.com/9aoyang/stackpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/9aoyang/stackpilot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/9aoyang/stackpilot)](https://github.com/9aoyang/stackpilot/releases)
+[![Agent Skills](https://img.shields.io/badge/Agent_Skills-compatible-blue)](https://agentskills.io)
 
 **English** | [中文](#中文文档)
 
-Autonomous AI development team. Write a spec, get production-ready code — with tests, docs, and code review. Works with Claude Code, Codex, Gemini CLI, or any LLM CLI.
+Sprint orchestration for Claude Code. Write a spec, get production-ready code — with TDD, code review, and 12-dimension test coverage.
 
 ```
- Spec → sp-pm → sp-architect → sp-dev → sp-qa → sp-docs → Delivery
+ Feature request → Design → Spec → Plan → sp-architect → sp-dev → sp-qa → Delivery
 ```
 
-## Why Stackpilot
+## Two Layers
 
-Without Stackpilot, shipping a feature with AI means:
-- Manually prompt the model → copy output → create tasks by hand
-- Run each step yourself → check results → re-prompt for fixes
-- Context is lost between sessions; no one tracks what's done
+**Portable methodology skills** — work in any [Agent Skills](https://agentskills.io)-compatible product (Cursor, VS Code Copilot, Gemini CLI, Codex, JetBrains Junie, and 25+ more):
 
-With Stackpilot, just type `/stackpilot` in Claude Code and describe what you want:
+| Skill | What it does |
+|-------|-------------|
+| `/tdd-development` | TDD cycle (RED-GREEN-REFACTOR) + verify/fix loop + 4-phase root cause investigation |
+| `/qa-12-dimensions` | Two-stage code review + 12-dimension scenario test coverage |
+| `/architecture-review` | Codebase pattern analysis → decisive architecture choice → implementation blueprint |
+
+**Sprint orchestration** — Claude Code native (uses Agent tool, TaskCreate, worktree isolation):
+
+| Skill | What it does |
+|-------|-------------|
+| `/stackpilot` | Full sprint: design discussion → spec → plan → autonomous coding → QA → ship |
+| `/stackpilot-auto` | Same flow, skip all confirmations, end on feature branch |
+| `/stackpilot-resume` | Recover interrupted sprint from plan + git log |
+| `/stackpilot-compete` | Competitive gap analysis from power-user persona |
+| `/stackpilot-sync` | Track and sync external skills inlined into agents |
 
 ## Demo
 
@@ -41,28 +53,17 @@ Phase 2: Design proposal ready — approve? (Y/n)
 Phase 3: Writing spec → .stackpilot/specs/2026-04-05-user-search-design.md ✓
 Phase 4: Writing plan → .stackpilot/plans/2026-04-05-user-search-plan.md ✓
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-  Stackpilot Sprint Status
-━━━━━━━━━━━━━━━━━━━━━━━━━
-⏳ TASK-001  Design search API schema          pending
-⏳ TASK-002  Implement /users/search endpoint  pending
-⏳ TASK-003  Write integration tests           pending
-⏳ TASK-004  Update API docs                   pending
-━━━━━━━━━━━━━━━━━━━━━━━━━
-
 Plan is ready. Proceed with coding? (Y/n)
 
-  🔄 TASK-001 → sp-architect reviewing...  ✅ done
-  🔄 TASK-002 → sp-dev implementing...     ✅ done
-  🔄 TASK-003 → sp-qa writing tests...     ✅ done
-  🔄 TASK-004 → sp-docs updating...        ✅ done
+  ✅ TASK-001  design search API       arch → dev → QA passed   (1/3)
+  ✅ TASK-002  implement endpoint      dev → QA passed           (2/3)
+  ✅ TASK-003  integration tests       dev → QA passed           (3/3)
 
 Sprint complete. All tests passing.
+Dev server running at: http://localhost:3000
+
+A. Merge into main  B. Push and create PR  C. Leave as-is  D. Discard
 ```
-
-Use `/stackpilot:auto` to skip all confirmations and run fully unattended.
-
-See [examples/specs/](examples/specs/) for real spec examples.
 
 ## Install
 
@@ -70,67 +71,37 @@ See [examples/specs/](examples/specs/) for real spec examples.
 curl -fsSL https://raw.githubusercontent.com/9aoyang/stackpilot/main/install.sh | bash
 ```
 
-Installs Stackpilot and all dependencies. Requires git and at least one AI CLI (Claude Code, Codex, Gemini CLI, or a custom tool).
+Or manually:
 
-## Usage
+```bash
+git clone https://github.com/9aoyang/stackpilot.git ~/Documents/github/stackpilot
+bash ~/Documents/github/stackpilot/scripts/restore.sh
+```
 
-**Claude Code:**
-
-| Command | Description |
-|---------|-------------|
-| `/stackpilot` | Main entry point — init, brainstorming, planning, and delivery. Shows sprint status, guides next action. |
-| `/stackpilot:auto` | Full-auto mode — same workflow but skips all confirmations. Ends with code on feature branch ready for review. |
-| `/stackpilot:sync` | Manage external skill references inlined into agents. `add` to extract a new skill, `check` to detect updates. |
-| `/stackpilot:compete` | Competitive gap analysis — assume persona of a competing product's power user and identify what would make them switch. |
-
-**Other providers:** Run `bash ~/.stackpilot/scripts/init.sh` in your project — the provider and test command are auto-detected.
+Requires git and [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
 ## Config
 
-`stackpilot.config.yml` is **auto-generated** by `init.sh` — it detects your project's language, test framework, and available AI CLI. You only need to edit it if the defaults are wrong.
+`stackpilot.config.yml` is **auto-generated** when you first run `/stackpilot`. It detects your test framework automatically.
 
 ```yaml
-# stackpilot.config.yml (auto-generated example for a Node.js project)
-provider:
-  name: claude             # auto-detected: claude | codex | gemini | custom
-  # model: ~               # Override model (optional)
-  # command: ~             # Required when name=custom
-
+# stackpilot.config.yml (auto-generated)
 qa:
   coverage_threshold: 80
   test_command: npm test    # auto-detected from project files
-coordinator:
-  worktree_limit: 3        # max parallel agents
-  timeout_hours: 2
-
-# Per-agent model routing — grouped by provider
-# Use multiple providers on the same project simultaneously
-models:
-  claude:
-    default: sonnet
-    sp-pm: haiku
-    sp-architect: opus
-  codex:
-    default: o4-mini
-    sp-architect: o3
-  gemini:
-    default: gemini-2.5-flash
 ```
 
-Auto-detection supports: Node.js, Python, Go, Rust, Ruby, Java/Kotlin (Maven & Gradle), Elixir, PHP, and .NET.
-
-### Supported Providers
-
-| Provider | CLI | Notes |
-|----------|-----|-------|
-| `claude` | [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | Default. Full feature support (tool restrictions, skills, plugins) |
-| `codex` | [Codex CLI](https://github.com/openai/codex) | Uses `--full-auto` mode |
-| `gemini` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | Uses `-p` prompt mode |
-| `custom` | Any CLI | Set `provider.command` to your tool's invocation |
+Auto-detection supports: Node.js, Python, Go, Rust, Ruby, Java/Kotlin, Elixir, PHP, .NET.
 
 ## Architecture
 
-See [docs/architecture.md](docs/architecture.md) for the full system design, agent pipeline, event flow, and task lifecycle.
+See [docs/architecture.md](docs/architecture.md) for the full system design.
+
+Key design decisions:
+- **Claude Code-native orchestration** — Agent tool with `isolation: "worktree"` for parallel development
+- **Agent Skills standard** — portable methodology skills work across 30+ agent products
+- **Progressive disclosure** — SKILL.md stays lean (<500 lines), heavy content in `references/`
+- **Plan as persistence** — TaskCreate for runtime, plan files for cross-session recovery
 
 ## [Contributing](CONTRIBUTING.md) | [License](LICENSE)
 
@@ -143,23 +114,35 @@ See [docs/architecture.md](docs/architecture.md) for the full system design, age
 [![CI](https://github.com/9aoyang/stackpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/9aoyang/stackpilot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/9aoyang/stackpilot)](https://github.com/9aoyang/stackpilot/releases)
+[![Agent Skills](https://img.shields.io/badge/Agent_Skills-compatible-blue)](https://agentskills.io)
 
 **[English](#stackpilot)** | 中文
 
-自治 AI 开发团队。写设计文档，交付生产级代码 — 含测试、文档和代码审查。支持 Claude Code、Codex、Gemini CLI 或任意 LLM CLI。
+面向 Claude Code 的 Sprint 编排层。写设计文档，交付生产级代码 — 含 TDD、代码审查和 12 维测试覆盖。
 
 ```
- 设计文档 → sp-pm → sp-architect → sp-dev → sp-qa → sp-docs → 交付
+ 功能需求 → 设计讨论 → Spec → Plan → sp-architect → sp-dev → sp-qa → 交付
 ```
 
-## 为什么选 Stackpilot
+## 两层架构
 
-没有 Stackpilot，用 AI 交付功能意味着：
-- 手动提示模型 → 复制输出 → 手动拆任务
-- 亲自跑每个步骤 → 看结果 → 再补充提示修复
-- 会话间上下文丢失，没有人追踪进度
+**便携式方法论 Skills** — 在任何 [Agent Skills](https://agentskills.io) 兼容产品中可用（Cursor、VS Code Copilot、Gemini CLI、Codex、JetBrains Junie 等 25+）：
 
-有了 Stackpilot，在 Claude Code 中输入 `/stackpilot` 并描述你想要的功能：
+| Skill | 功能 |
+|-------|------|
+| `/tdd-development` | TDD 循环（RED-GREEN-REFACTOR）+ verify/fix 循环 + 4 阶段根因调查 |
+| `/qa-12-dimensions` | 两阶段代码审查 + 12 维场景测试覆盖 |
+| `/architecture-review` | 代码库模式分析 → 唯一架构决策 → 实现蓝图 |
+
+**Sprint 编排** — Claude Code 专用（使用原生 Agent tool、TaskCreate、worktree 隔离）：
+
+| Skill | 功能 |
+|-------|------|
+| `/stackpilot` | 完整 sprint：设计讨论 → spec → plan → 自主编码 → QA → 上线 |
+| `/stackpilot-auto` | 全自动模式，跳过所有确认，代码停在 feature branch |
+| `/stackpilot-resume` | 从 plan + git log 恢复中断的 sprint |
+| `/stackpilot-compete` | 以竞品重度用户视角做差距分析 |
+| `/stackpilot-sync` | 追踪和同步内联到 agent 的外部 skill |
 
 ## 演示
 
@@ -169,7 +152,7 @@ See [docs/architecture.md](docs/architecture.md) for the full system design, age
 ━━━━━━━━━━━━━━━━━━━━━━━━━
   Stackpilot Sprint Status
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-  No active sprint.
+  无活跃 sprint
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 
 你想构建什么功能？
@@ -181,28 +164,17 @@ Phase 2: 设计方案就绪 — 确认？(Y/n)
 Phase 3: 写入 spec → .stackpilot/specs/2026-04-05-user-search-design.md ✓
 Phase 4: 写入 plan → .stackpilot/plans/2026-04-05-user-search-plan.md ✓
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-  Stackpilot Sprint Status
-━━━━━━━━━━━━━━━━━━━━━━━━━
-⏳ TASK-001  设计搜索 API schema          pending
-⏳ TASK-002  实现 /users/search 接口       pending
-⏳ TASK-003  编写集成测试                  pending
-⏳ TASK-004  更新 API 文档                 pending
-━━━━━━━━━━━━━━━━━━━━━━━━━
-
 计划就绪，开始编码？(Y/n)
 
-  🔄 TASK-001 → sp-architect 评审中...  ✅ 完成
-  🔄 TASK-002 → sp-dev 实现中...        ✅ 完成
-  🔄 TASK-003 → sp-qa 写测试中...       ✅ 完成
-  🔄 TASK-004 → sp-docs 更新文档中...   ✅ 完成
+  ✅ TASK-001  设计搜索 API       架构审查 → 开发 → QA 通过  (1/3)
+  ✅ TASK-002  实现搜索接口       开发 → QA 通过              (2/3)
+  ✅ TASK-003  集成测试           开发 → QA 通过              (3/3)
 
 Sprint 完成，所有测试通过。
+Dev server 运行中：http://localhost:3000
+
+A. 合并到 main  B. 推送并创建 PR  C. 暂时保留  D. 丢弃
 ```
-
-使用 `/stackpilot:auto` 可跳过所有确认环节，全自动运行。
-
-真实 spec 示例见 [examples/specs/](examples/specs/)。
 
 ## 安装
 
@@ -210,65 +182,36 @@ Sprint 完成，所有测试通过。
 curl -fsSL https://raw.githubusercontent.com/9aoyang/stackpilot/main/install.sh | bash
 ```
 
-自动安装 Stackpilot 及所有依赖。需要 git 和至少一个 AI CLI（Claude Code、Codex、Gemini CLI 或自定义工具）。
+或手动安装：
 
-## 使用
+```bash
+git clone https://github.com/9aoyang/stackpilot.git ~/Documents/github/stackpilot
+bash ~/Documents/github/stackpilot/scripts/restore.sh
+```
 
-**Claude Code:**
-
-| 命令 | 说明 |
-|------|------|
-| `/stackpilot` | 主入口 — 初始化、头脑风暴、规划、交付。显示 sprint 状态，引导下一步操作。 |
-| `/stackpilot:auto` | 全自动模式 — 跳过所有确认环节，代码直接提交到功能分支等待审查。 |
-| `/stackpilot:sync` | 管理外部技能引用。`add` 提取新技能，`check` 检测已引用技能的更新。 |
-| `/stackpilot:compete` | 竞品差距分析 — 以竞品重度用户视角，找出让用户转向的关键因素。 |
-
-**其他 Provider:** 在项目中运行 `bash ~/.stackpilot/scripts/init.sh`，provider 和测试命令会自动探测。
+需要 git 和 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)。
 
 ## 配置
 
-`stackpilot.config.yml` 由 `init.sh` **自动生成** — 会探测项目语言、测试框架和可用的 AI CLI。只有默认值不对时才需要手动修改。
+`stackpilot.config.yml` 在首次运行 `/stackpilot` 时**自动生成**，会自动探测测试框架。
 
 ```yaml
-# stackpilot.config.yml（自动生成示例，Node.js 项目）
-provider:
-  name: claude             # 自动探测：claude | codex | gemini | custom
-  # model: ~               # 覆盖模型（可选）
-  # command: ~             # name=custom 时必填
-
+# stackpilot.config.yml（自动生成）
 qa:
   coverage_threshold: 80
   test_command: npm test    # 根据项目文件自动探测
-coordinator:
-  worktree_limit: 3        # 最大并行 agent 数
-  timeout_hours: 2
-
-# 按 Provider 分组的 Agent 模型路由 — 同一项目可同时用多个 Provider
-models:
-  claude:
-    default: sonnet
-    sp-pm: haiku
-    sp-architect: opus
-  codex:
-    default: o4-mini
-    sp-architect: o3
-  gemini:
-    default: gemini-2.5-flash
 ```
 
-自动探测支持：Node.js、Python、Go、Rust、Ruby、Java/Kotlin（Maven & Gradle）、Elixir、PHP、.NET。
-
-### 支持的 Provider
-
-| Provider | CLI | 说明 |
-|----------|-----|------|
-| `claude` | [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | 默认。完整功能支持（工具限制、技能、插件） |
-| `codex` | [Codex CLI](https://github.com/openai/codex) | 使用 `--full-auto` 模式 |
-| `gemini` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | 使用 `-p` 提示模式 |
-| `custom` | 任意 CLI | 设置 `provider.command` 为你的工具命令 |
+自动探测支持：Node.js、Python、Go、Rust、Ruby、Java/Kotlin、Elixir、PHP、.NET。
 
 ## 架构文档
 
-完整的系统设计、Agent 流水线、事件流和任务生命周期，见 [docs/architecture.zh.md](docs/architecture.zh.md)。
+完整系统设计见 [docs/architecture.zh.md](docs/architecture.zh.md)。
+
+核心设计：
+- **Claude Code 原生编排** — Agent tool + `isolation: "worktree"` 实现并行开发
+- **Agent Skills 标准** — 便携式方法论 Skills 可在 30+ agent 产品中使用
+- **渐进式展开** — SKILL.md 精简（<500 行），重内容放 `references/`
+- **Plan 即持久层** — 运行时用 TaskCreate，跨会话用 plan 文件恢复
 
 ## [贡献指南](CONTRIBUTING.md) | [许可证](LICENSE)

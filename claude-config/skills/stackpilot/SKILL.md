@@ -1,6 +1,11 @@
 ---
 name: stackpilot
-description: Use when starting, resuming, or checking on autonomous development work. Acts as a project standup — always shows current status first, then guides next action.
+description: Sprint orchestration for Claude Code. Turns feature requests into working code through a design→spec→plan→code→QA pipeline. Use when starting, resuming, or checking on development work. Drives Claude Code's native Agent tool for multi-agent execution with worktree isolation.
+license: Apache-2.0
+compatibility: Requires Claude Code (uses native Agent tool, TaskCreate, worktree isolation)
+metadata:
+  author: stackpilot
+  version: "2.0"
 ---
 
 # Stackpilot
@@ -9,22 +14,16 @@ description: Use when starting, resuming, or checking on autonomous development 
 
 ```bash
 [ -d .stackpilot ] && echo "initialized" || echo "NOT_INITIALIZED"
-cat .stackpilot/tasks/backlog.yml 2>/dev/null || echo "NO_BACKLOG"
-cat .stackpilot/tasks/NEEDS_REVIEW.md 2>/dev/null
-cat .stackpilot/tasks/in-progress.yml 2>/dev/null
-ls .stackpilot/specs/*.md 2>/dev/null || echo "NO_SPECS"
+cat .stackpilot/NEEDS_REVIEW.md 2>/dev/null
+ls -t .stackpilot/plans/*.md 2>/dev/null || echo "NO_PLANS"
+ls -t .stackpilot/specs/*.md 2>/dev/null || echo "NO_SPECS"
 ```
 
-Run the checks silently. Do NOT paste raw command output, `Ran` / `Explored` logs, or long file lists back to the user unless they explicitly ask for them.
+Also check TaskList for any in-progress sprint tasks from the current session.
 
-Default user-facing output should be a concise state summary plus the routing decision in 1-3 lines. Example:
+Run checks silently. Default output: concise state summary + routing decision in 1-3 lines.
 
-```
-Current sprint is clean: no backlog, no pending review, specs exist.
-Treat this as a new design task and move directly into the first substantive design question.
-```
-
-If a detailed status readout is actually needed (active tasks, blockers, failures, or the user asked for full status), use this format:
+If detailed status needed, use this format:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -33,13 +32,8 @@ If a detailed status readout is actually needed (active tasks, blockers, failure
 ✅ TASK-001  implement login page    done
 🔄 TASK-002  integrate payment API   in-progress
 ⏳ TASK-003  write unit tests        pending
-❌ TASK-004  dashboard layout        failed
-❓ TASK-005  multi-user approach     blocked
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-Pending reviews: 1
 ```
-
-Legend: ✅ done  🔄 in-progress  ⏳ pending  ❌ failed  ❓ blocked
 
 ---
 
@@ -47,367 +41,146 @@ Legend: ✅ done  🔄 in-progress  ⏳ pending  ❌ failed  ❓ blocked
 
 ### Not Initialized
 
-**Auto-initialize** — no manual steps needed:
-
 ```bash
 bash ~/Documents/github/stackpilot/scripts/init.sh 2>&1
 ```
 
-If init succeeds, immediately re-run Step 1 to show status. Do NOT ask the user to configure anything — config is auto-detected. Only mention `stackpilot.config.yml` if the detected `test_command` binary was not found (init will warn about this).
+Re-run Step 1 after init. Only mention config if test_command binary was not found.
 
 ---
 
-### Sprint Clean (no tasks, or all done)
+### Sprint Clean
 
-Ask the user what feature they want to build, then **choose path by scope**:
+Ask what to build, then choose path by scope.
 
-After the concise state summary, move directly into feature or design discussion. Do NOT narrate the exploration steps or ask for permission to begin the discussion.
+> If the request is about **improving something measurable** (performance, error rate, bundle size), read [references/optimize-sprint.md](references/optimize-sprint.md) and follow the Optimize Sprint path.
 
-> If the user's request is about **improving / optimizing / fixing degradation** of something measurable (performance, test pass rate, error rate, bundle size, etc.), use the **Optimize Sprint** path below instead of the feature paths.
-
-#### Optimize Sprint (quantifiable improvement goal)
-
-Use when the user says "make X faster", "reduce Y", "improve Z score", "fix the failing tests", etc.
+#### Light Feature (single clear requirement, ≤ 2 sentences)
 
 <HARD-GATE>
-Do NOT start any optimization until Goal, Scope, Metric, and Verify are all defined. Vague goals produce wasted iterations.
+Do NOT start implementation until a plan is written and committed.
 </HARD-GATE>
 
-**Step 1 — Define the 4 parameters** (ask all at once if any are missing):
-
-```
-Goal:    What should improve? (e.g., "reduce p95 latency of /api/search")
-Scope:   Which files are allowed to change? (glob pattern, e.g., "src/search/**")
-Metric:  How is success measured? (must produce a number: ms, %, bytes, count)
-Verify:  Shell command that outputs the metric as a number (exit 0 on any result)
----
-Guard:   Optional — command that must still pass (e.g., existing test suite)
-Limit:   Optional — max iterations (default: 10)
-```
-
-**Step 2 — Baseline**: Run `Verify` command once and record the baseline number. This is the score to beat.
-
-**Step 3 — Iteration loop** (repeat up to `Limit` times):
-
-1. **Review**: Run `git log --oneline -10` — what has been tried? What improved? What failed?
-2. **Ideate**: Pick the highest-leverage change NOT already tried. Priority:
-   - Fix crashes/errors first
-   - Then exploit successful patterns from prior iterations
-   - Then explore new directions
-   - If stuck (3 consecutive no-improvements): switch to a radically different approach
-3. **Modify**: Make ONE atomic change (describable in one sentence)
-4. **Commit**: `git commit -m "experiment(<scope>): <description>"`
-5. **Verify**: Run the `Verify` command → extract the metric value
-6. **Guard check** (if defined): run Guard command — must still pass
-7. **Decide**:
-   - Metric improved AND Guard passes → **Keep** (log result, continue)
-   - Metric worse OR Guard fails → **Revert** (`git revert HEAD --no-edit`) and log
-8. **Log to `.stackpilot/optimize-log.tsv`**:
-   ```
-   iteration	commit	metric	delta	outcome	description
-   1	abc1234	245ms	-12ms	keep	removed N+1 query in getUserList
-   ```
-
-**Step 4 — Summary**: After loop ends (limit reached or user stops), output:
-- Best result achieved vs baseline
-- Top 3 changes that helped most (from log)
-- Ask: "What would you like to do with the changes?" → same finish options as Sprint Finish
-
-
-
-#### Light Feature (user says "simple change" / single clear requirement / ≤ 2 sentences)
-
-<HARD-GATE>
-Do NOT start any implementation until a plan is written and committed.
-</HARD-GATE>
-
-1. **Map file structure** — list all files that will be touched and what changes each needs
+1. **Map file structure** — list files to touch and changes each needs
 2. **Write plan** → `.stackpilot/plans/YYYY-MM-DD-<feature>-plan.md`
-   - Decompose into bite-sized tasks (2–5 minutes each)
-   - Every task must include: `title`, `description`, `type`, `complexity: light`, `depends_on`, `relevant_files`
-   - No placeholders — no TBD, TODO, "similar to Task N", or vague descriptions
-   - Every step must contain actual content: specific file paths, specific changes
-3. **Plan self-review:**
-   - Do all steps map to concrete spec requirements?
-   - Any placeholders or vague steps? → fix inline
-   - Are types consistent? (dev / qa / docs)
-   - **Type consistency**: do the types, method signatures, and property names used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 2 but `clearFullLayers()` in Task 3 is a bug — fix it inline
-4. **Create feature branch** → commit plan → run Coordinator
+   - Bite-sized tasks (2–5 min each)
+   - Every task: `title`, `description`, `type`, `complexity: light`, `depends_on`, `relevant_files`
+   - No placeholders — no TBD, TODO, vague descriptions
+3. **Plan self-review** — types consistent? Placeholders? Method names match across tasks?
+4. **Create feature branch** → commit plan → Run Sprint
 
-#### Standard Feature (multi-module, ambiguous requirements, architectural decisions)
+#### Standard Feature (multi-module, ambiguous, architectural decisions)
 
 **Phase 1: Exploration**
 
-1. Explore current project state: read `CLAUDE.md`, relevant source files, recent commits
-2. Assess scope: if the request spans multiple independent subsystems, flag it immediately and help the user decompose before proceeding
-3. **Ask clarifying questions one at a time** — each message only问一个问题，深入理解后再问下一个:
-   - Prefer multiple choice questions when possible (easier to answer)
-   - Focus on: purpose, constraints, success criteria, target platform (PC / mobile)
-   - If a topic needs more exploration, break it into multiple questions
-   - Continue until you have a clear picture of what to build
+1. Read `CLAUDE.md`, source files, recent commits
+2. If request spans multiple subsystems, flag and decompose first
+3. **Ask clarifying questions one at a time** — prefer multiple choice, focus on purpose/constraints/success criteria
 
-**Phase 1.5: Visual Companion Use** (only when a specific design question benefits from visualization)
+**Phase 1.5: Visual Companion** (only when a design question benefits from visualization)
 
-Do NOT send a separate permission-seeking message before starting design discussion.
-
-- Start the design discussion immediately after exploration.
-- Decide **per question** whether browser or terminal communicates the issue better. The test: **would the user understand this better by seeing it than reading it?**
-- If browser is clearly better, start the visual companion server and include the visual in the same message as the design question. Do not add a preamble asking whether the user wants visual mode first.
-- If terminal is sufficient, stay in terminal.
-- If the user explicitly asks to stay text-only, keep the rest of the discussion in terminal.
-- **Use browser**: UI mockups, wireframes, layout comparisons, architecture diagrams, side-by-side visual designs
-- **Use terminal**: requirements, conceptual choices, tradeoff lists, scope decisions, technical decisions
-
-**Visual Companion Server Setup** (only when a question clearly benefits from visuals):
-
-```bash
-# Start preview server (HTML goes to /tmp, auto-cleaned when server stops)
-bash ~/Documents/github/stackpilot/scripts/preview/start-server.sh
-
-# Returns JSON: {"port":52341,"url":"http://localhost:52341","screen_dir":"/tmp/brainstorm-.../content","state_dir":"/tmp/brainstorm-.../state"}
-# Save screen_dir, state_dir, and the full session_dir from the response
-```
-
-**Visual Companion Loop** (for each visual question):
-
-1. Write HTML content fragment to a new file in `screen_dir` (semantic name like `layout.html`, never reuse names)
-2. Tell user what's on screen, remind them of the URL, ask for feedback
-3. On next turn, read `$STATE_DIR/events` for browser click data (JSON lines), merge with terminal text
-4. Iterate (e.g. `layout-v2.html`) or advance to next question
-5. When returning to terminal questions, push a waiting screen to clear stale content
-
-**HTML Content Fragments** — write content only, server auto-wraps in frame template:
-
-```html
-<!-- Available CSS classes: .options, .cards, .mockup, .split, .pros-cons -->
-<!-- Mock elements: .mock-nav, .mock-sidebar, .mock-content, .mock-button, .mock-input -->
-<h2>Which layout works better?</h2>
-<div class="options">
-  <div class="option" data-choice="a" onclick="toggleSelect(this)">
-    <div class="letter">A</div>
-    <div class="content"><h3>Single Column</h3><p>Clean, focused reading</p></div>
-  </div>
-  <div class="option" data-choice="b" onclick="toggleSelect(this)">
-    <div class="letter">B</div>
-    <div class="content"><h3>Two Column</h3><p>Sidebar + main content</p></div>
-  </div>
-</div>
-```
+Read [references/visual-companion.md](references/visual-companion.md) for setup and usage. Key rule: decide **per question** whether browser or terminal communicates better.
 
 **Phase 2: Design**
 
-4. Propose 2–3 approaches with trade-offs and your recommendation, including:
-   - Architecture overview
-   - Components and data flow
-   - Error handling strategy
-   - Testing approach
-5. **Present design in sections scaled to complexity** — get user approval after each section. When a section benefits from visual treatment, inline the visual companion in that section instead of adding a separate setup/permission message. <!-- CONFIRM-GATE: design review -->
-6. When visual companion was used, stop the server after design is finalized:
-   ```bash
-   bash ~/Documents/github/stackpilot/scripts/preview/stop-server.sh $SESSION_DIR
-   ```
+4. Propose 2–3 approaches with trade-offs and recommendation
+5. Present in sections, get user approval per section <!-- CONFIRM-GATE: design review -->
+6. Stop visual companion server if used
 
 **Phase 3: Spec + Auto-Verify Loop**
 
 6. Write spec → `.stackpilot/specs/YYYY-MM-DD-<topic>-design.md`
-   - **Design for isolation**: break the system into smaller units with one clear purpose each, communicating through well-defined interfaces. Each unit should be understandable and testable independently. If a file grows large, it's doing too much — split by responsibility.
-7. **Run mechanical verification** (up to 3 self-fix rounds before escalating):
-
+7. Run verification (up to 3 self-fix rounds):
    ```bash
-   # Check 1 — no placeholders
-   grep -inE "TBD|TODO|FIXME|\bplaceholder\b" .stackpilot/specs/*.md | wc -l
-   # must be 0
-
-   # Check 2 — required sections present
-   grep -c "^## " .stackpilot/specs/*.md
-   # must be >= 4
-
-   # Check 3 — non-trivial content
-   wc -w .stackpilot/specs/*.md | tail -1
-   # must be >= 300 words
+   grep -inE "TBD|TODO|FIXME|\bplaceholder\b" .stackpilot/specs/*.md | wc -l  # must be 0
+   grep -c "^## " .stackpilot/specs/*.md  # must be >= 4
+   wc -w .stackpilot/specs/*.md | tail -1  # must be >= 300
    ```
-
-   For each failing check:
-   - Fix the spec inline
-   - Re-run the check
-   - Increment attempt counter
-
-   **If all 3 checks pass** → print a one-line summary and auto-proceed to Phase 4. No user prompt.
-
-   **If checks still fail after 3 rounds** → stop, show the specific failing checks only, ask the user for targeted input.
+   All pass → auto-proceed. Fail after 3 → escalate specific failures.
 
 **Phase 4: Plan + Auto-Verify Loop**
 
-8. **Map file structure** — list all files that will be touched and what changes each needs
-9. **Write plan** → `.stackpilot/plans/YYYY-MM-DD-<feature>-plan.md`
-    - Decompose into bite-sized tasks (2–5 minutes each)
-    - Every task must include: `title`, `description`, `type`, `complexity`, `depends_on`, `relevant_files`
-    - No placeholders — no TBD, TODO, "similar to Task N", or vague descriptions
-    - Every step must contain actual content: specific file paths, specific changes
-10. **Run mechanical verification** (same pattern as spec):
-
+8. Map file structure
+9. Write plan → `.stackpilot/plans/YYYY-MM-DD-<feature>-plan.md`
+10. Verify:
     ```bash
-    # Check 1 — no placeholders
-    grep -inE "TBD|TODO|FIXME|\bplaceholder\b" .stackpilot/plans/*.md | wc -l
-    # must be 0
-
-    # Check 2 — at least 3 tasks defined
-    grep -c "^### TASK-" .stackpilot/plans/*.md
-    # must be >= 3
-
-    # Check 3 — every task has required fields
-    grep -cE "relevant_files:|depends_on:|complexity:" .stackpilot/plans/*.md
-    # must equal (task_count * 3)
+    grep -inE "TBD|TODO|FIXME|\bplaceholder\b" .stackpilot/plans/*.md | wc -l  # 0
+    grep -c "^### TASK-" .stackpilot/plans/*.md  # >= 3
+    grep -cE "relevant_files:|depends_on:|complexity:" .stackpilot/plans/*.md  # task_count * 3
     ```
+    Check 4 — type consistency across tasks (manual scan).
+    All pass → auto-proceed.
 
-    **Check 4 — type consistency** (manual scan, not bash):
-    Verify that types, method signatures, and property names used in later tasks match definitions in earlier tasks. A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug — fix inline.
-
-    **If all checks pass** → auto-proceed.
-    **If checks fail after 3 rounds** → escalate with specific failures only.
-
-11. **Create feature branch** → commit spec and plan → run Coordinator
+11. **Create feature branch** → commit spec and plan → Run Sprint
 
 ---
 
-### Sprint In-Progress (pending / in-progress tasks exist)
-
-Show options:
+### Sprint In-Progress
 
 ```
-A. Continue current sprint (run Coordinator to advance tasks)
+A. Continue current sprint (Run Sprint)
 B. Add a new feature to the current sprint
-C. View details of a specific task
 ```
 
-- **A** → Run Coordinator
-- **B** → Follow the feature flow above → commit new spec/plan → Run Coordinator
-- **C** → Read `.stackpilot/tasks/done/TASK-ID.md` or `.stackpilot/tasks/arch-review/TASK-ID.md`
+### NEEDS_REVIEW Has Content
+
+Display issue, guide user to decision, clear file, continue sprint.
 
 ---
 
-### Blocked Tasks / NEEDS_REVIEW Has Content (handle first)
+## Run Sprint
 
-Display the blocking issue, analyze options, and guide the user to a decision.
+Core coding phase. Reads plan, creates tasks, dispatches specialist agents.
 
-Once user decides, append to `.stackpilot/tasks/NEEDS_REVIEW.md`:
+### Pre-Sprint
 
+1. Check NEEDS_REVIEW.md — resolve if content exists
+2. Read latest `.stackpilot/plans/*.md`, parse `### TASK-` sections
+3. Read `stackpilot.config.yml` for `qa.test_command` and `qa.coverage_threshold`
+
+### Pre-coding confirmation
+
+> "Plan ready. Proceed with coding?"
+> A. Yes  B. I'll handle it elsewhere
+
+Skip when running via `/stackpilot-auto`. <!-- CONFIRM-GATE: pre-coding -->
+
+### Sprint Execution Loop
+
+For each task in dependency order:
+
+**1. Track**: `TaskCreate` + `TaskUpdate(in_progress)`
+
+**2. Architecture review** (standard complexity only):
 ```
-REPLY: <decision>
-```
-
-Then run Coordinator to unblock.
-
----
-
-### Failed Tasks
-
-Display failure reason and ask the user:
-
-- **Retry** → set task back to `status: pending` in `backlog.yml`, run Coordinator
-- **Skip** → mark task with a disposition note
-- **Manual intervention** → help user analyze the problem
-
----
-
-## Run Coordinator
-
-Execute sp-coordinator's Entry Checklist directly in the current session (no branch switch needed):
-
-1. **Process `.stackpilot/tasks/NEEDS_REVIEW.md`**: has `REPLY:` → unblock; has content but no `REPLY:` → tell user, stop
-2. **Process soft-blocked tasks**: `attempt_count < 3` → re-schedule; `≥ 3` → escalate to blocked
-3. **Check timed-out tasks** → mark failed
-4. **Pre-coding confirmation** — Before dispatching any dev/qa agents, show the task list and ask:
-
-> "Plan is ready. Proceed with coding in this session?"
->
-> A. Yes, start coding (continue in current session)
-> B. I'll handle it elsewhere (stop here, tasks stay pending for another tool to pick up)
-
-   - **A** → continue to step 5
-   - **B** → stop. Do NOT dispatch agents. Tasks remain `pending` in backlog.yml for the user to execute with other tools.
-
-   **Skip this gate when running via `/stackpilot:auto` or triggered by git hook / background dispatch.** <!-- CONFIRM-GATE: pre-coding -->
-
-5. **Dispatch pending tasks** by `complexity` field:
-   - `light`: sp-dev → sp-qa (skip sp-architect and sp-docs)
-   - `standard`: sp-architect → sp-dev → sp-qa → sp-docs
-
-   **Progress reporting during coding** — after each task completes (dev + QA pair), print a one-line status update. Do NOT wait for user reply — just keep going.
-
-   ```
-   ✅ TASK-001  add user model          dev done → QA passed     (1/5)
-   ✅ TASK-002  add auth middleware      dev done → QA passed     (2/5)
-   ❌ TASK-003  payment integration      dev soft-blocked         (3/5)
-   ```
-
-   **Pause rules** — stop and ask the user ONLY when:
-   - A task is `soft-blocked` after 3 attempts (needs human decision)
-   - QA review found a critical issue (security or spec mismatch flagged in NEEDS_REVIEW.md)
-   - A task would introduce a new external dependency
-
-   For everything else (QA minor fixes, retry within 3 attempts, docs updates) — handle silently and report the one-liner.
-
-6. **If no pending / in-progress / soft-blocked** → Sprint complete:
-
-**Sprint Finish:**
-
-After all tasks are done, run the test command from `stackpilot.config.yml` to confirm all tests pass, then **start the dev server for user preview before cleanup or merge**.
-
-**Step 1 — Detect dev server command** (auto-detect from project files, no config needed):
-
-Only detect when there is a clear web server signal. CLI tools, daemons, and batch programs should NOT be started.
-
-```
-Check in order, use the first match:
-1. package.json exists → read scripts:
-   a. Has "dev" script AND dependencies include vite/next/nuxt/webpack/remix/astro/svelte → npm run dev
-   b. Has "dev" script with no web framework signal → skip (could be non-web tooling)
-   c. No "dev" script → skip
-2. manage.py exists + contains "django" → python manage.py runserver
-3. Gemfile exists + config/routes.rb exists → bundle exec rails server
-4. No match → skip preview, go directly to Step 3
+Agent(description="Arch: TASK-NNN", prompt="<architecture-review skill instructions> + <task context>", model="opus")
 ```
 
-Do NOT blindly run `cargo run`, `go run .`, `python app.py`, or `npm start` — these are too ambiguous.
-
-**Step 2 — Start server and present preview URL**:
-
-1. Start the detected command in the background, capture its PID: `<command> & echo $!`
-2. Wait for output containing `http://localhost:` or similar URL (timeout 15s)
-3. If no URL detected within timeout, kill the process and skip preview
-4. Present to user:
-
-> "Sprint complete. All tests passing. Dev server running at:"
->
-> `http://localhost:XXXX`  (PID: XXXX)
->
-> "Please review the changes in your browser, then tell me how to proceed."
-
-**Wait for user to finish reviewing before continuing.**
-
-**Step 3 — After user confirms review is done**, present options:
-
-> A. Merge into base branch
-> B. Push and create a PR
-> C. Leave as-is (handle later)
-> D. Discard all changes (destructive — confirm first)
-
-**Step 4 — Execute user's choice, THEN cleanup:**
-
-- **A**: Determine base branch (ask if unclear: main / master / dev), then `git merge`
-- **B**: `git push -u origin <branch>` then create PR with title and summary describing all completed tasks
-- **C**: Do nothing, return sprint status
-- **D**: Confirm once with user, then `git checkout <base-branch> && git branch -D <feature-branch>`
-
-**Step 5 — Sprint Cleanup** (only after user's choice is executed, NOT before):
-
-```bash
-rm -f .stackpilot/tasks/done/*.md
-rm -f .stackpilot/tasks/arch-review/*.md
-printf "tasks: []\n" > .stackpilot/tasks/backlog.yml
-printf "" > .stackpilot/tasks/NEEDS_REVIEW.md
-printf "tasks: []\n" > .stackpilot/tasks/in-progress.yml
+**3. Development**:
+```
+Agent(description="Dev: TASK-NNN", prompt="<tdd-development skill instructions> + <task> + <arch review>", isolation="worktree")
 ```
 
-Stop the dev server if it was started: `kill <PID> 2>/dev/null`
+**4. Handle dev result**:
+- `[ESCALATION]` → present to user, wait
+- `[SOFT-BLOCKED]` → retry up to 3 times, then ask user
+
+**5. QA review**:
+```
+Agent(description="QA: TASK-NNN", prompt="<qa-12-dimensions skill instructions> + <task> + <dev result>")
+```
+
+**6. Handle QA result**:
+- `[CRITICAL]` → present to user
+- `[SOFT-BLOCKED]` → retry dev+QA cycle
+
+**7. Complete**: `TaskUpdate(completed)`, print progress line:
+```
+✅ TASK-001  add user model          dev → QA passed     (1/5)
+```
+
+**Pause only when**: 3x soft-blocked, QA critical, new external dependency.
+
+### Sprint Complete
+
+Read [references/sprint-finish.md](references/sprint-finish.md) and follow the Sprint Finish flow.

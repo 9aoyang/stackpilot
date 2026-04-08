@@ -1,6 +1,6 @@
 ---
-name: stackpilot:sync
-description: Manage external skill references inlined into stackpilot agents. Use /stackpilot:sync add to extract and track a new skill, /stackpilot:sync check to detect updates in previously referenced skills.
+name: stackpilot-sync
+description: Manage external skill references inlined into stackpilot agents. Use /stackpilot-sync add to extract and track a new skill, /stackpilot-sync check to detect updates in previously referenced skills.
 ---
 
 # Skill Refs
@@ -8,12 +8,12 @@ description: Manage external skill references inlined into stackpilot agents. Us
 Internal skill for tracking and syncing external skills that have been referenced and inlined into stackpilot agents or SKILL.md.
 
 Triggered explicitly via slash commands:
-- `/stackpilot:sync add` — Mode A: add and extract a new skill
-- `/stackpilot:sync check` — Mode B: check for updates in all tracked skills
+- `/stackpilot-sync add` — Mode A: add and extract a new skill
+- `/stackpilot-sync check` — Mode B: check for updates in all tracked skills
 
 ---
 
-## Mode A: Add (`/stackpilot:sync add`)
+## Mode A: Add (`/stackpilot-sync add`)
 
 **Step 1: Identify the source**
 
@@ -64,7 +64,7 @@ If user says yes → make the change to the target file, update `docs/sync.md` s
 
 ---
 
-## Mode B: Check (`/stackpilot:sync check`)
+## Mode B: Check (`/stackpilot-sync check`)
 
 **Step 1: Read tracking table**
 

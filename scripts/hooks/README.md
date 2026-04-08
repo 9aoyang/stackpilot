@@ -1,16 +1,13 @@
-# Stackpilot Git Hooks
+# Git Hooks (Removed in v2)
 
-These hook templates are copied to `.git/hooks/` by `stackpilot init`.
+Stackpilot v1 used git hooks to trigger agents automatically:
+- `pre-commit` — validated spec/plan completeness before commit
+- `post-commit` — triggered sp-pm to decompose specs into tasks
+- `post-checkout` — triggered sp-coordinator to dispatch pending tasks
 
-## Manual install (without stackpilot init)
+In v2, these are replaced by:
+- **Spec/plan validation** — inline in the `/stackpilot` skill's Phase 3/4 auto-verify loops
+- **Task decomposition** — handled directly by the skill (no separate PM agent)
+- **Agent dispatch** — handled by the skill using Claude Code's native Agent tool
 
-```bash
-cp scripts/hooks/post-checkout.sh .git/hooks/post-checkout
-cp scripts/hooks/post-commit.sh .git/hooks/post-commit
-chmod +x .git/hooks/post-checkout .git/hooks/post-commit
-```
-
-## What they do
-
-- **post-checkout**: Triggers the Coordinator when you switch branches (only runs when `.stackpilot/` exists)
-- **post-commit**: Triggers the PM Agent when a new `docs/specs/*.md` file is committed
+No hooks need to be installed.

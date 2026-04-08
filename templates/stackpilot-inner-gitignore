@@ -1,6 +1,2 @@
 # Stackpilot runtime state (never commit)
-/tasks/
-/path
-/version
-/.locks/
-/.worktrees/
+/NEEDS_REVIEW.md

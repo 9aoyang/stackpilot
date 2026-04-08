@@ -68,7 +68,7 @@ $DRY_RUN && echo "[stackpilot] DRY RUN — no files will be written"
 
 # --- 1. Install agents to ~/.claude/agents/ ---
 echo ""
-echo "Agents (Claude Code integration — also usable via dispatch.sh for any provider):"
+echo "Agents (Claude Code integration):"
 if $DRY_RUN; then
   echo "[dry-run] rm sp-*.md from $CLAUDE_DIR/agents/"
   echo "[dry-run] cp agents from $CONFIG_DIR/agents/"
@@ -89,17 +89,14 @@ if $DRY_RUN; then
   echo "[dry-run] rm -rf stackpilot* skills from $CLAUDE_DIR/skills/"
   echo "[dry-run] cp skills from $CONFIG_DIR/skills/"
 else
-  # Remove old stackpilot skills (flat and sub-skill directories)
+  # Remove old stackpilot skills
   rm -rf "$CLAUDE_DIR/skills/stackpilot" "$CLAUDE_DIR/skills/stackpilot-"*
-  # Install each skill directory
+  rm -rf "$CLAUDE_DIR/skills/tdd-development" "$CLAUDE_DIR/skills/qa-12-dimensions" "$CLAUDE_DIR/skills/architecture-review"
+  # Install each skill directory (symlink to preserve references/ structure)
   for skill_dir in "$CONFIG_DIR/skills/"*/; do
     [ -d "$skill_dir" ] || continue
     skill_name="$(basename "$skill_dir")"
-    mkdir -p "$CLAUDE_DIR/skills/$skill_name"
-    for f in "$skill_dir"*.md; do
-      [ -f "$f" ] || continue
-      cp "$f" "$CLAUDE_DIR/skills/$skill_name/$(basename "$f")"
-    done
+    ln -sf "$skill_dir" "$CLAUDE_DIR/skills/$skill_name"
     echo "  ✓ $skill_name"
   done
 fi
@@ -124,5 +121,4 @@ echo "[stackpilot] ✓ Restore complete!"
 echo ""
 echo "Next steps:"
 echo "  1. Initialize a project:  bash $REPO_DIR/scripts/init.sh"
-echo "  2. Edit stackpilot.config.yml to set provider (claude/codex/gemini/custom)"
-echo "  3. Or type /stackpilot in Claude Code to get started"
+echo "  2. Or type /stackpilot in Claude Code to get started"

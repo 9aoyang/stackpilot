@@ -1,106 +1,38 @@
 #!/usr/bin/env bash
-# Stackpilot config helpers — pure bash YAML reader, frontmatter parser, and file locking
+# Stackpilot config helpers — pure bash YAML reader and frontmatter parser
 # Source this file: source "$(dirname "$0")/lib/config.sh"
 
-# locked_write <lock_name> <command...>
-# Executes a command while holding an exclusive lock on the named resource.
-# Uses flock when available, falls back to mkdir-based spinlock.
-# Example: locked_write "backlog" cp temp.yml backlog.yml
-locked_write() {
-  local lock_name="$1"; shift
-  local lock_base="${STACKPILOT_LOCK_DIR:-.stackpilot/.locks}"
-  mkdir -p "$lock_base" 2>/dev/null || true
-
-  if command -v flock >/dev/null 2>&1; then
-    local lock_file="$lock_base/${lock_name}.lock"
-    (
-      flock -w 30 200 || { echo "[stackpilot] Warning: failed to acquire lock '$lock_name' after 30s" >&2; return 1; }
-      "$@"
-    ) 200>"$lock_file"
-  else
-    # mkdir-based spinlock fallback (atomic on all POSIX systems)
-    local lock_dir="$lock_base/${lock_name}.lk"
-    local attempts=0
-    while ! mkdir "$lock_dir" 2>/dev/null; do
-      attempts=$((attempts + 1))
-      if [ "$attempts" -ge 60 ]; then
-        echo "[stackpilot] Warning: failed to acquire lock '$lock_name' after 30s — removing stale lock" >&2
-        rm -rf "$lock_dir"
-      fi
-      sleep 0.5
-    done
-    # Ensure lock is released on exit
-    trap 'rm -rf "'"$lock_dir"'"' EXIT
-    "$@"
-    rm -rf "$lock_dir"
-    trap - EXIT
-  fi
-}
-
 # config_get <key> <config_file>
-# Read a value from a simple YAML file. Supports dotted keys up to 3 levels deep.
+# Read a value from a simple YAML file. Supports dotted keys up to 2 levels deep.
 # Examples:
-#   config_get "provider.name" config.yml              → "claude"
-#   config_get "models.claude.sp-dev" config.yml       → "sonnet"
-#   config_get "models.claude.default" config.yml      → "sonnet"
+#   config_get "qa.test_command" config.yml     → "npm test"
+#   config_get "qa.coverage_threshold" config.yml → "80"
 config_get() {
   local key="$1" file="$2"
   [ -f "$file" ] || return 1
 
-  # Split key into segments
-  local depth=0 seg1="" seg2="" seg3=""
-  IFS='.' read -r seg1 seg2 seg3 <<< "$key"
+  local seg1="" seg2=""
+  IFS='.' read -r seg1 seg2 <<< "$key"
 
-  if [ -n "$seg3" ]; then
-    depth=3
-  elif [ -n "$seg2" ]; then
-    depth=2
+  if [ -n "$seg2" ]; then
+    # Two-level: parent.child
+    awk -v parent="$seg1" -v child="$seg2" '
+      BEGIN { in_block = 0 }
+      /^[^ #]/ {
+        if ($0 ~ "^" parent ":") { in_block = 1; next }
+        else { in_block = 0 }
+      }
+      in_block && $0 ~ "^[[:space:]]+" child ":" {
+        sub(/^[[:space:]]*[^:]+:[[:space:]]*/, "")
+        sub(/[[:space:]]*#.*$/, "")
+        print
+        exit
+      }
+    ' "$file"
   else
-    depth=1
+    # Top-level key
+    sed -n "s/^${seg1}:[[:space:]]*//p" "$file" | head -1 | sed 's/[[:space:]]*#.*$//'
   fi
-
-  case "$depth" in
-    1)
-      # Top-level key: match "key: value" not indented
-      sed -n "s/^${seg1}:[[:space:]]*//p" "$file" | head -1 | sed 's/[[:space:]]*#.*$//'
-      ;;
-    2)
-      # Two-level: parent.child (e.g., provider.name)
-      awk -v parent="$seg1" -v child="$seg2" '
-        BEGIN { in_block = 0 }
-        /^[^ #]/ {
-          if ($0 ~ "^" parent ":") { in_block = 1; next }
-          else { in_block = 0 }
-        }
-        in_block && $0 ~ "^[[:space:]]+" child ":" {
-          sub(/^[[:space:]]*[^:]+:[[:space:]]*/, "")
-          sub(/[[:space:]]*#.*$/, "")
-          print
-          exit
-        }
-      ' "$file"
-      ;;
-    3)
-      # Three-level: grandparent.parent.child (e.g., models.claude.sp-dev)
-      awk -v gp="$seg1" -v parent="$seg2" -v child="$seg3" '
-        BEGIN { in_gp = 0; in_parent = 0 }
-        /^[^ #]/ {
-          if ($0 ~ "^" gp ":") { in_gp = 1; in_parent = 0; next }
-          else { in_gp = 0; in_parent = 0 }
-        }
-        in_gp && /^  [^ #]/ {
-          if ($0 ~ "^  " parent ":") { in_parent = 1; next }
-          else { in_parent = 0 }
-        }
-        in_gp && in_parent && $0 ~ "^    " child ":" {
-          sub(/^[[:space:]]*[^:]+:[[:space:]]*/, "")
-          sub(/[[:space:]]*#.*$/, "")
-          print
-          exit
-        }
-      ' "$file"
-      ;;
-  esac
 }
 
 # config_get_or <key> <default> <config_file>
