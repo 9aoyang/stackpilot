@@ -1,16 +1,1 @@
 iteration	competitor	dimension	classification	severity	title	gap_description
-1	superpowers	daily_workflow	new	week-1	No TDD enforcement	sp-dev runs test-after not test-first; misses design-phase bug detection
-2	superpowers	muscle_memory	new	week-1	Git-hook driven breaks flow	Must commit/checkout to drive pipeline; superpowers runs in single session
-3	superpowers	error_recovery	new	instant-close	No systematic debugging	sp-dev has 3-round fix loop but no root cause investigation discipline
-4	superpowers	data_state	new	week-1	No per-task two-stage review	QA runs batch after all dev; superpowers reviews each task (spec + quality)
-5	superpowers	customization	new	gradual-drift	No skill creation workflow	stackpilot:sync inlines external skills but cannot create new ones from scratch
-6	superpowers	onboarding	new	instant-close	5+ min setup vs instant	init.sh + config + spec + commit + checkout vs /install-plugin + go
-7	superpowers	integration	new	week-1	No IDE context	dispatch.sh runs standalone CLI; no awareness of IDE state or open files
-8	superpowers	collaboration	new	gradual-drift	No code review protocol	sp-qa does testing not review; no receiving-code-review equivalent
-9	superpowers	performance	new	gradual-drift	No per-task model routing	Same model for all agents; superpowers uses cheap/standard/capable per task
-10	superpowers	emotional	new	gradual-drift	Weaker verification discipline	sp-dev verifies but coordinator/PM don't; superpowers verifies everything
-11	superpowers	scale	new	moat-for-stackpilot	Better parallel dispatch	worktree_limit + background agents > superpowers single-session subagents
-12	superpowers	edge_cases	new	moat-for-stackpilot	Optimize Sprint	Goal/Scope/Metric/Verify loop with auto-revert is unique to stackpilot
-13	superpowers	daily_workflow	variant	week-1	Coarser plan granularity	3-5 sentence YAML desc vs full code snippets in superpowers plans
-14	superpowers	integration	variant	gradual-drift	No actual git worktree	Config has worktree_limit but dispatch runs in cwd, no real isolation
-15	superpowers	customization	variant	gradual-drift	No auto skill discovery	User must call /stackpilot manually; superpowers auto-activates on 1% match
