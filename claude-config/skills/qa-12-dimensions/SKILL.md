@@ -4,7 +4,7 @@ description: Systematic test coverage using a 12-dimension scenario matrix plus 
 license: Apache-2.0
 metadata:
   author: stackpilot
-  version: "2.0"
+  version: "1.0"
 ---
 
 # QA: 12-Dimension Testing + Code Review

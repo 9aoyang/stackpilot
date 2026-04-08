@@ -4,7 +4,7 @@ description: Analyzes existing codebase patterns to make decisive architecture c
 license: Apache-2.0
 metadata:
   author: stackpilot
-  version: "2.0"
+  version: "1.0"
 ---
 
 # Architecture Review
