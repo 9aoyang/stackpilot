@@ -75,6 +75,22 @@ When stuck detection fires:
 - **Different dependency**: library issues → native implementation (or vice versa)
 - **Different entry point**: fix not working in file A → real problem is in file B (the caller)
 
+## Rationalization Blockers
+
+If you catch yourself thinking any of these, STOP — you are about to violate TDD:
+
+| Rationalization | Why it's wrong |
+|----------------|---------------|
+| "This is too simple to test" | Simple code breaks. The test takes 30 seconds to write. Do it. |
+| "I'll write the test after" | Tests-after prove "what does this code do?" Tests-first prove "what should this code do?" These are different things. |
+| "The test passed immediately" | A test that never failed RED proves nothing. Delete it and write one that fails first. |
+| "I already tested this manually" | Manual testing is not systematic, not repeatable, and not in CI. Write the automated test. |
+| "I need to write the code first to know what to test" | You should know the expected behavior before writing code. If you don't, the requirement is unclear — clarify it. |
+| "TDD is too slow for this" | TDD is faster than debugging after. The feeling of speed without tests is an illusion. |
+| "This is just a refactor, tests already exist" | Run the tests first (they should pass). Make the change. Run again (they should still pass). That IS TDD for refactors. |
+
+**If you wrote production code before a failing test:** delete the production code and start over. Sunk cost is not a reason to skip TDD.
+
 ## Gotchas
 
 - Always read git history before starting — repeating a failed approach wastes a full cycle
