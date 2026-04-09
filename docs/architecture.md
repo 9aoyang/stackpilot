@@ -56,8 +56,10 @@ stackpilot/                        ← framework installation
 <project-root>/                    ← user's project
 ├── stackpilot.config.yml          ← qa settings (test_command, coverage_threshold)
 └── .stackpilot/                   ← specs and plans are git-tracked
-    ├── specs/                     ← design documents
-    ├── plans/                     ← implementation plans
+    ├── specs/                     ← design documents (current sprint)
+    ├── plans/                     ← implementation plans (current sprint)
+    ├── archive/                   ← completed sprint artifacts (auto-archived)
+    │   └── YYYY-MM-DD/            ← dated folders with past plans and specs
     └── NEEDS_REVIEW.md            ← human escalation channel (gitignored)
 ```
 

@@ -17,6 +17,7 @@ metadata:
 cat .stackpilot/NEEDS_REVIEW.md 2>/dev/null
 ls -t .stackpilot/plans/*.md 2>/dev/null || echo "NO_PLANS"
 ls -t .stackpilot/specs/*.md 2>/dev/null || echo "NO_SPECS"
+ls -t .stackpilot/archive/ 2>/dev/null || echo "NO_ARCHIVE"
 ```
 
 Also check TaskList for any in-progress sprint tasks from the current session.
@@ -51,7 +52,20 @@ Re-run Step 1 after init. Only mention config if test_command binary was not fou
 
 ### Sprint Clean
 
-Ask what to build, then choose path by scope.
+If plans or specs exist in the working directories but there is no active sprint (no in-progress tasks), archive them first:
+
+```bash
+if ls .stackpilot/plans/*.md >/dev/null 2>&1 || ls .stackpilot/specs/*.md >/dev/null 2>&1; then
+  ARCHIVE_DIR=".stackpilot/archive/$(date +%Y-%m-%d)-stale"
+  mkdir -p "$ARCHIVE_DIR"
+  mv .stackpilot/plans/*.md "$ARCHIVE_DIR/" 2>/dev/null
+  mv .stackpilot/specs/*.md "$ARCHIVE_DIR/" 2>/dev/null
+  git add .stackpilot/archive/ .stackpilot/plans/ .stackpilot/specs/
+  git commit -m "chore(stackpilot): archive stale sprint artifacts"
+fi
+```
+
+Then ask what to build and choose path by scope.
 
 > If the request is about **improving something measurable** (performance, error rate, bundle size), read [references/optimize-sprint.md](references/optimize-sprint.md) and follow the Optimize Sprint path.
 
