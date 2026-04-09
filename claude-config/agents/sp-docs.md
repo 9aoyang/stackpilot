@@ -8,9 +8,10 @@ You are the Stackpilot Docs Agent. You run after QA passes on a task.
 
 ## Process
 
-1. Read `.stackpilot/tasks/done/TASK-ID.md` to understand what was built
-2. Read the changed source files
-3. Update documentation
+1. Read the task description passed in by the main session
+2. Read the latest plan in `.stackpilot/plans/` to understand scope and nearby tasks
+3. Read the changed source files and any QA findings passed in by the main session
+4. Update documentation
 
 ## What to Update
 
@@ -36,5 +37,5 @@ Do NOT claim docs are complete without reading back what you wrote.
 
 ## On Completion
 
-1. Update `.stackpilot/tasks/backlog.yml`: set docs task `status: done`
-2. Write `.stackpilot/tasks/done/TASK-ID-docs.md` with a one-line summary of what was documented
+1. Return a concise summary of what docs were updated
+2. Include any follow-up documentation gaps that should be tracked in the next plan revision

@@ -27,57 +27,91 @@ WORKTREE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # 1. Agent source files in repo
 echo "--- Agent files (claude-config/agents/) ---"
-check "sp-pm.md"          "$WORKTREE_DIR/claude-config/agents/sp-pm.md"
 check "sp-architect.md"   "$WORKTREE_DIR/claude-config/agents/sp-architect.md"
 check "sp-dev.md"         "$WORKTREE_DIR/claude-config/agents/sp-dev.md"
 check "sp-qa.md"          "$WORKTREE_DIR/claude-config/agents/sp-qa.md"
 check "sp-docs.md"        "$WORKTREE_DIR/claude-config/agents/sp-docs.md"
-check "sp-coordinator.md" "$WORKTREE_DIR/claude-config/agents/sp-coordinator.md"
+if [ ! -e "$WORKTREE_DIR/claude-config/agents/sp-pm.md" ] && [ ! -e "$WORKTREE_DIR/claude-config/agents/sp-coordinator.md" ]; then
+  echo "  PASS: legacy sp-pm/sp-coordinator agents removed in v2"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: legacy sp-pm/sp-coordinator agents should be removed in v2"
+  FAIL=$((FAIL + 1))
+fi
 echo ""
 
 # 2. Skill source files in repo
-echo "--- Skills (claude-config/skills/stackpilot/) ---"
-check "SKILL.md"          "$WORKTREE_DIR/claude-config/skills/stackpilot/SKILL.md"
-check "coordinator.md"    "$WORKTREE_DIR/claude-config/skills/stackpilot/coordinator.md"
+echo "--- Skills (claude-config/skills/) ---"
+check "stackpilot/SKILL.md"              "$WORKTREE_DIR/claude-config/skills/stackpilot/SKILL.md"
+check "stackpilot-auto/SKILL.md"         "$WORKTREE_DIR/claude-config/skills/stackpilot-auto/SKILL.md"
+check "stackpilot-resume/SKILL.md"       "$WORKTREE_DIR/claude-config/skills/stackpilot-resume/SKILL.md"
+check "stackpilot-compete/SKILL.md"      "$WORKTREE_DIR/claude-config/skills/stackpilot-compete/SKILL.md"
+check "stackpilot-sync/SKILL.md"         "$WORKTREE_DIR/claude-config/skills/stackpilot-sync/SKILL.md"
+check "tdd-development/SKILL.md"         "$WORKTREE_DIR/claude-config/skills/tdd-development/SKILL.md"
+check "qa-12-dimensions/SKILL.md"        "$WORKTREE_DIR/claude-config/skills/qa-12-dimensions/SKILL.md"
+check "architecture-review/SKILL.md"     "$WORKTREE_DIR/claude-config/skills/architecture-review/SKILL.md"
+check "systematic-debugging/SKILL.md"    "$WORKTREE_DIR/claude-config/skills/systematic-debugging/SKILL.md"
+if [ ! -e "$WORKTREE_DIR/claude-config/skills/stackpilot/coordinator.md" ]; then
+  echo "  PASS: legacy stackpilot/coordinator.md removed in v2"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: legacy stackpilot/coordinator.md should be removed in v2"
+  FAIL=$((FAIL + 1))
+fi
 echo ""
 
-# 3. templates/ — expect 5 files
-echo "--- templates/ (expect 5 files) ---"
+# 3. templates/ — expect 3 files
+echo "--- templates/ (expect 3 files) ---"
 TEMPLATE_COUNT=$(find "$WORKTREE_DIR/templates" -maxdepth 1 -type f | wc -l | tr -d ' ')
-if [ "$TEMPLATE_COUNT" -eq 5 ]; then
-  echo "  PASS: templates/ has 5 files (found $TEMPLATE_COUNT)"
+if [ "$TEMPLATE_COUNT" -eq 3 ]; then
+  echo "  PASS: templates/ has 3 files (found $TEMPLATE_COUNT)"
   PASS=$((PASS + 1))
 else
-  echo "  FAIL: templates/ should have 5 files, found $TEMPLATE_COUNT"
+  echo "  FAIL: templates/ should have 3 files, found $TEMPLATE_COUNT"
   FAIL=$((FAIL + 1))
 fi
 echo ""
 
-# 4. scripts/hooks/ — expect 3 .sh files (pre-commit, post-checkout, post-commit)
-echo "--- scripts/hooks/ (expect 3 .sh files) ---"
+# 4. scripts/hooks/ — v2 keeps docs only
+echo "--- scripts/hooks/ (expect docs only) ---"
 HOOKS_COUNT=$(find "$WORKTREE_DIR/scripts/hooks" -maxdepth 1 -name "*.sh" -type f | wc -l | tr -d ' ')
-if [ "$HOOKS_COUNT" -eq 3 ]; then
-  echo "  PASS: scripts/hooks/ has 3 .sh files (found $HOOKS_COUNT)"
+if [ "$HOOKS_COUNT" -eq 0 ]; then
+  echo "  PASS: scripts/hooks/ has 0 .sh files (found $HOOKS_COUNT)"
   PASS=$((PASS + 1))
 else
-  echo "  FAIL: scripts/hooks/ should have 3 .sh files, found $HOOKS_COUNT"
+  echo "  FAIL: scripts/hooks/ should have 0 .sh files, found $HOOKS_COUNT"
   FAIL=$((FAIL + 1))
 fi
+check "scripts/hooks/README.md" "$WORKTREE_DIR/scripts/hooks/README.md"
 echo ""
 
 # 5. scripts/
 echo "--- scripts/ ---"
 check "scripts/init.sh"            "$WORKTREE_DIR/scripts/init.sh"
 check "scripts/restore.sh"         "$WORKTREE_DIR/scripts/restore.sh"
-check "scripts/dispatch.sh"        "$WORKTREE_DIR/scripts/dispatch.sh"
 check "scripts/release.sh"         "$WORKTREE_DIR/scripts/release.sh"
 check "scripts/lib/config.sh"      "$WORKTREE_DIR/scripts/lib/config.sh"
+if [ ! -e "$WORKTREE_DIR/scripts/dispatch.sh" ]; then
+  echo "  PASS: scripts/dispatch.sh removed in v2"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: scripts/dispatch.sh should be removed in v2"
+  FAIL=$((FAIL + 1))
+fi
+if [ ! -e "$WORKTREE_DIR/scripts/lib/version.sh" ]; then
+  echo "  PASS: scripts/lib/version.sh removed in v2"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: scripts/lib/version.sh should be removed in v2"
+  FAIL=$((FAIL + 1))
+fi
 echo ""
 
 # 6. workflows/
 echo "--- .github/workflows/ ---"
 check ".github/workflows/ci.yml"       "$WORKTREE_DIR/.github/workflows/ci.yml"
 check ".github/workflows/release.yml"  "$WORKTREE_DIR/.github/workflows/release.yml"
+check ".claude-plugin/plugin.json"     "$WORKTREE_DIR/.claude-plugin/plugin.json"
 echo ""
 
 # 6. tests/ — 2 existing test files (not counting this one)

@@ -48,8 +48,10 @@ cat stackpilot.config.yml 2>/dev/null || cat templates/stackpilot.config.yml 2>/
 for f in scripts/init.sh scripts/lib/config.sh; do echo "=== $f ==="; cat "$f" 2>/dev/null; done
 
 # State layer
-cat .stackpilot/tasks/backlog.yml 2>/dev/null
 ls .stackpilot/ 2>/dev/null
+ls -t .stackpilot/plans/*.md 2>/dev/null | head -3
+ls -t .stackpilot/specs/*.md 2>/dev/null | head -3
+cat .stackpilot/NEEDS_REVIEW.md 2>/dev/null
 
 # External refs
 cat docs/sync.md 2>/dev/null

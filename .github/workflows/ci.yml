@@ -19,6 +19,9 @@ jobs:
       - name: Run init tests
         run: bash tests/test-init.sh
 
+      - name: Run config tests
+        run: bash tests/test-config.sh
+
       - name: Run hook tests
         run: bash tests/test-hooks.sh
 
