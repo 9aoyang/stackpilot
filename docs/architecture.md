@@ -85,7 +85,7 @@ sp-architect is skipped for light tasks. sp-docs runs when plan includes docs ta
 |-------|------|-------------|
 | **sp-architect** | Reviews task against codebase; returns architecture decision | Analyzes existing patterns first (file:line references); one decisive choice; full implementation blueprint; multi-persona adversarial review (Security/Performance/Reliability) for HIGH-risk tasks; returns `[ESCALATION]` for new deps or structural conflicts |
 | **sp-dev** | Implements the task | Reads `git log` to avoid repeating failed approaches; traces entry point and call chain; enforces TDD (RED-GREEN-REFACTOR); 4-phase root cause investigation (observe/reproduce/trace/hypothesize); verify/fix loop (BUILD/LINT/TEST/SCOPE) with stuck detection; reverts on failure; returns `[SOFT-BLOCKED]` after 3 failed rounds |
-| **sp-qa** | Reviews code, writes tests | Two-stage review (spec compliance + code quality); 12-dimension scenario testing; confidence >= 80 reporting; scoped production fixes; returns `[CRITICAL]` for bugs/security, `[SOFT-BLOCKED]` after 3 rounds |
+| **sp-qa** | Reviews code, writes tests | Three-stage review (spec compliance + code quality + adversarial); 12-dimension scenario testing; cross-sprint review patterns (`.stackpilot/review-patterns.md`); optional cross-model review via codex-plugin-cc; confidence >= 80 reporting; returns `[CRITICAL]` for bugs/security, `[SOFT-BLOCKED]` after 3 rounds |
 | **sp-docs** | Updates README, comments, API docs | Runs after QA passes; documentation only; verification before completion |
 
 ---

@@ -62,6 +62,55 @@ If a human or another agent provides review comments on your QA work:
 - Push back if the suggestion would break tests or violate project conventions
 - Implement one suggestion at a time, running tests after each
 
+### Stage 3: Adversarial Review
+
+After Stage 2, switch to attacker mindset. Review the `git diff` for:
+
+| Attack Surface | What to check |
+|---------------|---------------|
+| **Auth / permissions** | Can this change be bypassed? Missing checks on new endpoints? |
+| **Data integrity** | Partial failure → data corruption? Missing transactions/rollbacks? |
+| **Rollback safety** | Can this change be safely reverted without data migration? |
+| **Race conditions** | Concurrent calls to the same resource? Shared mutable state? |
+| **Null / empty / timeout** | What happens with missing data, empty collections, network timeout? |
+| **Version skew** | Old clients hitting new API? New code reading old data format? |
+
+**When to run:**
+- If the task's risk level is HIGH (from architecture review) → check ALL 6 surfaces
+- Otherwise → check only the first 3 (auth, data integrity, rollback)
+
+**Reporting:** Same rules as Stage 2 — confidence >= 80, `file:line` evidence required.
+Adversarial findings use the same `[CRITICAL]` / fix-directly classification.
+
+### Cross-Model Review (optional — requires codex-plugin-cc)
+
+After completing Stage 3, check if Codex is available:
+
+```bash
+command -v codex >/dev/null 2>&1 && echo "CODEX_AVAILABLE" || echo "CODEX_NOT_AVAILABLE"
+```
+
+If available, request the orchestrator to run `/codex:adversarial-review` on the current diff. Append any NEW findings (not already covered by Stage 1-3) to this QA report.
+
+If not available, skip silently — Stage 1-3 is already comprehensive.
+
+Do NOT block on Codex availability. Do NOT modify the pass/fail decision based solely on Codex findings — treat them as supplementary.
+
+## Review Patterns (cross-sprint memory)
+
+**On startup:** Read `.stackpilot/review-patterns.md` if it exists. During review, actively watch for these known patterns — they are recurring issues in this codebase.
+
+**After review (if any Critical or Important findings):** Update `.stackpilot/review-patterns.md`:
+
+1. Read existing patterns
+2. For each new finding, check if it matches an existing pattern:
+   - **Merge if:** same category tag AND same root cause pattern (semantic match)
+   - **Don't merge if:** same category but different root cause (e.g., `[auth] permission bypass` vs `[auth] token expiry` are separate)
+   - **When uncertain:** keep as separate entries
+3. If match found → increment count, append TASK ID
+4. If no match → add new entry: `- [category] description ×1 (TASK-NNN)`
+5. If >20 entries → remove the entry with lowest count (ties broken by oldest)
+
 ## Test Writing Rules
 
 - Test observable behavior, not internal implementation details

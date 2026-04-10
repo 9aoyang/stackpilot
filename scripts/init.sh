@@ -21,19 +21,25 @@ echo "[stackpilot] Initializing Stackpilot in: $PROJECT_ROOT"
 mkdir -p "$PROJECT_ROOT/.stackpilot/specs"
 mkdir -p "$PROJECT_ROOT/.stackpilot/plans"
 
-# 2. Create .stackpilot/.gitignore
+# 2. Create review-patterns.md if missing
+if [ ! -f "$PROJECT_ROOT/.stackpilot/review-patterns.md" ]; then
+  cp "$STACKPILOT_DIR/templates/review-patterns.md" "$PROJECT_ROOT/.stackpilot/review-patterns.md"
+  echo "[stackpilot] Created .stackpilot/review-patterns.md"
+fi
+
+# 3. Create .stackpilot/.gitignore (NEEDS_REVIEW.md is gitignored, review-patterns.md is tracked)
 if [ ! -f "$PROJECT_ROOT/.stackpilot/.gitignore" ]; then
   cp "$STACKPILOT_DIR/templates/stackpilot-inner-gitignore" "$PROJECT_ROOT/.stackpilot/.gitignore"
   echo "[stackpilot] Created .stackpilot/.gitignore"
 fi
 
-# 3. Create NEEDS_REVIEW.md if missing
+# 4. Create NEEDS_REVIEW.md if missing
 if [ ! -f "$PROJECT_ROOT/.stackpilot/NEEDS_REVIEW.md" ]; then
   cp "$STACKPILOT_DIR/templates/NEEDS_REVIEW.md" "$PROJECT_ROOT/.stackpilot/NEEDS_REVIEW.md"
   echo "[stackpilot] Created .stackpilot/NEEDS_REVIEW.md"
 fi
 
-# 4. Create stackpilot.config.yml if missing — auto-detect test command
+# 5. Create stackpilot.config.yml if missing — auto-detect test command
 if [ ! -f "$PROJECT_ROOT/stackpilot.config.yml" ]; then
   detect_test_command() {
     local dir="$1"
@@ -112,7 +118,7 @@ CFGEOF
   fi
 fi
 
-# 5. Update .gitignore — ensure specs/ and plans/ are trackable
+# 6. Update .gitignore — ensure specs/ and plans/ are trackable
 GITIGNORE="$PROJECT_ROOT/.gitignore"
 
 # Remove blanket .stackpilot/ ignore if present

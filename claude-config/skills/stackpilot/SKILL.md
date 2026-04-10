@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: Requires Claude Code (uses native Agent tool, TaskCreate, worktree isolation)
 metadata:
   author: stackpilot
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Stackpilot
@@ -287,7 +287,7 @@ Agent(description="Dev: TASK-NNN", prompt="<tdd-development skill instructions> 
 
 **5. QA review**:
 ```
-Agent(description="QA: TASK-NNN", prompt="<qa-12-dimensions skill instructions> + <task> + <dev result>")
+Agent(description="QA: TASK-NNN", prompt="<qa-12-dimensions skill instructions> + <task> + <dev result> + Risk level: <from arch review, or LOW> + Review patterns: <.stackpilot/review-patterns.md content>")
 ```
 
 **6. Handle QA result**:

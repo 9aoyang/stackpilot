@@ -85,7 +85,7 @@ sp-dev → sp-qa
 |-------|------|---------|
 | **sp-architect** | 对照代码库审查任务；返回架构决策 | 先分析现有代码模式（file:line 引用）；唯一的架构决策；完整实现蓝图；HIGH 风险多角色对抗分析；新依赖/结构冲突返回 `[ESCALATION]` |
 | **sp-dev** | 实现任务 | 读 `git log` 避免重复失败路径；追踪入口点+调用链；强制 TDD（RED-GREEN-REFACTOR）；4 阶段根因调查；verify/fix 循环含卡住检测；失败后回滚；3 轮后返回 `[SOFT-BLOCKED]` |
-| **sp-qa** | 审查代码、编写测试 | 两阶段审查（spec 合规 + 代码质量）；12 维场景测试；置信度 ≥ 80 才上报；有限范围生产修复；返回 `[CRITICAL]` 或 `[SOFT-BLOCKED]` |
+| **sp-qa** | 审查代码、编写测试 | 三阶段审查（spec 合规 + 代码质量 + 对抗性审查）；12 维场景测试；跨 sprint 审查记忆（`.stackpilot/review-patterns.md`）；可选 codex-plugin-cc 跨模型审查；置信度 ≥ 80 才上报；返回 `[CRITICAL]` 或 `[SOFT-BLOCKED]` |
 | **sp-docs** | 更新 README、注释、API 文档 | QA 通过后运行；只改文档不改逻辑 |
 
 ---
