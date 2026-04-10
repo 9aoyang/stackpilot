@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-04-10
+
+### Changed
+- **Consolidated orchestration commands** (6→3): merged `stackpilot-auto`, `stackpilot-resume`, `stackpilot-tidy` into main `/stackpilot` as state-routed flows
+- **Removed archive mechanism**: plans/specs are deleted directly after sprint (git history is sufficient)
+- **Auto/interactive mode**: user chooses after describing feature, replacing standalone `/stackpilot-auto`
+
+### Added
+- **Workspace tidy flow**: cleans `.claude/plans/`, `.superpowers/`, orphaned worktrees, merged branches, stale remote tracking branches
+- **Sprint resume flow**: detects interrupted sprints from plan + git log, offers continue/fresh/discard
+
+### Removed
+- `stackpilot-auto` skill (merged into `/stackpilot`)
+- `stackpilot-resume` skill (merged into `/stackpilot`)
+- `stackpilot-tidy` skill (merged into `/stackpilot`)
+- `.stackpilot/archive/` directory and all archive logic
+
 ## [1.0.1] - 2026-04-08
 
 ### Added
