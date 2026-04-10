@@ -58,17 +58,15 @@ printf "" > .stackpilot/NEEDS_REVIEW.md
 
 Stop dev server if started: `kill <PID> 2>/dev/null`
 
-## Step 6 — Archive Sprint Artifacts
+## Step 6 — Clear Sprint Artifacts
 
-Move this sprint's plans and specs into a dated archive folder so the working directories stay clean for the next sprint.
+Delete this sprint's plans and specs. They are already in git history from when they were committed during the sprint.
 
 ```bash
-ARCHIVE_DIR=".stackpilot/archive/$(date +%Y-%m-%d)"
-mkdir -p "$ARCHIVE_DIR"
-mv .stackpilot/plans/*.md "$ARCHIVE_DIR/" 2>/dev/null
-mv .stackpilot/specs/*.md "$ARCHIVE_DIR/" 2>/dev/null
-git add .stackpilot/archive/ .stackpilot/plans/ .stackpilot/specs/
-git commit -m "chore(stackpilot): archive sprint artifacts to $ARCHIVE_DIR"
+rm -f .stackpilot/plans/*.md 2>/dev/null
+rm -f .stackpilot/specs/*.md 2>/dev/null
+git add .stackpilot/plans/ .stackpilot/specs/
+git commit -m "chore(stackpilot): clear sprint artifacts"
 ```
 
-This is automatic — do not ask the user. The archive is git-tracked so history is preserved.
+This is automatic — do not ask the user.

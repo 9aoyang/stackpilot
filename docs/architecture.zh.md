@@ -58,8 +58,6 @@ stackpilot/                        ← 框架安装目录
 └── .stackpilot/                   ← specs 和 plans 受 git 跟踪
     ├── specs/                     ← 设计文档（当前 sprint）
     ├── plans/                     ← 实现计划（当前 sprint）
-    ├── archive/                   ← 已完成 sprint 的归档（自动归档）
-    │   └── YYYY-MM-DD/            ← 按日期存放历史 plans 和 specs
     └── NEEDS_REVIEW.md            ← 人工升级通道（gitignored）
 ```
 

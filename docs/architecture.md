@@ -58,8 +58,6 @@ stackpilot/                        ← framework installation
 └── .stackpilot/                   ← specs and plans are git-tracked
     ├── specs/                     ← design documents (current sprint)
     ├── plans/                     ← implementation plans (current sprint)
-    ├── archive/                   ← completed sprint artifacts (auto-archived)
-    │   └── YYYY-MM-DD/            ← dated folders with past plans and specs
     └── NEEDS_REVIEW.md            ← human escalation channel (gitignored)
 ```
 

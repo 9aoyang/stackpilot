@@ -17,10 +17,9 @@ PROJECT_ROOT="$(git rev-parse --show-toplevel)"
 
 echo "[stackpilot] Initializing Stackpilot in: $PROJECT_ROOT"
 
-# 1. Create .stackpilot/ directory structure (specs, plans, archive — tasks are tracked by Claude Code natively)
+# 1. Create .stackpilot/ directory structure (specs, plans — tasks are tracked by Claude Code natively)
 mkdir -p "$PROJECT_ROOT/.stackpilot/specs"
 mkdir -p "$PROJECT_ROOT/.stackpilot/plans"
-mkdir -p "$PROJECT_ROOT/.stackpilot/archive"
 
 # 2. Create .stackpilot/.gitignore
 if [ ! -f "$PROJECT_ROOT/.stackpilot/.gitignore" ]; then
