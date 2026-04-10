@@ -1,6 +1,6 @@
 # Stackpilot 架构文档
 
-> 最后更新：2026-04-08
+> 最后更新：2026-04-10
 
 Stackpilot 是一个面向 Claude Code 的方法论驱动 Sprint 编排层。它将设计文档转化为可运行代码，通过驱动 Claude Code 原生的 Agent tool、TaskCreate 和 worktree 隔离能力完成——无需自建基础设施。
 
@@ -29,10 +29,6 @@ stackpilot/                        ← 框架安装目录
 │   └── skills/
 │       ├── stackpilot/
 │       │   └── SKILL.md           ← /stackpilot 主入口
-│       ├── stackpilot-auto/
-│       │   └── SKILL.md           ← /stackpilot-auto 全自动模式
-│       ├── stackpilot-resume/
-│       │   └── SKILL.md           ← /stackpilot-resume 中断恢复
 │       ├── stackpilot-compete/
 │       │   └── SKILL.md           ← /stackpilot-compete 竞品差距分析
 │       ├── stackpilot-sync/
@@ -123,12 +119,14 @@ Agent(
 
 ```
 /stackpilot [功能描述]
-  └─ 展示 Sprint 状态
+  └─ 展示 Sprint 状态 + 扫描工作区
        └─ 按状态路由：
-            未初始化      → 运行 init.sh
-            Sprint 干净   → 功能流程（轻量或标准路径）
-            进行中         → 继续 sprint
-            有待审阅       → 展示问题，引导回复
+            未初始化        → 运行 init.sh
+            工作区有残留    → tidy（清理工作流文件、修剪分支/worktree）
+            Sprint 中断     → resume（匹配 plan 任务与 git log，提供继续/重新开始）
+            Sprint 干净     → 询问需求 → 选择自动/交互模式 → 功能流程
+            进行中           → 继续 sprint
+            有待审阅         → 展示问题，引导回复
 ```
 
 **Standard Feature — 人工介入点：**
@@ -181,11 +179,9 @@ qa:
 
 | Slash Command | 用途 |
 |--------------|------|
-| `/stackpilot` | 主入口：状态 + 功能流程 + Sprint 执行 |
-| `/stackpilot-auto` | 全自动：跳过所有确认，代码停在 feature branch |
-| `/stackpilot-resume` | 恢复中断的 Sprint（从 plan + git log 重建状态） |
+| `/stackpilot` | 主入口：tidy + resume + 状态 + 自动/交互模式 + Sprint 执行 |
 | `/stackpilot-compete` | 以竞品重度用户视角做差距分析 |
-| `/stackpilot-sync` | 外部 skill 追踪和同步 |
+| `/stackpilot-sync` | 外部 skill 追踪和同步（开发者维护） |
 | `/tdd-development` | **便携式** — TDD + verify/fix + 合理化阻断 |
 | `/qa-12-dimensions` | **便携式** — 12 维测试覆盖 + 代码审查 |
 | `/architecture-review` | **便携式** — 代码库模式分析 + 实现蓝图 |
@@ -210,9 +206,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | Skill | 功能 |
 |-------|------|
-| `stackpilot` | 完整 sprint：设计→spec→plan→编码→QA→上线 |
-| `stackpilot-auto` | 全自动，跳过确认 |
-| `stackpilot-resume` | 从 plan + git log 恢复中断 sprint |
+| `stackpilot` | 完整 sprint：tidy→resume→设计→spec→plan→编码→QA→上线。内置自动模式（跳过确认）和工作区清理。 |
 
 **渐进式展开** — SKILL.md 控制在 500 行以内，重内容（visual companion、optimize sprint、sprint finish）放在 `references/` 按需加载。
 
@@ -224,7 +218,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 **Prompt 级 Agent 间通信。** Agent 输出直接作为 prompt 上下文传递给下游 Agent。无中间文件（arch-review/、done/）。主会话即 coordinator。
 
-**Plan 即持久层。** 任务在会话内通过 TaskCreate 跟踪。Plan 文件是持久化的 source of truth。`/stackpilot-resume` 从 plan + git log 重建状态。
+**Plan 即持久层。** 任务在会话内通过 TaskCreate 跟踪。Plan 文件是持久化的 source of truth。resume 流程从 plan + git log 重建状态。
 
 **零外部依赖。** 所有 Agent 协议内联，无需安装任何外部插件。
 
@@ -244,6 +238,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-10 | **v2.1 整合**：将 stackpilot-auto、stackpilot-resume、stackpilot-tidy 合并到主 `/stackpilot` 作为状态路由流程（编排命令 6→3）。移除归档机制——plans/specs 直接删除（git history 可追溯）。新增工作区 tidy 流程（清理 .claude/plans/、.superpowers/、孤立 worktree、已合并分支）。用户描述需求后新增自动/交互模式选择。 |
 | 2026-04-08 | **v2 架构**：dispatch.sh 替换为 Claude Code 原生 Agent tool；backlog.yml 替换为 TaskCreate；移除 sp-pm 和 sp-coordinator（内联到 skill）；移除 git hooks；配置精简为仅 qa 部分；新增 /stackpilot-resume；Agent 变为纯方法论提示词，无文件 I/O |
 | 2026-04-07 | 收敛交互流程；Visual Companion 内联；自动探测项目栈；TDD + 根因调查；即时 review；per-provider model routing；worktree 隔离；pre-commit 校验；文件锁；超时；自动 coding + 进度简报 |
 | 2026-04-07 | 逐个澄清问题；Visual Companion 浏览器服务器；compete 12 维度 + 5 角色辩论 |

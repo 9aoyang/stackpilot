@@ -1,11 +1,11 @@
 ---
 name: stackpilot
-description: Sprint orchestration for Claude Code. Turns feature requests into working code through a design→spec→plan→code→QA pipeline. Use when starting, resuming, or checking on development work. Drives Claude Code's native Agent tool for multi-agent execution with worktree isolation.
+description: Sprint orchestration for Claude Code. Turns feature requests into working code through a design→spec→plan→code→QA pipeline. Use when starting, resuming, tidying, or checking on development work. Drives Claude Code's native Agent tool for multi-agent execution with worktree isolation.
 license: Apache-2.0
 compatibility: Requires Claude Code (uses native Agent tool, TaskCreate, worktree isolation)
 metadata:
   author: stackpilot
-  version: "1.0.1"
+  version: "2.0.0"
 ---
 
 # Stackpilot
@@ -20,6 +20,17 @@ ls -t .stackpilot/specs/*.md 2>/dev/null || echo "NO_SPECS"
 ```
 
 Also check TaskList for any in-progress sprint tasks from the current session.
+
+Additionally, scan for workspace debris:
+
+```bash
+# Workflow artifacts
+ls .claude/plans/*.md 2>/dev/null
+ls -d .superpowers/ 2>/dev/null
+git worktree prune --dry-run 2>/dev/null
+git remote prune origin --dry-run 2>/dev/null
+git status --porcelain 2>/dev/null | head -10
+```
 
 Run checks silently. Default output: concise state summary + routing decision in 1-3 lines.
 
@@ -49,22 +60,120 @@ Re-run Step 1 after init. Only mention config if test_command binary was not fou
 
 ---
 
-### Sprint Clean
+### Tidy (workspace has debris)
 
-If plans or specs exist in the working directories but there is no active sprint (no in-progress tasks), clear them first (they are already in git history):
+If Step 1 found workflow artifacts (.claude/plans/, .superpowers/, orphaned worktrees, remote-deleted tracking branches), run cleanup before proceeding.
 
-```bash
-if ls .stackpilot/plans/*.md >/dev/null 2>&1 || ls .stackpilot/specs/*.md >/dev/null 2>&1; then
-  rm -f .stackpilot/plans/*.md 2>/dev/null
-  rm -f .stackpilot/specs/*.md 2>/dev/null
-  git add .stackpilot/plans/ .stackpilot/specs/
-  git commit -m "chore(stackpilot): clear stale sprint artifacts"
-fi
+**Scan and report:**
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Stackpilot Tidy
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Will clean:
+    · 4 Claude plan files (.claude/plans/)
+    · .superpowers/ (3 files)
+    · 1 orphaned worktree
+    · 2 merged branches: feature/old, fix/typo
+
+  Needs attention:
+    · 3 uncommitted changes
+    · 2 stashed entries
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-Then ask what to build and choose path by scope.
+**"Will clean" items** (safe, automatic — ask once to confirm):
+- `git worktree prune`
+- `git remote prune origin`
+- Delete merged local branches: `git branch -d <branch>` (only `--merged` branches, exclude main/master/develop)
+- Delete `.claude/plans/*.md` (non-git-tracked only — check with `git ls-files --error-unmatch` first)
+- Delete `.superpowers/`
+- Clear `.stackpilot/NEEDS_REVIEW.md`
+
+**"Needs attention" items** (report only, never auto-handle):
+- Uncommitted changes (`git status --porcelain`)
+- Stale stashes (`git stash list`)
+
+After cleanup, commit if stackpilot files changed:
+```bash
+git add .stackpilot/ 2>/dev/null
+git diff --cached --quiet || git commit -m "chore(stackpilot): tidy"
+```
+
+Then continue routing to the next applicable state.
+
+---
+
+### Sprint Interrupted (plans exist, no active session tasks)
+
+If `.stackpilot/plans/*.md` exists but TaskList has no in-progress tasks from the current session, this is an interrupted sprint from a previous session.
+
+**1. Find the plan:**
+
+```bash
+ls -t .stackpilot/plans/*.md 2>/dev/null | head -1
+```
+
+Read the latest plan file and parse all `### TASK-` sections.
+
+**2. Determine completed tasks:**
+
+```bash
+git log --oneline --all -50
+```
+
+For each TASK in the plan:
+- Search git log for commit messages containing the TASK ID or task title keywords
+- Check if the task's `relevant_files` exist and have recent modifications
+- Evidence of completion → **done**; no evidence → **pending**
+
+**3. Check blockers:**
+
+Read `.stackpilot/NEEDS_REVIEW.md` — if has content, present to user first.
+
+**4. Show status and offer choices:**
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Sprint Resume — <plan name>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ TASK-001  add user model         done (commit abc1234)
+✅ TASK-002  add auth middleware     done (commit def5678)
+⏳ TASK-003  payment integration     pending
+⏳ TASK-004  write unit tests        pending
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Completed: 2/4  |  Remaining: 2
+```
+
+> A. Resume from TASK-003
+> B. Show me the plan details first
+> C. Start fresh (re-run all tasks)
+> D. Discard this sprint and start something new
+
+- **A** → Create TaskCreate entries for pending tasks only, then Run Sprint from first pending task
+- **B** → Display the full plan, then ask again
+- **C** → Create TaskCreate entries for ALL tasks, Run Sprint from beginning
+- **D** → Clear plans/specs, then proceed to Sprint Clean
+
+---
+
+### Sprint Clean
+
+If no plans/specs exist (or they were just cleared), ask what to build.
 
 > If the request is about **improving something measurable** (performance, error rate, bundle size), read [references/optimize-sprint.md](references/optimize-sprint.md) and follow the Optimize Sprint path.
+
+After the user describes what to build, ask:
+
+> How should I run this?
+> A. Walk through design together (I'll check in at key points)
+> B. Full auto (plan and code without stopping, result stays on feature branch)
+
+If **B (auto mode)**: skip all `<!-- CONFIRM-GATE -->` prompts. At Sprint Finish, auto-select option C (leave as-is). Pick the most conservative non-destructive default at any decision point.
+
+Then choose path by scope:
 
 #### Light Feature (single clear requirement, ≤ 2 sentences)
 
@@ -154,7 +263,7 @@ Core coding phase. Reads plan, creates tasks, dispatches specialist agents.
 > "Plan ready. Proceed with coding?"
 > A. Yes  B. I'll handle it elsewhere
 
-Skip when running via `/stackpilot-auto`. <!-- CONFIRM-GATE: pre-coding -->
+<!-- CONFIRM-GATE: pre-coding -->
 
 ### Sprint Execution Loop
 

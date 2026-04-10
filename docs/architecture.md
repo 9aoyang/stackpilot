@@ -1,6 +1,6 @@
 # Stackpilot Architecture
 
-> Last updated: 2026-04-08
+> Last updated: 2026-04-10
 
 Stackpilot is a methodology-driven sprint orchestration layer for Claude Code. It turns a specification into working code by driving Claude Code's native Agent tool, TaskCreate, and worktree isolation — no custom infrastructure needed.
 
@@ -29,10 +29,6 @@ stackpilot/                        ← framework installation
 │   └── skills/
 │       ├── stackpilot/
 │       │   └── SKILL.md           ← /stackpilot main entry point
-│       ├── stackpilot-auto/
-│       │   └── SKILL.md           ← /stackpilot-auto full-auto mode
-│       ├── stackpilot-resume/
-│       │   └── SKILL.md           ← /stackpilot-resume interrupted sprint recovery
 │       ├── stackpilot-compete/
 │       │   └── SKILL.md           ← /stackpilot-compete competitive gap analysis
 │       ├── stackpilot-sync/
@@ -123,12 +119,14 @@ Agent(
 
 ```
 /stackpilot [feature description]
-  └─ Show sprint status
+  └─ Show sprint status + scan workspace
        └─ Route by state:
-            not initialized → run init.sh
-            sprint clean    → feature flow (light or standard path)
-            in-progress     → continue sprint
-            NEEDS_REVIEW    → show escalation, guide reply
+            not initialized    → run init.sh
+            workspace dirty    → tidy (clean workflow artifacts, prune branches/worktrees)
+            sprint interrupted → resume (match plan tasks to git log, offer continue/fresh)
+            sprint clean       → ask what to build → choose auto or interactive → feature flow
+            in-progress        → continue sprint
+            NEEDS_REVIEW       → show escalation, guide reply
 ```
 
 **Standard Feature — human intervention points:**
@@ -181,11 +179,9 @@ Model routing is handled by Claude Code natively (agent frontmatter `model:` fie
 
 | Slash Command | Purpose |
 |--------------|---------|
-| `/stackpilot` | Main entry: status + feature flow + sprint execution |
-| `/stackpilot-auto` | Full-auto: skip all confirmations, end on feature branch |
-| `/stackpilot-resume` | Resume interrupted sprint from plan + git log |
+| `/stackpilot` | Main entry: tidy + resume + status + auto/interactive mode + sprint execution |
 | `/stackpilot-compete` | Competitive gap analysis from power-user persona |
-| `/stackpilot-sync` | External skill tracking and sync |
+| `/stackpilot-sync` | External skill tracking and sync (developer maintenance) |
 | `/tdd-development` | **Portable** — TDD + verify/fix + rationalization blockers |
 | `/qa-12-dimensions` | **Portable** — 12-dimension test coverage + code review |
 | `/architecture-review` | **Portable** — Codebase pattern analysis + blueprint |
@@ -210,9 +206,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Skill | What it does |
 |-------|-------------|
-| `stackpilot` | Full sprint lifecycle: design → spec → plan → code → QA → ship |
-| `stackpilot-auto` | Same flow, skip all confirmations |
-| `stackpilot-resume` | Recover interrupted sprints from plan + git log |
+| `stackpilot` | Full sprint lifecycle: tidy → resume → design → spec → plan → code → QA → ship. Includes auto mode (skip confirmations) and workspace cleanup. |
 
 **Progressive disclosure** — SKILL.md stays under 500 lines. Heavy content (visual companion, optimize sprint, sprint finish) lives in `references/` and loads on demand.
 
@@ -224,7 +218,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 **Prompt-based inter-agent communication.** Agent outputs flow directly as prompt context to downstream agents. No intermediate files (arch-review/, done/). The main session is the coordinator.
 
-**Plan as persistence layer.** Tasks are tracked in-session via TaskCreate. Plan files are the persistent source of truth. `/stackpilot-resume` reconstructs state from plan + git log.
+**Plan as persistence layer.** Tasks are tracked in-session via TaskCreate. Plan files are the persistent source of truth. The resume flow reconstructs state from plan + git log.
 
 **Zero external dependencies.** All agent protocols are inlined. The skill works without any external plugin installed.
 
@@ -244,6 +238,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-04-10 | **v2.1 consolidation**: Merged stackpilot-auto, stackpilot-resume, stackpilot-tidy into main `/stackpilot` as state-routed flows (6→3 orchestration commands). Removed archive mechanism — plans/specs deleted directly (git history is sufficient). Added workspace tidy flow (clean .claude/plans/, .superpowers/, orphaned worktrees, merged branches). Added auto/interactive mode choice after user describes feature. |
 | 2026-04-08 | **v2 architecture**: Replaced dispatch.sh with Claude Code native Agent tool; replaced backlog.yml with TaskCreate; removed sp-pm and sp-coordinator (inlined in skill); removed git hooks; simplified config to qa-only; added /stackpilot-resume; agents become pure methodology prompts with no file I/O. Adopted Agent Skills open standard: extracted 3 portable methodology skills (tdd-development, qa-12-dimensions, architecture-review) usable in any Agent Skills-compatible product; restructured SKILL.md with progressive disclosure (references/); all name fields comply with spec |
 | 2026-04-07 | Tightened interaction flow; Visual Companion inline; auto-detect project stack; TDD + root cause investigation; per-task inline review; per-provider model routing; git worktree isolation; pre-commit validation; file locking; timeout enforcement; autonomous coding with progress reporting |
 | 2026-04-07 | One-at-a-time clarifying questions; Visual Companion browser server; compete skill 12-dimension + 5-persona debate |

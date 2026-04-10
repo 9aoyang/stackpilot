@@ -43,8 +43,6 @@ echo ""
 # 2. Skill source files in repo
 echo "--- Skills (claude-config/skills/) ---"
 check "stackpilot/SKILL.md"              "$WORKTREE_DIR/claude-config/skills/stackpilot/SKILL.md"
-check "stackpilot-auto/SKILL.md"         "$WORKTREE_DIR/claude-config/skills/stackpilot-auto/SKILL.md"
-check "stackpilot-resume/SKILL.md"       "$WORKTREE_DIR/claude-config/skills/stackpilot-resume/SKILL.md"
 check "stackpilot-compete/SKILL.md"      "$WORKTREE_DIR/claude-config/skills/stackpilot-compete/SKILL.md"
 check "stackpilot-sync/SKILL.md"         "$WORKTREE_DIR/claude-config/skills/stackpilot-sync/SKILL.md"
 check "tdd-development/SKILL.md"         "$WORKTREE_DIR/claude-config/skills/tdd-development/SKILL.md"
