@@ -23,9 +23,9 @@ fi
 # 3. If agent/skill files changed, architecture docs must also be updated
 STAGED=$(git diff --cached --name-only)
 SKILL_CHANGED=$(echo "$STAGED" | grep -cE '^claude-config/(agents|skills)/' || true)
-DOCS_CHANGED=$(echo "$STAGED" | grep -cE '^docs/architecture' || true)
+DOCS_CHANGED=$(echo "$STAGED" | grep -cE '^(docs/architecture|README\.md|CONTRIBUTING\.md)' || true)
 if [ "$SKILL_CHANGED" -gt 0 ] && [ "$DOCS_CHANGED" -eq 0 ]; then
-  warn "Agent/skill files changed but docs/architecture.md not updated"
+  warn "Agent/skill files changed but docs not updated (check: architecture.md, README.md, CONTRIBUTING.md)"
 fi
 
 # 4. Tests pass
