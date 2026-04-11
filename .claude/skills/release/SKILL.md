@@ -1,10 +1,6 @@
 ---
 name: release
-description: Use when releasing a new version of stackpilot — bumps version across all three required files, updates CHANGELOG, validates, commits, tags, and pushes.
-args:
-  - name: bump
-    description: "Bump type: patch (1.3.0→1.3.1), minor (1.3.0→1.4.0), major (1.3.0→2.0.0). Or an explicit X.Y.Z version."
-    required: true
+description: Use when releasing a new version of stackpilot — auto-detects bump type from CHANGELOG, bumps version across all three required files, validates, commits, tags, and pushes.
 ---
 
 # Release
@@ -31,23 +27,39 @@ git status --porcelain
 
 Must be empty. If not, commit or stash pending changes first.
 
-**2. Calculate new version**
+**2. Auto-detect bump type from CHANGELOG**
+
+Read the `## [Unreleased]` section in `CHANGELOG.md` and determine bump type:
+
+```bash
+UNRELEASED=$(awk '/^## \[Unreleased\]/{found=1; next} found && /^## \[/{exit} found{print}' CHANGELOG.md)
+```
+
+Rules (in priority order):
+
+| CHANGELOG content | Bump type |
+|-------------------|-----------|
+| Contains `BREAKING` (case-insensitive) | **major** |
+| Has `### Added` or `### Changed` with content | **minor** |
+| Has only `### Fixed` / `### Security` / `### Deprecated` | **patch** |
+| `[Unreleased]` is empty | **abort** — nothing to release |
+
+Show the detected bump type and the content it was inferred from. Then calculate:
 
 ```bash
 CURRENT="$(cat VERSION)"
-BUMP="$ARGUMENTS"   # patch | minor | major | or explicit X.Y.Z
-
 IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
 
 case "$BUMP" in
   patch) NEW_VER="$MAJOR.$MINOR.$((PATCH + 1))" ;;
   minor) NEW_VER="$MAJOR.$((MINOR + 1)).0" ;;
   major) NEW_VER="$((MAJOR + 1)).0.0" ;;
-  *)     NEW_VER="$BUMP" ;;  # explicit version passed
 esac
 
-echo "Bumping $CURRENT → $NEW_VER"
+echo "Detected: $BUMP bump → $CURRENT → $NEW_VER"
 ```
+
+If `$ARGUMENTS` is provided (e.g. `patch`, `minor`, `major`, or explicit `X.Y.Z`), skip auto-detection and use that directly.
 
 **3. Update CHANGELOG.md**
 
