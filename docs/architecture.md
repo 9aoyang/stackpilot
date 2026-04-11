@@ -139,7 +139,7 @@ Phase 3: spec auto-verify loop (self-fix, escalates only on 3x failure)
 Phase 4: plan auto-verify loop (self-fix, escalates only on 3x failure)
 Pre-coding: confirm to start
 Coding: autonomous with per-task progress reporting
-Sprint finish: merge / PR / leave / discard choice
+Sprint finish: squash merge (1 commit on main) / PR / leave / discard choice
 ```
 
 ---
@@ -238,6 +238,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-04-11 | **v1.3.0**: Sprint Finish squash merge — feature branch commits folded into one commit on main. Pre-merge housekeeping (arch update, artifact cleanup) committed on feature branch before squash. Feature branch auto-deleted after merge. |
 | 2026-04-10 | **v2.1 consolidation**: Merged stackpilot-auto, stackpilot-resume, stackpilot-tidy into main `/stackpilot` as state-routed flows (6→3 orchestration commands). Removed archive mechanism — plans/specs deleted directly (git history is sufficient). Added workspace tidy flow (clean .claude/plans/, .superpowers/, orphaned worktrees, merged branches). Added auto/interactive mode choice after user describes feature. |
 | 2026-04-08 | **v2 architecture**: Replaced dispatch.sh with Claude Code native Agent tool; replaced backlog.yml with TaskCreate; removed sp-pm and sp-coordinator (inlined in skill); removed git hooks; simplified config to qa-only; added /stackpilot-resume; agents become pure methodology prompts with no file I/O. Adopted Agent Skills open standard: extracted 3 portable methodology skills (tdd-development, qa-12-dimensions, architecture-review) usable in any Agent Skills-compatible product; restructured SKILL.md with progressive disclosure (references/); all name fields comply with spec |
 | 2026-04-07 | Tightened interaction flow; Visual Companion inline; auto-detect project stack; TDD + root cause investigation; per-task inline review; per-provider model routing; git worktree isolation; pre-commit validation; file locking; timeout enforcement; autonomous coding with progress reporting |

@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: Requires Claude Code (uses native Agent tool, TaskCreate, worktree isolation)
 metadata:
   author: stackpilot
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # Stackpilot
@@ -14,6 +14,7 @@ metadata:
 
 ```bash
 [ -d .stackpilot ] && echo "initialized" || echo "NOT_INITIALIZED"
+[ -f .stackpilot/ARCHITECTURE.md ] && echo "ARCH_EXISTS" || echo "ARCH_MISSING"
 cat .stackpilot/NEEDS_REVIEW.md 2>/dev/null
 ls -t .stackpilot/plans/*.md 2>/dev/null || echo "NO_PLANS"
 ls -t .stackpilot/specs/*.md 2>/dev/null || echo "NO_SPECS"
@@ -57,6 +58,44 @@ bash ~/Documents/github/stackpilot/scripts/init.sh 2>&1
 ```
 
 Re-run Step 1 after init. Only mention config if test_command binary was not found.
+
+---
+
+### Architecture Missing (ARCH_MISSING — first run only)
+
+`.stackpilot/ARCHITECTURE.md` does not exist. Run a one-time project assessment before proceeding.
+
+**Assessment steps:**
+
+1. Read `CLAUDE.md` (project instructions)
+2. Scan project structure:
+   ```bash
+   find src -type d | head -30 2>/dev/null || true
+   ls package.json pyproject.toml Cargo.toml go.mod 2>/dev/null | head -5
+   git log --oneline -10
+   ```
+3. Read key entry points (e.g. `src/app/`, `src/lib/`, main config files)
+4. Write `.stackpilot/ARCHITECTURE.md` covering:
+   - Tech stack
+   - Route/module structure
+   - Data layer (DB tables, API surface)
+   - Key directories and their purpose
+   - Core data flows
+   - Design patterns in use
+   - Known constraints or gotchas
+5. Commit:
+   ```bash
+   git add .stackpilot/ARCHITECTURE.md
+   git commit -m "docs(arch): initial project assessment"
+   ```
+
+Then continue routing to the next applicable state (treat as ARCH_EXISTS from this point).
+
+---
+
+### Architecture Exists (ARCH_EXISTS — all subsequent runs)
+
+**Before doing anything else**, read `.stackpilot/ARCHITECTURE.md` in full. This is the authoritative context for all routing and planning decisions. Do not re-explore the codebase for information already captured here.
 
 ---
 
