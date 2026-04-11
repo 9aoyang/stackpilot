@@ -136,7 +136,9 @@ Phase 1: clarifying questions (one at a time, deep exploration)
 Phase 1.5: visual companion (browser-based mockups, only when visual helps)
 Phase 2: design proposal (sectioned, user approves each)
 Phase 3: spec auto-verify loop (self-fix, escalates only on 3x failure)
+Phase 3.5: spec 12-QA (12-dimension scenario coverage review of spec)
 Phase 4: plan auto-verify loop (self-fix, escalates only on 3x failure)
+Phase 4.5: plan 12-QA (12-dimension scenario coverage review of plan, cross-ref with spec)
 Pre-coding: confirm to start
 Coding: autonomous with per-task progress reporting
 Sprint finish: squash merge (1 commit on main) / PR / leave / discard choice

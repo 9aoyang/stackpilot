@@ -136,7 +136,9 @@ Phase 1: 逐个澄清问题（深度理解后再问下一个）
 Phase 1.5: 可视化伴侣（浏览器端 mockup，仅在视觉表达更优时使用）
 Phase 2: 设计方案（分段展示，用户逐段确认）
 Phase 3: spec 自动验证循环（自修复，仅 3 次失败才升级）
+Phase 3.5: spec 12-QA（12 维度场景覆盖审查）
 Phase 4: plan 自动验证循环（自修复，仅 3 次失败才升级）
+Phase 4.5: plan 12-QA（12 维度场景覆盖审查，与 spec 交叉验证）
 Pre-coding: 确认开始
 Coding: 自动执行 + 每 task 进度简报
 Sprint finish: merge / PR / 保留 / 丢弃
