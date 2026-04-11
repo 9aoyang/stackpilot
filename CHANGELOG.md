@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-04-11
+
+### Fixed
+- **12-QA phases skipped** — Phase 3 and Phase 4 auto-verify exits used ambiguous `auto-proceed` which LLMs interpreted as "jump to next numbered phase", skipping Spec 12-QA (Phase 3.5) and Plan 12-QA (Phase 4.5). Replaced with explicit phase references and "do NOT skip" instruction.
+
 ## [1.5.2] - 2026-04-11
 
 ### Fixed

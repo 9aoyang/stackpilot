@@ -235,6 +235,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-11 | **v1.5.3**：修复 12-QA 阶段被跳过的问题——将模糊的 `auto-proceed` 替换为显式阶段引用，防止 LLM 跳过 Phase 3.5/4.5。 |
 | 2026-04-11 | **v1.5.2**：修复 `/release` skill，在 release commit 中包含架构文档以满足 pre-commit hook 检查。 |
 | 2026-04-11 | **v1.5.1**：移除未使用的 `NEEDS_REVIEW.md` 机制。修复 zsh `no matches found` 报错——用 `find` 替代 glob 模式。 |
 | 2026-04-11 | **v1.5.0**：在 spec（Phase 3.5）和 plan（Phase 4.5）后新增 12-QA 审查门禁——12 维度场景覆盖审查，维度 1-4 为硬性门禁。 |
