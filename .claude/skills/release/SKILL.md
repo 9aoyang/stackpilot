@@ -101,17 +101,18 @@ Only include sections that have content. Date format: `YYYY-MM-DD`.
 
 **7. Bump version in all three files**
 
-```bash
-echo "$NEW_VER" > VERSION
-sed -i '' "s/\"version\": \".*\"/\"version\": \"$NEW_VER\"/" .claude-plugin/plugin.json
-sed -i '' "s/version: \".*\"/version: \"$NEW_VER\"/" claude-config/skills/stackpilot/SKILL.md
-```
+Use the Edit tool (not sed/bash substitution) to update each file directly:
 
-Verify all three match:
+- `VERSION` — replace entire content with `$NEW_VER`
+- `.claude-plugin/plugin.json` — replace `"version": "X.Y.Z"` line
+- `claude-config/skills/stackpilot/SKILL.md` — replace `version: "X.Y.Z"` line in frontmatter
+
+Verify all three match after editing:
 ```bash
 cat VERSION
 jq -r '.version' .claude-plugin/plugin.json
 grep -m1 'version:' claude-config/skills/stackpilot/SKILL.md
+# all three must show the same value
 ```
 
 **8. Run pre-commit validation**
