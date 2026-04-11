@@ -322,6 +322,8 @@ After plan passes auto-verify, review it against the same 12 dimensions — but 
 
 ### Sprint In-Progress
 
+If the user's message indicates they want to merge/finish (e.g. "可以合并了", "merge it", "ship it"), skip to **Sprint Complete** below.
+
 ```
 A. Continue current sprint (Run Sprint)
 B. Add a new feature to the current sprint
@@ -386,3 +388,5 @@ Agent(description="QA: TASK-NNN", prompt="<qa-12-dimensions skill instructions> 
 **YOU MUST complete the Sprint Finish flow before ending the conversation. Do NOT stop after printing a summary.**
 
 Read [references/sprint-finish.md](references/sprint-finish.md) and follow every step. You MUST present the A/B/C/D branch options and wait for user input.
+
+> **Note:** A `pre-merge-commit` git hook enforces squash-only merges on main/master. Non-squash merges will be rejected by the hook.

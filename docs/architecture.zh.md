@@ -40,7 +40,8 @@ stackpilot/                        ← 框架安装目录
 │   ├── lib/
 │   │   └── config.sh              ← YAML 配置读取工具
 │   ├── hooks/
-│   │   └── README.md              ← hooks 在 v2 中已移除，附说明
+│   │   ├── pre-merge-commit       ← 阻止非 squash merge 到 main/master
+│   │   └── README.md
 │   └── preview/
 │       ├── start-server.sh        ← 可视化设计伴侣服务器
 │       └── stop-server.sh
@@ -138,7 +139,8 @@ Phase 4: plan 自动验证循环（自修复，仅 3 次失败才升级）
 Phase 4.5: plan 12-QA（12 维度场景覆盖审查，与 spec 交叉验证）
 Pre-coding: 确认开始
 Coding: 自动执行 + 每 task 进度简报
-Sprint finish: merge / PR / 保留 / 丢弃
+Sprint finish: squash merge（main 上仅一个 commit）/ PR / 保留 / 丢弃
+  ↳ pre-merge-commit hook 硬性拒绝非 squash 的 merge
 ```
 
 ---
@@ -235,6 +237,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-11 | **v1.6.0**：新增 `pre-merge-commit` git hook，强制 main/master 只允许 squash merge。由 `init.sh` 安装。可通过 `STACKPILOT_ALLOW_MERGE=1` 绕过。 |
 | 2026-04-11 | **v1.5.3**：修复 12-QA 阶段被跳过的问题——将模糊的 `auto-proceed` 替换为显式阶段引用，防止 LLM 跳过 Phase 3.5/4.5。 |
 | 2026-04-11 | **v1.5.2**：修复 `/release` skill，在 release commit 中包含架构文档以满足 pre-commit hook 检查。 |
 | 2026-04-11 | **v1.5.1**：移除未使用的 `NEEDS_REVIEW.md` 机制。修复 zsh `no matches found` 报错——用 `find` 替代 glob 模式。 |

@@ -40,7 +40,8 @@ stackpilot/                        ← framework installation
 │   ├── lib/
 │   │   └── config.sh              ← YAML config reader
 │   ├── hooks/
-│   │   └── README.md              ← hooks removed in v2, explains why
+│   │   ├── pre-merge-commit       ← blocks non-squash merges on main/master
+│   │   └── README.md
 │   └── preview/
 │       ├── start-server.sh        ← visual design companion server
 │       └── stop-server.sh
@@ -139,6 +140,7 @@ Phase 4.5: plan 12-QA (12-dimension scenario coverage review of plan, cross-ref 
 Pre-coding: confirm to start
 Coding: autonomous with per-task progress reporting
 Sprint finish: squash merge (1 commit on main) / PR / leave / discard choice
+  ↳ pre-merge-commit hook rejects non-squash merges on main as a hard guard
 ```
 
 ---
@@ -235,6 +237,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-04-11 | **v1.6.0**: Added `pre-merge-commit` git hook to enforce squash-only merges on main/master. Installed by `init.sh`. Bypass via `STACKPILOT_ALLOW_MERGE=1`. |
 | 2026-04-11 | **v1.5.3**: Fixed 12-QA phases being skipped — replaced ambiguous `auto-proceed` with explicit phase references so LLMs don't jump over Phase 3.5/4.5. |
 | 2026-04-11 | **v1.5.2**: Fixed `/release` skill to include architecture docs in release commit, satisfying pre-commit hook. |
 | 2026-04-11 | **v1.5.1**: Removed unused `NEEDS_REVIEW.md` mechanism. Fixed zsh `no matches found` errors by replacing glob patterns with `find`. |

@@ -122,6 +122,22 @@ if grep -qE '^\.?stackpilot/?$' "$GITIGNORE" 2>/dev/null; then
   echo "[stackpilot] Removed blanket .stackpilot/ ignore (specs/ and plans/ must be trackable)"
 fi
 
+# 7. Install git hooks
+HOOKS_SRC="$STACKPILOT_DIR/scripts/hooks"
+HOOKS_DST="$PROJECT_ROOT/.git/hooks"
+
+for hook in "$HOOKS_SRC"/pre-merge-commit; do
+  [ -f "$hook" ] || continue
+  hook_name="$(basename "$hook")"
+  if [ -f "$HOOKS_DST/$hook_name" ] && ! grep -q "stackpilot" "$HOOKS_DST/$hook_name" 2>/dev/null; then
+    echo "[stackpilot] ⚠ Existing $hook_name hook found — skipping (add manually)"
+  else
+    cp "$hook" "$HOOKS_DST/$hook_name"
+    chmod +x "$HOOKS_DST/$hook_name"
+    echo "[stackpilot] ✓ Installed $hook_name hook"
+  fi
+done
+
 echo ""
 echo "[stackpilot] ✓ Initialization complete!"
 echo ""

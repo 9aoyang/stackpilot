@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Stackpilot: block non-squash merges into main/master.
+#
+# git merge --squash does NOT trigger pre-merge-commit (no merge commit created).
+# git merge / git merge --no-ff DO trigger it. So if we're on main, reject.
+
+branch="$(git symbolic-ref --short HEAD 2>/dev/null)"
+
+if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+  echo ""
+  echo "ERROR: merge commit blocked on '$branch'."
+  echo ""
+  echo "  Stackpilot requires squash merge:"
+  echo "    git merge --squash <feature-branch>"
+  echo "    git commit -m \"feat: ...\""
+  echo ""
+  echo "  To bypass (not recommended): STACKPILOT_ALLOW_MERGE=1 git merge ..."
+  echo ""
+
+  if [ "${STACKPILOT_ALLOW_MERGE:-}" = "1" ]; then
+    exit 0
+  fi
+
+  exit 1
+fi
