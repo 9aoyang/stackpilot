@@ -115,7 +115,19 @@ grep -m1 'version:' claude-config/skills/stackpilot/SKILL.md
 # all three must show the same value
 ```
 
-**8. Run pre-commit validation**
+**8. Update architecture evolution notes**
+
+The pre-commit hook requires docs updates whenever skill files change. Since step 7 always modifies `SKILL.md`, you must update the evolution notes in both architecture docs.
+
+Append a row to the `## Evolution Notes` table in `docs/architecture.md`:
+
+```markdown
+| <TODAY> | **v<NEW_VER>**: <one-line summary of CHANGELOG sections> |
+```
+
+Do the same for `docs/architecture.zh.md` (Chinese translation, under `## 演进记录`).
+
+**9. Run pre-commit validation**
 
 ```bash
 bash .githooks/pre-commit
@@ -123,10 +135,10 @@ bash .githooks/pre-commit
 
 Fix any failures before proceeding.
 
-**9. Commit, tag, push**
+**10. Commit, tag, push**
 
 ```bash
-git add VERSION .claude-plugin/plugin.json claude-config/skills/stackpilot/SKILL.md CHANGELOG.md
+git add VERSION .claude-plugin/plugin.json claude-config/skills/stackpilot/SKILL.md CHANGELOG.md docs/architecture.md docs/architecture.zh.md
 git commit -m "chore: release v$NEW_VER"
 git tag "v$NEW_VER"
 git push origin main --tags
@@ -139,3 +151,4 @@ git push origin main --tags
 | Updating VERSION but not plugin.json | pre-commit FAIL: version mismatch |
 | Updating plugin.json but not SKILL.md frontmatter | pre-commit FAIL: version mismatch |
 | Pushing tag before main | GitHub Actions may fail |
+| Not including docs in release commit | pre-commit FAIL: skill files changed but docs not updated |
