@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-04-11
+
+### Added
+- **`pre-merge-commit` git hook** — blocks non-squash merges on main/master. `git merge --squash` is unaffected (no merge commit = hook doesn't fire). Installed by `init.sh`. Bypass: `STACKPILOT_ALLOW_MERGE=1`.
+
 ## [1.5.3] - 2026-04-11
 
 ### Fixed

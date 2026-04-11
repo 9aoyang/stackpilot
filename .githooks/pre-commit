@@ -20,12 +20,16 @@ if ! grep -q "\[$SKILL_VER\]" CHANGELOG.md; then
   warn "CHANGELOG.md has no entry for version $SKILL_VER"
 fi
 
-# 3. If agent/skill files changed, architecture docs must also be updated
+# 3. If agent/skill files changed (beyond version-only bumps), architecture docs must also be updated
 STAGED=$(git diff --cached --name-only)
 SKILL_CHANGED=$(echo "$STAGED" | grep -cE '^claude-config/(agents|skills)/' || true)
 DOCS_CHANGED=$(echo "$STAGED" | grep -cE '^(docs/architecture|README\.md|CONTRIBUTING\.md)' || true)
 if [ "$SKILL_CHANGED" -gt 0 ] && [ "$DOCS_CHANGED" -eq 0 ]; then
-  warn "Agent/skill files changed but docs not updated (check: architecture.md, README.md, CONTRIBUTING.md)"
+  # Allow version-only changes (release commits) without doc updates
+  SKILL_DIFF=$(git diff --cached -- claude-config/ | grep '^[+-]' | grep -v '^[+-][+-][+-]' | grep -cvE '^\+.*version:|^-.*version:' || true)
+  if [ "$SKILL_DIFF" -gt 0 ]; then
+    warn "Agent/skill files changed but docs not updated (check: architecture.md, README.md, CONTRIBUTING.md)"
+  fi
 fi
 
 # 4. Tests pass
