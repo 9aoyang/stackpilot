@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-04-11
+
+### Changed
+- Remove unused `NEEDS_REVIEW.md` mechanism entirely (template, init, skill references, docs, tests)
+
+### Fixed
+- Fix zsh `no matches found` errors in sprint cleanup — replace glob patterns (`ls *.md`, `rm -f *.md`) with `find -name '*.md'` for cross-shell safety
+
 ## [1.5.0] - 2026-04-11
 
 ### Added
