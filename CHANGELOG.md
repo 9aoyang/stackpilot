@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-04-11
+
+### Added
+- **Spec/Plan 12-QA gates** — after spec and plan auto-verify, a 12-dimension scenario coverage review is run (happy path, error, edge case, abuse, scale, concurrent, temporal, data variation, permission, integration, recovery, state transition); dimensions 1-4 are hard gates that block progress if missing
+
+### Fixed
+- **`/release` skill** — use Edit tool instead of sed for version bumping
+
 ## [1.4.0] - 2026-04-11
 
 ### Added

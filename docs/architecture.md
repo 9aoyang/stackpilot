@@ -240,6 +240,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-04-11 | **v1.5.0**: Added 12-QA review gates after spec (Phase 3.5) and plan (Phase 4.5) — 12-dimension scenario coverage review with hard gates on dimensions 1-4. |
 | 2026-04-11 | **v1.4.0**: Project-local `/release` skill — auto-generates CHANGELOG from git log (conventional commits), detects bump type (major/minor/patch), bumps all three version files atomically, validates with pre-commit, tags, and pushes. Added `.stackpilot/ARCHITECTURE.md` quick-reference. Tracked `codex-plugin-cc` in `docs/sync.md`. |
 | 2026-04-11 | **v1.3.0**: Sprint Finish squash merge — feature branch commits folded into one commit on main. Pre-merge housekeeping (arch update, artifact cleanup) committed on feature branch before squash. Feature branch auto-deleted after merge. |
 | 2026-04-10 | **v2.1 consolidation**: Merged stackpilot-auto, stackpilot-resume, stackpilot-tidy into main `/stackpilot` as state-routed flows (6→3 orchestration commands). Removed archive mechanism — plans/specs deleted directly (git history is sufficient). Added workspace tidy flow (clean .claude/plans/, .superpowers/, orphaned worktrees, merged branches). Added auto/interactive mode choice after user describes feature. |
