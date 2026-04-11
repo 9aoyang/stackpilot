@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-04-11
+
+### Fixed
+- **`/release` skill** — include `docs/architecture.md` and `docs/architecture.zh.md` in release commit to satisfy pre-commit hook that requires docs updates when skill files change
+
 ## [1.5.1] - 2026-04-11
 
 ### Changed

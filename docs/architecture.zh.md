@@ -235,6 +235,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-11 | **v1.5.2**：修复 `/release` skill，在 release commit 中包含架构文档以满足 pre-commit hook 检查。 |
 | 2026-04-11 | **v1.5.1**：移除未使用的 `NEEDS_REVIEW.md` 机制。修复 zsh `no matches found` 报错——用 `find` 替代 glob 模式。 |
 | 2026-04-11 | **v1.5.0**：在 spec（Phase 3.5）和 plan（Phase 4.5）后新增 12-QA 审查门禁——12 维度场景覆盖审查，维度 1-4 为硬性门禁。 |
 | 2026-04-10 | **v2.1 整合**：将 stackpilot-auto、stackpilot-resume、stackpilot-tidy 合并到主 `/stackpilot` 作为状态路由流程（编排命令 6→3）。移除归档机制——plans/specs 直接删除（git history 可追溯）。新增工作区 tidy 流程（清理 .claude/plans/、.superpowers/、孤立 worktree、已合并分支）。用户描述需求后新增自动/交互模式选择。 |
