@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-04-11
+
+### Added
+- **`/release` skill** — project-local skill that auto-generates CHANGELOG from git log, detects bump type (patch/minor/major), bumps all three version files, validates, tags, and pushes
+- **`.stackpilot/ARCHITECTURE.md`** — quick-reference architecture summary for sprint routing
+
+### Fixed
+- **pre-commit hook** — expanded doc check to include README.md and CONTRIBUTING.md
+- **`/release` skill** — support `patch`/`minor`/`major` bump types with auto-calculation; auto-detect bump type from commits when no args provided
+
+### Changed
+- **`docs/sync.md`** — track `codex-plugin-cc` as evaluated external skill reference
+
 ## [1.3.0] - 2026-04-11
 
 ### Changed
