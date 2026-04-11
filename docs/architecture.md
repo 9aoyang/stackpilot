@@ -235,6 +235,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-04-11 | **v1.5.3**: Fixed 12-QA phases being skipped — replaced ambiguous `auto-proceed` with explicit phase references so LLMs don't jump over Phase 3.5/4.5. |
 | 2026-04-11 | **v1.5.2**: Fixed `/release` skill to include architecture docs in release commit, satisfying pre-commit hook. |
 | 2026-04-11 | **v1.5.1**: Removed unused `NEEDS_REVIEW.md` mechanism. Fixed zsh `no matches found` errors by replacing glob patterns with `find`. |
 | 2026-04-11 | **v1.5.0**: Added 12-QA review gates after spec (Phase 3.5) and plan (Phase 4.5) — 12-dimension scenario coverage review with hard gates on dimensions 1-4. |

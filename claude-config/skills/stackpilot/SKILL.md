@@ -249,7 +249,7 @@ Read [references/visual-companion.md](references/visual-companion.md) for setup 
    grep -c "^## " .stackpilot/specs/*.md  # must be >= 4
    wc -w .stackpilot/specs/*.md | tail -1  # must be >= 300
    ```
-   All pass → auto-proceed. Fail after 3 → escalate specific failures.
+   All pass → proceed to **Phase 3.5: Spec 12-QA** (do NOT skip). Fail after 3 → escalate specific failures.
 
 **Phase 3.5: Spec 12-QA**
 
@@ -288,7 +288,7 @@ After spec passes auto-verify, review it against the 12 scenario dimensions. For
     grep -cE "relevant_files:|depends_on:|complexity:" .stackpilot/plans/*.md  # task_count * 3
     ```
     Check 4 — type consistency across tasks (manual scan).
-    All pass → auto-proceed.
+    All pass → proceed to **Phase 4.5: Plan 12-QA** (do NOT skip).
 
 **Phase 4.5: Plan 12-QA**
 
