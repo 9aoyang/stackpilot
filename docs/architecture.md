@@ -46,15 +46,13 @@ stackpilot/                        ← framework installation
 │       └── stop-server.sh
 └── templates/
     ├── stackpilot.config.yml      ← config template (qa section only)
-    ├── stackpilot-inner-gitignore
-    └── NEEDS_REVIEW.md            ← escalation inbox template
+    └── stackpilot-inner-gitignore
 
 <project-root>/                    ← user's project
 ├── stackpilot.config.yml          ← qa settings (test_command, coverage_threshold)
 └── .stackpilot/                   ← specs and plans are git-tracked
     ├── specs/                     ← design documents (current sprint)
-    ├── plans/                     ← implementation plans (current sprint)
-    └── NEEDS_REVIEW.md            ← human escalation channel (gitignored)
+    └── plans/                     ← implementation plans (current sprint)
 ```
 
 ---
@@ -126,7 +124,6 @@ Agent(
             sprint interrupted → resume (match plan tasks to git log, offer continue/fresh)
             sprint clean       → ask what to build → choose auto or interactive → feature flow
             in-progress        → continue sprint
-            NEEDS_REVIEW       → show escalation, guide reply
 ```
 
 **Standard Feature — human intervention points:**
@@ -158,8 +155,6 @@ pending → in-progress → done
 - `blocked`: 3 retries exhausted, escalated to user for decision
 - Tracking via Claude Code's `TaskCreate`/`TaskUpdate` (session-scoped)
 - Persistence via plan files (git-tracked, survives session restarts)
-
-**NEEDS_REVIEW.md** is the human escalation channel. Agents return escalation text; the main session writes critical issues here for cross-session persistence.
 
 ---
 

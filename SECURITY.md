@@ -30,4 +30,4 @@ Stackpilot executes Claude Code agents that can run shell commands via the `Bash
 - Design specs committed to `docs/specs/` trigger automated agent execution via git hooks
 - Review `stackpilot.config.yml` to configure timeouts and resource limits
 
-Always review agent output and escalations in `tasks/NEEDS_REVIEW.md` before accepting changes.
+Always review agent output before accepting changes.

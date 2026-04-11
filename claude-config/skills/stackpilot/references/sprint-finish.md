@@ -60,9 +60,8 @@ Commit all housekeeping on the feature branch **before** touching the base branc
 **4b. Clear sprint artifacts:**
 
 ```bash
-printf "" > .stackpilot/NEEDS_REVIEW.md
-rm -f .stackpilot/plans/*.md 2>/dev/null
-rm -f .stackpilot/specs/*.md 2>/dev/null
+find .stackpilot/plans -name '*.md' -delete 2>/dev/null || true
+find .stackpilot/specs -name '*.md' -delete 2>/dev/null || true
 git add .stackpilot/
 git commit -m "chore(stackpilot): clear sprint artifacts"
 ```

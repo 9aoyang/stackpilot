@@ -46,15 +46,13 @@ stackpilot/                        ← 框架安装目录
 │       └── stop-server.sh
 └── templates/
     ├── stackpilot.config.yml      ← 配置模板（仅 qa 部分）
-    ├── stackpilot-inner-gitignore
-    └── NEEDS_REVIEW.md            ← 人工审阅收件箱模板
+    └── stackpilot-inner-gitignore
 
 <项目根目录>/                      ← 用户的项目
 ├── stackpilot.config.yml          ← qa 配置（test_command, coverage_threshold）
 └── .stackpilot/                   ← specs 和 plans 受 git 跟踪
     ├── specs/                     ← 设计文档（当前 sprint）
-    ├── plans/                     ← 实现计划（当前 sprint）
-    └── NEEDS_REVIEW.md            ← 人工升级通道（gitignored）
+    └── plans/                     ← 实现计划（当前 sprint）
 ```
 
 ---
@@ -126,7 +124,6 @@ Agent(
             Sprint 中断     → resume（匹配 plan 任务与 git log，提供继续/重新开始）
             Sprint 干净     → 询问需求 → 选择自动/交互模式 → 功能流程
             进行中           → 继续 sprint
-            有待审阅         → 展示问题，引导回复
 ```
 
 **Standard Feature — 人工介入点：**
@@ -158,8 +155,6 @@ pending → in-progress → done
 - `blocked`：重试耗尽，升级给用户
 - 运行时跟踪：Claude Code 的 `TaskCreate`/`TaskUpdate`（会话级）
 - 持久化：plan 文件（git 跟踪，跨会话存续）
-
-**NEEDS_REVIEW.md** 是人工升级通道。Agent 返回升级文本；主会话将关键问题写入此处，供跨会话使用。
 
 ---
 

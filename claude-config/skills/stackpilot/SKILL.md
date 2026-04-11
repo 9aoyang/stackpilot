@@ -15,9 +15,8 @@ metadata:
 ```bash
 [ -d .stackpilot ] && echo "initialized" || echo "NOT_INITIALIZED"
 [ -f .stackpilot/ARCHITECTURE.md ] && echo "ARCH_EXISTS" || echo "ARCH_MISSING"
-cat .stackpilot/NEEDS_REVIEW.md 2>/dev/null
-ls -t .stackpilot/plans/*.md 2>/dev/null || echo "NO_PLANS"
-ls -t .stackpilot/specs/*.md 2>/dev/null || echo "NO_SPECS"
+find .stackpilot/plans -name '*.md' -exec ls -t {} + 2>/dev/null || echo "NO_PLANS"
+find .stackpilot/specs -name '*.md' -exec ls -t {} + 2>/dev/null || echo "NO_SPECS"
 ```
 
 Also check TaskList for any in-progress sprint tasks from the current session.
@@ -26,7 +25,7 @@ Additionally, scan for workspace debris:
 
 ```bash
 # Workflow artifacts
-ls .claude/plans/*.md 2>/dev/null
+find .claude/plans -name '*.md' 2>/dev/null
 ls -d .superpowers/ 2>/dev/null
 git worktree prune --dry-run 2>/dev/null
 git remote prune origin --dry-run 2>/dev/null
@@ -129,7 +128,6 @@ If Step 1 found workflow artifacts (.claude/plans/, .superpowers/, orphaned work
 - Delete merged local branches: `git branch -d <branch>` (only `--merged` branches, exclude main/master/develop)
 - Delete `.claude/plans/*.md` (non-git-tracked only — check with `git ls-files --error-unmatch` first)
 - Delete `.superpowers/`
-- Clear `.stackpilot/NEEDS_REVIEW.md`
 
 **"Needs attention" items** (report only, never auto-handle):
 - Uncommitted changes (`git status --porcelain`)
@@ -152,7 +150,7 @@ If `.stackpilot/plans/*.md` exists but TaskList has no in-progress tasks from th
 **1. Find the plan:**
 
 ```bash
-ls -t .stackpilot/plans/*.md 2>/dev/null | head -1
+find .stackpilot/plans -name '*.md' -exec ls -t {} + 2>/dev/null | head -1
 ```
 
 Read the latest plan file and parse all `### TASK-` sections.
@@ -168,11 +166,7 @@ For each TASK in the plan:
 - Check if the task's `relevant_files` exist and have recent modifications
 - Evidence of completion → **done**; no evidence → **pending**
 
-**3. Check blockers:**
-
-Read `.stackpilot/NEEDS_REVIEW.md` — if has content, present to user first.
-
-**4. Show status and offer choices:**
+**3. Show status and offer choices:**
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -333,10 +327,6 @@ A. Continue current sprint (Run Sprint)
 B. Add a new feature to the current sprint
 ```
 
-### NEEDS_REVIEW Has Content
-
-Display issue, guide user to decision, clear file, continue sprint.
-
 ---
 
 ## Run Sprint
@@ -345,9 +335,8 @@ Core coding phase. Reads plan, creates tasks, dispatches specialist agents.
 
 ### Pre-Sprint
 
-1. Check NEEDS_REVIEW.md — resolve if content exists
-2. Read latest `.stackpilot/plans/*.md`, parse `### TASK-` sections
-3. Read `stackpilot.config.yml` for `qa.test_command` and `qa.coverage_threshold`
+1. Read latest `.stackpilot/plans/*.md`, parse `### TASK-` sections
+2. Read `stackpilot.config.yml` for `qa.test_command` and `qa.coverage_threshold`
 
 ### Pre-coding confirmation
 

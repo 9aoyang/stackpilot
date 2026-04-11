@@ -113,5 +113,5 @@ Skills that have been evaluated and/or inlined into stackpilot agents.
 | finishing-a-development-branch | SKILL.md | Verify tests pass first; present 4 options (merge/PR/keep/discard); execute chosen option | inlined | YYYY-MM-DD |
 | feature-dev:code-architect | sp-architect.md | Analyze existing patterns first (not assumptions); one decisive architecture choice (not options list); full implementation blueprint with build sequence | inlined | YYYY-MM-DD |
 | feature-dev:code-explorer | sp-dev.md | Locate entry point (file:line); trace call chain up and down; find similar existing implementations; confirm file list before writing | inlined | YYYY-MM-DD |
-| feature-dev:code-reviewer | sp-qa.md | Based on git diff only; report only issues with confidence ≥ 80 with specific file:line evidence; Critical → NEEDS_REVIEW.md, Important → fix directly if ≤ 5 lines | inlined | YYYY-MM-DD |
+| feature-dev:code-reviewer | sp-qa.md | Based on git diff only; report only issues with confidence ≥ 80 with specific file:line evidence; Critical → escalate to user, Important → fix directly if ≤ 5 lines | inlined | YYYY-MM-DD |
 ```

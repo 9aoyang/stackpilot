@@ -49,10 +49,8 @@ for f in scripts/init.sh scripts/lib/config.sh; do echo "=== $f ==="; cat "$f" 2
 
 # State layer
 ls .stackpilot/ 2>/dev/null
-ls -t .stackpilot/plans/*.md 2>/dev/null | head -3
-ls -t .stackpilot/specs/*.md 2>/dev/null | head -3
-cat .stackpilot/NEEDS_REVIEW.md 2>/dev/null
-
+find .stackpilot/plans -name '*.md' -exec ls -t {} + 2>/dev/null | head -3
+find .stackpilot/specs -name '*.md' -exec ls -t {} + 2>/dev/null | head -3
 # External refs
 cat docs/sync.md 2>/dev/null
 

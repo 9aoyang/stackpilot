@@ -27,19 +27,13 @@ if [ ! -f "$PROJECT_ROOT/.stackpilot/review-patterns.md" ]; then
   echo "[stackpilot] Created .stackpilot/review-patterns.md"
 fi
 
-# 3. Create .stackpilot/.gitignore (NEEDS_REVIEW.md is gitignored, review-patterns.md is tracked)
+# 3. Create .stackpilot/.gitignore (review-patterns.md is tracked)
 if [ ! -f "$PROJECT_ROOT/.stackpilot/.gitignore" ]; then
   cp "$STACKPILOT_DIR/templates/stackpilot-inner-gitignore" "$PROJECT_ROOT/.stackpilot/.gitignore"
   echo "[stackpilot] Created .stackpilot/.gitignore"
 fi
 
-# 4. Create NEEDS_REVIEW.md if missing
-if [ ! -f "$PROJECT_ROOT/.stackpilot/NEEDS_REVIEW.md" ]; then
-  cp "$STACKPILOT_DIR/templates/NEEDS_REVIEW.md" "$PROJECT_ROOT/.stackpilot/NEEDS_REVIEW.md"
-  echo "[stackpilot] Created .stackpilot/NEEDS_REVIEW.md"
-fi
-
-# 5. Create stackpilot.config.yml if missing — auto-detect test command
+# 4. Create stackpilot.config.yml if missing — auto-detect test command
 if [ ! -f "$PROJECT_ROOT/stackpilot.config.yml" ]; then
   detect_test_command() {
     local dir="$1"
