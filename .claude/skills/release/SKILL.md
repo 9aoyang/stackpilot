@@ -2,8 +2,8 @@
 name: release
 description: Use when releasing a new version of stackpilot — bumps version across all three required files, updates CHANGELOG, validates, commits, tags, and pushes.
 args:
-  - name: version
-    description: New version number in X.Y.Z format (e.g. 1.4.0). Do not include "v" prefix.
+  - name: bump
+    description: "Bump type: patch (1.3.0→1.3.1), minor (1.3.0→1.4.0), major (1.3.0→2.0.0). Or an explicit X.Y.Z version."
     required: true
 ---
 
@@ -13,11 +13,11 @@ Bump stackpilot version consistently across all required files, validate, and pu
 
 ## Files That Must Be Updated (all three, always)
 
-| File | Field | Example |
-|------|-------|---------|
-| `VERSION` | entire file content | `1.4.0` |
-| `claude-config/skills/stackpilot/SKILL.md` | `version:` in frontmatter (line ~8) | `version: "1.4.0"` |
-| `.claude-plugin/plugin.json` | `"version"` field | `"version": "1.4.0"` |
+| File | Field |
+|------|-------|
+| `VERSION` | entire file content |
+| `claude-config/skills/stackpilot/SKILL.md` | `version:` in frontmatter |
+| `.claude-plugin/plugin.json` | `"version"` field |
 
 Missing any one of these will fail the pre-commit hook.
 
@@ -31,32 +31,42 @@ git status --porcelain
 
 Must be empty. If not, commit or stash pending changes first.
 
-**2. Update CHANGELOG.md**
+**2. Calculate new version**
+
+```bash
+CURRENT="$(cat VERSION)"
+BUMP="$ARGUMENTS"   # patch | minor | major | or explicit X.Y.Z
+
+IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+case "$BUMP" in
+  patch) NEW_VER="$MAJOR.$MINOR.$((PATCH + 1))" ;;
+  minor) NEW_VER="$MAJOR.$((MINOR + 1)).0" ;;
+  major) NEW_VER="$((MAJOR + 1)).0.0" ;;
+  *)     NEW_VER="$BUMP" ;;  # explicit version passed
+esac
+
+echo "Bumping $CURRENT → $NEW_VER"
+```
+
+**3. Update CHANGELOG.md**
 
 Move content from `## [Unreleased]` into a new versioned section:
 
 ```markdown
 ## [Unreleased]
 
-## [1.4.0] - YYYY-MM-DD
+## [<NEW_VER>] - YYYY-MM-DD
 
-### Added
-- ...
-
-### Changed
-- ...
-
-### Fixed
+### Added / Changed / Fixed
 - ...
 ```
 
 Date format: `YYYY-MM-DD`. Only include sections that have content.
 
-**3. Bump version in all three files**
+**4. Bump version in all three files**
 
 ```bash
-NEW_VER="$ARGUMENTS"
-
 # VERSION file
 echo "$NEW_VER" > VERSION
 
@@ -72,6 +82,7 @@ Verify all three match before continuing:
 cat VERSION
 jq -r '.version' .claude-plugin/plugin.json
 grep -m1 'version:' claude-config/skills/stackpilot/SKILL.md
+# all three must output the same value
 ```
 
 **4. Run pre-commit validation**
