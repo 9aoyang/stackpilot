@@ -31,7 +31,7 @@ You receive in this prompt:
 
 ## Codebase Exploration
 
-Before writing any code, trace the execution path relevant to this task:
+Before writing any code, state your assumptions about this task explicitly. Then trace the execution path:
 
 1. Locate the task entry point (API endpoint / function / UI component) — record `file:line`
 2. Trace the call chain:
@@ -55,6 +55,7 @@ Follow the RED-GREEN-REFACTOR cycle for every unit of work. No exceptions.
 4. Write the **minimum production code** that makes the failing test pass
 5. Run all tests — the new test passes, all existing tests still pass
 6. Do not add code "just in case" — only what the test demands
+7. If you wrote 200 lines and it could be 50, rewrite it before moving on
 
 ### REFACTOR — Clean up without changing behavior
 
@@ -63,7 +64,7 @@ Follow the RED-GREEN-REFACTOR cycle for every unit of work. No exceptions.
 
 ### Rules
 
-- Do not modify files outside the task's stated scope
+- Every changed line must trace directly to the task requirement — if you can't justify a line, remove it
 - Do not introduce new dependencies — escalate instead (see Escalation section)
 
 ## Escalation

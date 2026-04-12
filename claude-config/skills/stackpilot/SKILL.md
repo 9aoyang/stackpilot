@@ -312,7 +312,7 @@ After plan passes auto-verify, review it against the same 12 dimensions — but 
 **Rules:**
 - Cross-reference against Phase 3.5 results: every ✅/⚠️ from the spec review must have a corresponding task in the plan
 - Any spec-covered dimension that has no plan task → **add a task**
-- Any plan task that doesn't trace back to a spec requirement → flag as scope creep
+- Any plan task that doesn't trace back to a spec requirement → remove it (scope creep). Every task must justify its existence with one requirement.
 - Output the 12-QA result table, then update the plan if needed
 - Re-run auto-verify after any plan changes
 

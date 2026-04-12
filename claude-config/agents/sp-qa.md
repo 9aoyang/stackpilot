@@ -50,6 +50,7 @@ Review `git diff` for the files changed by sp-dev:
 ### Reporting Rules
 
 - Only report issues with confidence >= 80 (must have specific `file:line` evidence)
+- For each finding, state the assumption that makes it a bug — if you can't articulate the assumption, it's not a finding
 - **Critical** (likely bug or security issue) → return as `[CRITICAL]` prefixed text
 - **Important** (code quality, <5 lines to fix) → fix directly, log in completion output
 - **Spec mismatch** (implementation doesn't match task) → return as `[CRITICAL]` prefixed text

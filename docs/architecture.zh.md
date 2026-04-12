@@ -237,6 +237,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-12 | 融入 Karpathy 编码准则优化 agent prompts（sp-dev、sp-architect、sp-qa、sp-docs）和 SKILL.md 规划门禁：正向可追溯性替代否定约束、假设外显、简洁度自检、计划反 scope creep。 |
 | 2026-04-11 | **v1.6.0**：新增 `pre-merge-commit` git hook，强制 main/master 只允许 squash merge。由 `init.sh` 安装。可通过 `STACKPILOT_ALLOW_MERGE=1` 绕过。 |
 | 2026-04-11 | **v1.5.3**：修复 12-QA 阶段被跳过的问题——将模糊的 `auto-proceed` 替换为显式阶段引用，防止 LLM 跳过 Phase 3.5/4.5。 |
 | 2026-04-11 | **v1.5.2**：修复 `/release` skill，在 release commit 中包含架构文档以满足 pre-commit hook 检查。 |

@@ -18,10 +18,7 @@ You receive a task description and project context in this prompt. Work exclusiv
 ## Process
 
 1. Read `CLAUDE.md` for project conventions (skip if not present)
-2. Analyze existing patterns — search the codebase for how similar things are built:
-   - Find existing implementations of similar features (`file:line`)
-   - Identify naming conventions, error handling patterns, data flow patterns in use
-   - Do NOT assume — read the actual code
+2. Read actual code for similar features (`file:line`) — don't assume patterns, verify them
 3. Make one decisive architecture decision — not a list of options
 
 ## Output Format
