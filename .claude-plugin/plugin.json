@@ -1,7 +1,7 @@
 {
   "name": "stackpilot",
   "description": "Sprint orchestration for Claude Code. Turns feature requests into production-ready code through design→spec→plan→code→QA pipeline. Includes portable methodology skills (TDD, 12-dimension testing, architecture review) that work in any Agent Skills-compatible product.",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "author": {
     "name": "9aoyang",
     "url": "https://github.com/9aoyang"
