@@ -31,6 +31,8 @@ stackpilot/                        ← 框架安装目录
 │       │   └── SKILL.md           ← /stackpilot 主入口
 │       ├── stackpilot-compete/
 │       │   └── SKILL.md           ← /stackpilot-compete 竞品差距分析
+│       ├── stackpilot-research/
+│       │   └── SKILL.md           ← /stackpilot-research 深度研究（横纵分析法）
 │       ├── stackpilot-sync/
 │       │   └── SKILL.md           ← /stackpilot-sync 外部 skill 同步
 │       └── systematic-debugging/
@@ -180,6 +182,7 @@ qa:
 |--------------|------|
 | `/stackpilot` | 主入口：tidy + resume + 状态 + 自动/交互模式 + Sprint 执行 |
 | `/stackpilot-compete` | 以竞品重度用户视角做差距分析 |
+| `/stackpilot-research` | 横纵分析法深度研报（纵向发展史 + 横向竞品切面） |
 | `/stackpilot-sync` | 外部 skill 追踪和同步（开发者维护） |
 | `/tdd-development` | **便携式** — TDD + verify/fix + 合理化阻断 |
 | `/qa-12-dimensions` | **便携式** — 12 维测试覆盖 + 代码审查 |

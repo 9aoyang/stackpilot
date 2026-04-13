@@ -31,6 +31,8 @@ stackpilot/                        ← framework installation
 │       │   └── SKILL.md           ← /stackpilot main entry point
 │       ├── stackpilot-compete/
 │       │   └── SKILL.md           ← /stackpilot-compete competitive gap analysis
+│       ├── stackpilot-research/
+│       │   └── SKILL.md           ← /stackpilot-research deep research (横纵分析法)
 │       ├── stackpilot-sync/
 │       │   └── SKILL.md           ← /stackpilot-sync external skill tracking
 │       └── systematic-debugging/
@@ -180,6 +182,7 @@ Model routing is handled by Claude Code natively (agent frontmatter `model:` fie
 |--------------|---------|
 | `/stackpilot` | Main entry: tidy + resume + status + auto/interactive mode + sprint execution |
 | `/stackpilot-compete` | Competitive gap analysis from power-user persona |
+| `/stackpilot-research` | Deep research reports using cross-longitudinal analysis (横纵分析法) |
 | `/stackpilot-sync` | External skill tracking and sync (developer maintenance) |
 | `/tdd-development` | **Portable** — TDD + verify/fix + rationalization blockers |
 | `/qa-12-dimensions` | **Portable** — 12-dimension test coverage + code review |
