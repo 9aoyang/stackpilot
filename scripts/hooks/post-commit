@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Stackpilot: auto-sync skills to ~/.claude/skills/ after commit
+#
+# Only runs when files under claude-config/skills/ were changed in the commit.
+# Creates symlinks for any new skill directories.
+
+if git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null | grep -q '^claude-config/skills/'; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  # Hook lives in .git/hooks/ — repo root is two levels up
+  REPO_DIR="$(git rev-parse --show-toplevel 2>/dev/null)"
+  if [ -x "$REPO_DIR/scripts/sync-skills.sh" ]; then
+    "$REPO_DIR/scripts/sync-skills.sh"
+  fi
+fi

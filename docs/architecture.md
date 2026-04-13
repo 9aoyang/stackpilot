@@ -41,7 +41,9 @@ stackpilot/                        ← framework installation
 │   ├── init.sh                    ← project setup (minimal: dirs + test command detection)
 │   ├── lib/
 │   │   └── config.sh              ← YAML config reader
+│   ├── sync-skills.sh             ← idempotent skill sync (--auto-update for version self-check)
 │   ├── hooks/
+│   │   ├── post-commit            ← auto-sync new skills after commit
 │   │   ├── pre-merge-commit       ← blocks non-squash merges on main/master
 │   │   └── README.md
 │   └── preview/

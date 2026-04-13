@@ -80,6 +80,8 @@ bash ~/Documents/github/stackpilot/scripts/restore.sh
 
 Requires git and [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
+Skills auto-update: `/stackpilot` checks for upstream updates once per day and pulls new skills automatically.
+
 ## Config
 
 `stackpilot.config.yml` is **auto-generated** when you first run `/stackpilot`. It detects your test framework automatically.
@@ -190,6 +192,8 @@ bash ~/Documents/github/stackpilot/scripts/restore.sh
 ```
 
 需要 git 和 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)。
+
+Skills 自动更新：`/stackpilot` 每天自动检查上游更新并拉取新 skills。
 
 ## 配置
 

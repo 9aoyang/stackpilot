@@ -10,6 +10,18 @@ metadata:
 
 # Stackpilot
 
+## Step 0: Version Check (silent, once per session)
+
+```bash
+SP_DIR="${STACKPILOT_DIR:-$HOME/.stackpilot}"
+[ -L ~/.claude/skills/stackpilot ] && SP_DIR="$(readlink ~/.claude/skills/stackpilot | sed 's|/claude-config/skills/stackpilot.*||')"
+[ -x "$SP_DIR/scripts/sync-skills.sh" ] && "$SP_DIR/scripts/sync-skills.sh" --auto-update 2>&1 || true
+```
+
+If the output shows an update was pulled, inform the user briefly and continue. Otherwise proceed silently.
+
+---
+
 ## Step 1: Show Current State (always run first)
 
 ```bash

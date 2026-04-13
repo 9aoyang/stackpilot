@@ -116,6 +116,24 @@ else
   echo "[stackpilot] Skipping dependency installation (--skip-deps)"
 fi
 
+# --- 4. Install post-commit hook for auto skill sync ---
+echo ""
+echo "Git hooks (auto skill sync):"
+HOOK_SRC="$REPO_DIR/scripts/hooks/post-commit"
+HOOK_DST="$REPO_DIR/.git/hooks/post-commit"
+if [ -f "$HOOK_SRC" ]; then
+  if $DRY_RUN; then
+    echo "  [dry-run] install post-commit hook"
+  elif [ -f "$HOOK_DST" ] && ! grep -q "sync-skills" "$HOOK_DST" 2>/dev/null; then
+    echo "  ⚠ Existing post-commit hook found — append manually or run:"
+    echo "    cat $HOOK_SRC >> $HOOK_DST"
+  else
+    cp "$HOOK_SRC" "$HOOK_DST"
+    chmod +x "$HOOK_DST"
+    echo "  ✓ post-commit (auto skill sync)"
+  fi
+fi
+
 echo ""
 echo "[stackpilot] ✓ Restore complete!"
 echo ""

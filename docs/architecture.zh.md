@@ -41,7 +41,9 @@ stackpilot/                        ← 框架安装目录
 │   ├── init.sh                    ← 项目初始化（精简：目录 + 测试命令检测）
 │   ├── lib/
 │   │   └── config.sh              ← YAML 配置读取工具
+│   ├── sync-skills.sh             ← 幂等 skill 同步（--auto-update 版本自检）
 │   ├── hooks/
+│   │   ├── post-commit            ← commit 后自动同步新 skill
 │   │   ├── pre-merge-commit       ← 阻止非 squash merge 到 main/master
 │   │   └── README.md
 │   └── preview/

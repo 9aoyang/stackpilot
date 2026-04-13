@@ -32,10 +32,9 @@ done
 for skill_dir in "$STACKPILOT_DIR/claude-config/skills/"*/; do
   [ -d "$skill_dir" ] || continue
   skill_name="$(basename "$skill_dir")"
-  mkdir -p "$CLAUDE_DIR/skills/$skill_name"
-  for f in "$skill_dir"*.md; do
-    [ -f "$f" ] && cp "$f" "$CLAUDE_DIR/skills/$skill_name/$(basename "$f")"
-  done
+  # Copy entire directory to preserve references/ subdirectories
+  rm -rf "$CLAUDE_DIR/skills/$skill_name"
+  cp -r "$skill_dir" "$CLAUDE_DIR/skills/$skill_name"
 done
 
 # --- 3. Install dependencies ---
