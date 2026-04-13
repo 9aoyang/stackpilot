@@ -242,6 +242,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-13 | **v1.8.0**：Skill 自动同步（`sync-skills.sh --auto-update`），post-commit hook 自动检测新 skill，`/stackpilot` Step 0 版本自检，修复 `install.sh` 用 `cp -r` 保留 `references/` 子目录。 |
 | 2026-04-13 | **v1.7.0**：新增 `/stackpilot-research` skill——横纵分析法深度研报（纵向发展史 + 横向竞品切面），3 波研究策略，叙事驱动输出，质量自检。仅显式调用触发。 |
 | 2026-04-12 | **v1.6.1**：融入 Karpathy 编码准则优化 agent prompts（sp-dev、sp-architect、sp-qa、sp-docs）和 SKILL.md 规划门禁：正向可追溯性替代否定约束、假设外显、简洁度自检、计划反 scope creep。 |
 | 2026-04-11 | **v1.6.0**：新增 `pre-merge-commit` git hook，强制 main/master 只允许 squash merge。由 `init.sh` 安装。可通过 `STACKPILOT_ALLOW_MERGE=1` 绕过。 |

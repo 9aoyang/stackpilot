@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-04-13
+
+### Added
+- **Skill auto-sync** — `scripts/sync-skills.sh` with `--auto-update` mode. Automatically checks for upstream updates (throttled to once per 24h), pulls new versions, and syncs missing skills. Works for both developers (symlink mode) and external users (copy mode).
+- **Post-commit hook** — `scripts/hooks/post-commit` auto-creates symlinks for newly added skill directories after commit. Installed by `restore.sh`.
+- **Version self-check in `/stackpilot`** — Step 0 runs version check on skill invocation, notifying users of available updates.
+- **Fixed `install.sh` skill copy** — uses `cp -r` to preserve `references/` subdirectories in skills.
+
 ## [1.7.0] - 2026-04-13
 
 ### Added

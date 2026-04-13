@@ -242,6 +242,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-04-13 | **v1.8.0**: Skill auto-sync (`sync-skills.sh --auto-update`), post-commit hook for new skill detection, version self-check in `/stackpilot` Step 0, fixed `install.sh` `cp -r` for `references/` subdirs. |
 | 2026-04-13 | **v1.7.0**: Added `/stackpilot-research` skill — cross-longitudinal analysis (横纵分析法) for deep research reports. 3-wave research strategy, narrative output, quality self-check. Explicit invocation only. |
 | 2026-04-12 | **v1.6.1**: Sharpened agent prompts (sp-dev, sp-architect, sp-qa, sp-docs) and SKILL.md planning gates with Karpathy coding principles: positive traceability over negative constraints, assumption surfacing, simplicity self-checks, anti-scope-creep in plans. |
 | 2026-04-11 | **v1.6.0**: Added `pre-merge-commit` git hook to enforce squash-only merges on main/master. Installed by `init.sh`. Bypass via `STACKPILOT_ALLOW_MERGE=1`. |

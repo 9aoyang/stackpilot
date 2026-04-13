@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: Requires Claude Code (uses native Agent tool, TaskCreate, worktree isolation)
 metadata:
   author: stackpilot
-  version: "1.7.0"
+  version: "1.8.0"
 ---
 
 # Stackpilot
