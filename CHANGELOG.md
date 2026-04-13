@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-04-13
+
+### Added
+- **`/stackpilot-research` skill** — Cross-longitudinal analysis (横纵分析法) for deep research reports (10k-30k words). 3-wave research strategy, narrative-driven output, structured quality self-check. Explicit invocation only.
+
 ## [1.6.1] - 2026-04-12
 
 ### Changed
