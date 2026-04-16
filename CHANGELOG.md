@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-04-16
+
+### Added
+- **sp-qa WTF self-monitoring** — tracks revert/fix ratio and total fix count during QA runs. Hard stops at 15 fixes or when instability ratio exceeds 20%, preventing cascading damage from runaway fixes.
+- **Phase 1 anti-sycophancy** — Standard Feature exploration now enforces position-taking, specificity forcing questions, status-quo challenge, and a two-push rule for vague requirements.
+- **Sprint-finish pre-merge gate** — new Step 0 runs typecheck + lint + test suite before presenting merge/PR options. Failures are surfaced explicitly, not silently skipped.
+- **3-strike escalation in debugging** — systematic-debugging now hard-stops after 3 disproven hypotheses and escalates to user with evidence, preventing guess spirals.
+- **`--quick` flag for sync-skills** — skips full skill directory sync on startup, used by `/stackpilot` Step 0 for faster invocation.
+
 ## [1.8.0] - 2026-04-13
 
 ### Added
