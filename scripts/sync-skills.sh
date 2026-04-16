@@ -48,10 +48,12 @@ MODE="symlink"
 
 # --- Parse flags ---
 AUTO_UPDATE=false
+QUICK=false
 for arg in "$@"; do
   case "$arg" in
     --copy) MODE="copy" ;;
     --auto-update) AUTO_UPDATE=true ;;
+    --quick) QUICK=true ;;
   esac
 done
 
@@ -102,26 +104,28 @@ if $AUTO_UPDATE; then
   fi
 fi
 
-# --- Sync: add missing skills ---
-mkdir -p "$SKILLS_DST"
+# --- Sync: add missing skills (skipped with --quick) ---
+if ! $QUICK; then
+  mkdir -p "$SKILLS_DST"
 
-changed=0
-for skill_dir in "$SKILLS_SRC/"*/; do
-  [ -d "$skill_dir" ] || continue
-  skill_name="$(basename "$skill_dir")"
-  target="$SKILLS_DST/$skill_name"
+  changed=0
+  for skill_dir in "$SKILLS_SRC/"*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name="$(basename "$skill_dir")"
+    target="$SKILLS_DST/$skill_name"
 
-  # Skip if already installed (symlink or directory)
-  [ -e "$target" ] && continue
+    # Skip if already installed (symlink or directory)
+    [ -e "$target" ] && continue
 
-  if [ "$MODE" = "symlink" ]; then
-    ln -sf "$skill_dir" "$target"
-  else
-    cp -r "$skill_dir" "$target"
-  fi
-  echo "  ✓ $skill_name"
-  changed=$((changed + 1))
-done
+    if [ "$MODE" = "symlink" ]; then
+      ln -sf "$skill_dir" "$target"
+    else
+      cp -r "$skill_dir" "$target"
+    fi
+    echo "  ✓ $skill_name"
+    changed=$((changed + 1))
+  done
 
-[ $changed -gt 0 ] && echo "[stackpilot] Synced $changed new skill(s)"
+  [ $changed -gt 0 ] && echo "[stackpilot] Synced $changed new skill(s)"
+fi
 exit 0

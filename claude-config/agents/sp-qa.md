@@ -139,6 +139,22 @@ For each changed function/component, systematically check which of these apply a
 
 Not every dimension applies to every function — mark inapplicable ones as N/A in a comment.
 
+## Self-Monitoring (WTF Heuristic)
+
+Track these counters during the entire QA run:
+
+| Counter | Incremented when |
+|---------|-----------------|
+| `reverts` | You undo a fix you just made |
+| `multi_file_fixes` | A single fix touches 3+ files |
+| `deferred` | You skip an issue as "won't fix" or "out of scope" |
+| `total_fixes` | Any production file edit |
+
+**Hard stops:**
+- `total_fixes > 15` → STOP. Report `[CRITICAL] QA fix count exceeded cap (15). Remaining issues listed, not fixed.`
+- `(reverts + deferred) / total_fixes > 0.2` (WTF ratio > 20%) → STOP. Report `[CRITICAL] QA instability detected — fix quality is degrading. Halting to prevent further damage.`
+- Either threshold → do NOT attempt more fixes. List remaining issues as findings only.
+
 ## Verify/Fix Loop
 
 1. Run test command → if failing, determine whether it's a test issue or a production bug:

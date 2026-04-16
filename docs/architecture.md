@@ -1,6 +1,6 @@
 # Stackpilot Architecture
 
-> Last updated: 2026-04-11
+> Last updated: 2026-04-16
 
 Stackpilot is a methodology-driven sprint orchestration layer for Claude Code. It turns a specification into working code by driving Claude Code's native Agent tool, TaskCreate, and worktree isolation — no custom infrastructure needed.
 
@@ -242,6 +242,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-04-16 | Hardened sprint pipeline with gstack-inspired improvements: sp-qa WTF self-monitoring heuristic (revert/fix ratio, hard cap 15 fixes), anti-sycophancy and forcing questions in Phase 1 Exploration, Step 0 pre-merge verification gate in sprint-finish (typecheck + lint + tests), 3-strike escalation rule in systematic-debugging, `--quick` flag for sync-skills. |
 | 2026-04-13 | **v1.8.0**: Skill auto-sync (`sync-skills.sh --auto-update`), post-commit hook for new skill detection, version self-check in `/stackpilot` Step 0, fixed `install.sh` `cp -r` for `references/` subdirs. |
 | 2026-04-13 | **v1.7.0**: Added `/stackpilot-research` skill — cross-longitudinal analysis (横纵分析法) for deep research reports. 3-wave research strategy, narrative output, quality self-check. Explicit invocation only. |
 | 2026-04-12 | **v1.6.1**: Sharpened agent prompts (sp-dev, sp-architect, sp-qa, sp-docs) and SKILL.md planning gates with Karpathy coding principles: positive traceability over negative constraints, assumption surfacing, simplicity self-checks, anti-scope-creep in plans. |

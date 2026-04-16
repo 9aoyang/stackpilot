@@ -10,39 +10,31 @@ metadata:
 
 # Stackpilot
 
-## Step 0: Version Check (silent, once per session)
+## Step 0+1: Initialize (single bash call — do NOT split into separate Bash calls)
 
 ```bash
+# --- Version check (cache-gated, runs at most once/24h) ---
 SP_DIR="${STACKPILOT_DIR:-$HOME/.stackpilot}"
 [ -L ~/.claude/skills/stackpilot ] && SP_DIR="$(readlink ~/.claude/skills/stackpilot | sed 's|/claude-config/skills/stackpilot.*||')"
-[ -x "$SP_DIR/scripts/sync-skills.sh" ] && "$SP_DIR/scripts/sync-skills.sh" --auto-update 2>&1 || true
-```
+[ -x "$SP_DIR/scripts/sync-skills.sh" ] && "$SP_DIR/scripts/sync-skills.sh" --auto-update --quick 2>&1 || true
 
-If the output shows an update was pulled, inform the user briefly and continue. Otherwise proceed silently.
-
----
-
-## Step 1: Show Current State (always run first)
-
-```bash
+# --- State scan ---
+echo "---STATE---"
 [ -d .stackpilot ] && echo "initialized" || echo "NOT_INITIALIZED"
 [ -f .stackpilot/ARCHITECTURE.md ] && echo "ARCH_EXISTS" || echo "ARCH_MISSING"
-find .stackpilot/plans -name '*.md' -exec ls -t {} + 2>/dev/null || echo "NO_PLANS"
-find .stackpilot/specs -name '*.md' -exec ls -t {} + 2>/dev/null || echo "NO_SPECS"
+ls -t .stackpilot/plans/*.md 2>/dev/null || echo "NO_PLANS"
+ls -t .stackpilot/specs/*.md 2>/dev/null || echo "NO_SPECS"
+
+# --- Fast debris (local-only, no network) ---
+echo "---DEBRIS---"
+ls .claude/plans/*.md 2>/dev/null || true
+[ -d .superpowers ] && echo "SUPERPOWERS_EXISTS"
+git status --porcelain 2>/dev/null | head -5
 ```
+
+If the version check output shows an update was pulled, inform the user briefly. Otherwise proceed silently.
 
 Also check TaskList for any in-progress sprint tasks from the current session.
-
-Additionally, scan for workspace debris:
-
-```bash
-# Workflow artifacts
-find .claude/plans -name '*.md' 2>/dev/null
-ls -d .superpowers/ 2>/dev/null
-git worktree prune --dry-run 2>/dev/null
-git remote prune origin --dry-run 2>/dev/null
-git status --porcelain 2>/dev/null | head -10
-```
 
 Run checks silently. Default output: concise state summary + routing decision in 1-3 lines.
 
@@ -68,7 +60,7 @@ If detailed status needed, use this format:
 bash ~/Documents/github/stackpilot/scripts/init.sh 2>&1
 ```
 
-Re-run Step 1 after init. Only mention config if test_command binary was not found.
+Re-run Step 0+1 after init. Only mention config if test_command binary was not found.
 
 ---
 
@@ -112,7 +104,14 @@ Then continue routing to the next applicable state (treat as ARCH_EXISTS from th
 
 ### Tidy (workspace has debris)
 
-If Step 1 found workflow artifacts (.claude/plans/, .superpowers/, orphaned worktrees, remote-deleted tracking branches), run cleanup before proceeding.
+If Step 0+1 found lightweight debris indicators (.claude/plans/, .superpowers/, uncommitted changes), run a deep scan first:
+
+```bash
+git worktree prune --dry-run 2>/dev/null
+git remote prune origin --dry-run 2>/dev/null
+git branch --merged main 2>/dev/null | grep -vE '^\*|main|master|develop'
+git stash list 2>/dev/null
+```
 
 **Scan and report:**
 
@@ -162,7 +161,7 @@ If `.stackpilot/plans/*.md` exists but TaskList has no in-progress tasks from th
 **1. Find the plan:**
 
 ```bash
-find .stackpilot/plans -name '*.md' -exec ls -t {} + 2>/dev/null | head -1
+ls -t .stackpilot/plans/*.md 2>/dev/null | head -1
 ```
 
 Read the latest plan file and parse all `### TASK-` sections.
@@ -241,6 +240,12 @@ Do NOT start implementation until a plan is written and committed.
 1. Read `CLAUDE.md`, source files, recent commits
 2. If request spans multiple subsystems, flag and decompose first
 3. **Ask clarifying questions one at a time** — prefer multiple choice, focus on purpose/constraints/success criteria
+
+**Exploration rigor rules:**
+- **Take a position.** Do NOT hedge with "That could work" or "There are many ways." If the user's direction has a gap, say so and state what you'd do instead.
+- **Push for specificity.** Vague requirements ("make it better", "add analytics") → ask one forcing question: "Who specifically benefits, and what do they do differently after this exists?"
+- **Challenge status-quo assumptions.** If the user describes a solution, ask "What problem does this solve that can't be solved by [simpler alternative]?" at least once.
+- **Two-push rule.** If the first answer is still vague, push once more. After two pushes, accept and move on — don't interrogate.
 
 **Phase 1.5: Visual Companion** (only when a design question benefits from visualization)
 

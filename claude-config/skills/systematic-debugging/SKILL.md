@@ -53,6 +53,17 @@ Stop and restart investigation if you catch yourself thinking:
 | "I don't fully understand but this might work" | Unverified fixes create new bugs. |
 | Each fix reveals a new problem in a different place | You're chasing symptoms, not the cause. Step back. |
 
+## 3-Strike Escalation Rule
+
+If you've formed 3 hypotheses and all were disproven by evidence: **STOP. Do not form a 4th hypothesis.**
+
+Instead:
+1. Report what you know: the 3 hypotheses, why each was wrong, what evidence disproved them
+2. Report what you don't know: the remaining unknowns
+3. Ask the user for direction — they likely have domain context you lack
+
+This prevents the "guess spiral" where each attempt muddies the codebase further.
+
 ## Architecture Check (after 3 failed fixes)
 
 If you've tried 3 different fixes and none worked, stop fixing. Ask:

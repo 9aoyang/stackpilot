@@ -2,6 +2,37 @@
 
 Run after all tasks are done. Confirms tests pass, optionally starts dev server for preview, then presents merge/PR/keep/discard options.
 
+## Step 0 — Pre-merge verification gate
+
+Before anything else, run the project's verification suite. Read `stackpilot.config.yml` for `qa.test_command`.
+
+```bash
+# 1. Type check (if available)
+npx tsc --noEmit 2>&1 || true
+# 2. Lint (if available)
+npm run lint 2>&1 || true
+# 3. Test suite
+<test_command from config>
+```
+
+Auto-detect which checks exist (don't fail on missing tools). Report results:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━
+  Pre-Merge Gate
+━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Type check     passed
+⚠️  Lint           3 warnings (non-blocking)
+✅ Tests          47/47 passed
+━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+- All green → proceed to Step 1
+- Test failures → report and ask: "Tests failing. Fix before merge, or proceed anyway?"
+- Type errors → report and ask: same pattern
+
+Do NOT silently skip verification.
+
 ## Step 1 — Detect dev server command
 
 Auto-detect from project files. Only detect when there is a clear web server signal.
