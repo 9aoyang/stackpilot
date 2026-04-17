@@ -2,31 +2,46 @@
 
 Reference documentation for the main agent executing `/stackpilot-bench`. This file specifies how to invoke workload legs, capture metrics, manage worktree state, and shuffle execution order deterministically.
 
-## Resetting the Worktree
+## Resetting the Worktree (sandbox model)
 
-Call the reset script before each leg to restore fixture state.
+Call the reset script before each leg to restore the sandbox to pristine fixture state.
 
 **Signature:**
 ```bash
-bash scripts/reset-worktree.sh <worktree_path> <fixture_source>
+bash scripts/reset-worktree.sh <worktree_path> <sandbox_source>
 ```
 
 **Arguments:**
 - `<worktree_path>`: absolute path to the git worktree (e.g., `/path/to/repo/.worktrees/bench-run`)
-- `<fixture_source>`: absolute path to the fixture directory for this workload (e.g., `/path/to/repo/claude-config/skills/stackpilot-bench/workloads/01-trap-heavy-bash/fixtures`)
+- `<sandbox_source>`: absolute path to the workload's sandbox source dir (e.g., `/path/to/repo/claude-config/skills/stackpilot-bench/workloads/01-trap-heavy-bash/sandbox`)
+
+**What the script does:**
+1. Reads `<worktree_path>/.bench-base-sha` — the main-branch SHA the worktree was created from. Aborts (exit 3) if missing.
+2. Runs `git -C <worktree_path> reset --hard <base_sha>` — undoes ALL changes from the prior leg across the entire worktree.
+3. Runs `git clean -fdx` (while preserving the `.bench-base-sha` marker file).
+4. Removes any existing `<worktree>/bench-sandbox/` and copies `<sandbox_source>/` into it.
+5. Runs `git add bench-sandbox/` then commits with `--no-verify` (fixed author/committer identity, no VERSION/hook checks applied). The commit is the "leg-start SHA".
+6. Prints the leg-start SHA to stdout in the form `reset-worktree: OK <sha>`.
 
 **Exit behavior:**
-- Exit 0 on success: worktree state matches fixture, all differences from the base SHA are removed.
-- Exit 1 (or non-zero) if `git reset --hard` fails (e.g., dirty state not cleaned, invalid SHA).
-- Exit 2 if `rsync` fails (e.g., source directory missing, permission denied on target).
+- Exit 0 on success; `reset-worktree: OK <sha>` on stdout.
+- Exit 2 on bad arguments / missing paths.
+- Exit 3 if `.bench-base-sha` marker missing or empty.
+- Exit 1 if git/cp operations fail.
 
-**Idempotency:**
-- Safe to call multiple times in a row; the second call is a no-op (already at fixture state).
-- Script uses `set -euo pipefail` internally to fail fast on any error.
+**Why this model:**
+- Workload edits are scoped to `bench-sandbox/` (a throwaway subdirectory).
+- The rest of the worktree retains main's files (CLAUDE.md, `claude-config/`, etc.), so dispatched agents have normal project context.
+- The leg-start commit lets the runner compute a CLEAN diff scoped to `bench-sandbox/` after the leg finishes, without fixture-install churn showing up as "agent changes".
 
-**Implementation notes:**
-- The script runs `git -C <worktree_path> reset --hard <base_sha>` where `<base_sha>` is the SHA of the `main` branch at the time the worktree was created. This is stable for a given run.
-- Then it syncs fixture files: `rsync -a --delete <fixture_source>/ <worktree_path>/<relative_target>`. The relative target is determined by the fixture layout — typically fixtures are at the root, so target is `.`.
+**Diff capture after the leg:**
+```bash
+git -C <worktree_path> diff <leg_start_sha> -- bench-sandbox/
+```
+
+The `-- bench-sandbox/` pathspec excludes any stray edits the agent may have made outside the sandbox (CLAUDE.md etc.); those are cleaned up by the next leg's `reset --hard`.
+
+**Idempotency:** safe to call multiple times; each call produces a new leg-start commit and a freshly-installed sandbox.
 
 ## Invoking Legs
 
@@ -323,8 +338,8 @@ This demonstrates that order varies per workload but is deterministic within a r
 
 Each trap entry may optionally declare `check_mode`:
 
-- `check_mode: diff` (default, assumed if absent) — `diff_bad_regex` is evaluated against the output of `git -C .worktrees/bench-run diff <base_sha>`.
-- `check_mode: final_file` — the trap declares `check_file: <relative path>`; `diff_bad_regex` is evaluated against the final content of that file (read from the worktree after dispatch completes, before reset). Use this mode when the trap condition is "old phrase X still exists in file Y" — testable regardless of whether the agent touched the file.
+- `check_mode: diff` (default, assumed if absent) — `diff_bad_regex` is evaluated against the scoped diff (`git -C .worktrees/bench-run diff <leg_start_sha> -- bench-sandbox/`).
+- `check_mode: final_file` — the trap declares `check_file: <path relative to bench-sandbox/>`; `diff_bad_regex` is evaluated against the final content of that file (read from `<worktree>/bench-sandbox/<check_file>` after dispatch completes, before reset). Use this mode when the trap condition is "old phrase X still exists in file Y" — testable regardless of whether the agent touched the file.
 
 Pseudocode for trap evaluation:
 
@@ -333,7 +348,7 @@ Pseudocode for trap evaluation:
         if mode == 'diff':
             text = captured_diff
         elif mode == 'final_file':
-            text = read_file(f"{worktree}/{trap['check_file']}")
+            text = read_file(f"{worktree}/bench-sandbox/{trap['check_file']}")
         if re.search(trap['diff_bad_regex'], text, re.MULTILINE):
             traps_avoided_in_diff += 0    # trap triggered
         else:

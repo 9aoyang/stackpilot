@@ -190,6 +190,8 @@ mkdir -p .stackpilot/benchmarks/runs/$RUN_TS/raw
 
 Hold `RUN_TS` as a runtime variable for the remainder of the run. All raw artifacts for this run are written to `.stackpilot/benchmarks/runs/$RUN_TS/raw/`.
 
+**Isolation model — sandbox subdirectory**: each workload operates inside `.worktrees/bench-run/bench-sandbox/`, NOT at the worktree root. This preserves the rest of the worktree's tree (CLAUDE.md, `claude-config/`, `.stackpilot/`, etc.) so dispatched agents have context while their edits are scoped to a throwaway subdir. `reset-worktree.sh` (invoked in Step 2) handles the sandbox install + a leg-start commit.
+
 ---
 
 ## Step 2 — Main execution loop
@@ -217,13 +219,16 @@ Shuffle `["zero", "savvy", "stackpilot"]` deterministically using `RUN_TS` as se
 
 For each `leg` in the shuffled order:
 
-1. **Reset worktree** to fixture state:
+1. **Reset worktree to sandbox fixture state**:
 
    ```bash
-   bash claude-config/skills/stackpilot-bench/scripts/reset-worktree.sh \
+   LEG_START_SHA=$(bash claude-config/skills/stackpilot-bench/scripts/reset-worktree.sh \
      .worktrees/bench-run \
-     claude-config/skills/stackpilot-bench/workloads/<id>/fixtures
+     claude-config/skills/stackpilot-bench/workloads/<id>/sandbox \
+     | awk '/^reset-worktree: OK/ {print $NF}')
    ```
+
+   The script resets the worktree to `base_sha`, installs the sandbox at `.worktrees/bench-run/bench-sandbox/`, and creates a leg-start commit. The `LEG_START_SHA` is the commit that represents "sandbox pristine, nothing done yet" — later diff capture uses it as the base.
 
    If the script exits non-zero, treat as a dispatch error (see runner.md §Error Handling During Dispatch) and continue to next leg.
 
@@ -235,16 +240,25 @@ For each `leg` in the shuffled order:
 
 3. **Dispatch the leg** (enforce 30-minute soft timeout per runner.md §Timeout Handling):
 
+   Every leg's prompt is prefixed at dispatch time with a **working-directory preamble** so the sub-agent knows to operate inside the sandbox rather than the main repo:
+
+   ```
+   PREAMBLE = f"""Working directory for this task: `.worktrees/bench-run/bench-sandbox/`. All file paths below are relative to that directory. Do not read or modify files outside it except for reference (e.g., reading CLAUDE.md at the repo root is allowed).
+
+   {prompts[leg]}
+   """
+   ```
+
    - `zero` and `savvy` legs:
      ```
-     Agent(subagent_type="general-purpose", prompt=prompts[leg])
+     Agent(subagent_type="general-purpose", prompt=PREAMBLE)
      ```
 
-   - `stackpilot` leg: the main agent drives the full `/stackpilot` flow directly against `prompts["stackpilot"]` inside `.worktrees/bench-run`. Do NOT use `subagent_type="stackpilot"`. The pipeline phases:
+   - `stackpilot` leg: the main agent drives the full `/stackpilot` flow directly against `prompts["stackpilot"]` (wrapped with the same preamble). Do NOT use `subagent_type="stackpilot"`. The pipeline phases:
      1. Write a mini spec from the prompt text.
-     2. Write a mini plan (single task).
-     3. Dispatch `sp-architect` if standard complexity, otherwise proceed directly.
-     4. Dispatch `sp-dev` operating inside `.worktrees/bench-run` (use the bench worktree, not `isolation="worktree"` — the worktree is already set up).
+     2. Write a mini plan (single task, all paths under `bench-sandbox/`).
+     3. Dispatch `sp-architect` if standard complexity, otherwise proceed directly. Pass the preamble + task context.
+     4. Dispatch `sp-dev` with the preamble in its prompt so it operates inside `bench-sandbox/`.
      5. Dispatch `sp-qa` against the resulting diff.
      Capture all dispatch return outputs.
 
@@ -254,13 +268,13 @@ For each `leg` in the shuffled order:
    LEG_DUR=$(( $(date +%s) - LEG_START ))
    ```
 
-5. **Capture final diff**:
+5. **Capture scoped diff** (bench-sandbox/ only, from leg-start SHA):
 
    ```bash
-   git -C .worktrees/bench-run diff $(cat .worktrees/bench-run/.bench-base-sha)
+   git -C .worktrees/bench-run diff "$LEG_START_SHA" -- bench-sandbox/
    ```
 
-   Write diff to `.stackpilot/benchmarks/runs/$RUN_TS/raw/<id>-<leg>-diff.patch`.
+   Write diff to `.stackpilot/benchmarks/runs/$RUN_TS/raw/<id>-<leg>-diff.patch`. Changes made by the agent OUTSIDE `bench-sandbox/` are intentionally excluded from the diff — they're either stray accidental edits (caught at next reset) or context reads (no-op).
 
 6. **For `stackpilot` leg only**: write the sp-qa dispatch's return text to `.stackpilot/benchmarks/runs/$RUN_TS/raw/<id>-stackpilot-qa.txt`.
 
@@ -271,10 +285,10 @@ For each `leg` in the shuffled order:
    ```
 
 8. **Run trap assertions** against the captured diff. For each trap in `traps.yml`:
-   - Check `diff_bad_regex` against the diff (grep). No match → trap avoided.
+   - `check_mode: diff` (default): evaluate `diff_bad_regex` against the scoped diff (from step 5). No match → trap avoided.
+   - `check_mode: final_file`: read the file at `<worktree>/bench-sandbox/<trap.check_file>` (check_file is relative to the sandbox root). Evaluate `diff_bad_regex` against its FINAL content. No match → trap avoided.
    - For `stackpilot` leg only: check `qa_good_regex` against the sp-qa report text.
    - If any regex is invalid, abort the run immediately (no CSV write); point to the offending trap ID.
-   - For traps with `final_file` mode (where the bad pattern should be checked in the final file rather than the diff), see runner.md §Trap Assertion Evaluation for the alternative check.
    - Accumulate `traps_avoided_in_diff` and `traps_caught_in_qa` counts.
 
 9. **Run functional assertions**: each `diff_must_match_regex` in `functional_assertions` must match the diff. `functional_pass = true` iff ALL pass. A failed assertion does not abort; record it in the row.
@@ -498,12 +512,13 @@ For each (workload, leg) pair that is marked:
 
 2. For each additional iteration `N` in `[2, 3]`:
 
-   a. Reset the worktree to the fixture state:
+   a. Reset the worktree sandbox (capture new `LEG_START_SHA`):
 
       ```bash
-      bash claude-config/skills/stackpilot-bench/scripts/reset-worktree.sh \
+      LEG_START_SHA=$(bash claude-config/skills/stackpilot-bench/scripts/reset-worktree.sh \
         .worktrees/bench-run \
-        claude-config/skills/stackpilot-bench/workloads/<id>/fixtures
+        claude-config/skills/stackpilot-bench/workloads/<id>/sandbox \
+        | awk '/^reset-worktree: OK/ {print $NF}')
       ```
 
    b. Record start time: `LEG_START=$(date +%s)`

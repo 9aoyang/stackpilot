@@ -86,6 +86,8 @@ sp-architect is skipped for light tasks. sp-docs runs when plan includes docs ta
 
 `/stackpilot-bench` is a standalone benchmark skill, separate from the `/stackpilot` orchestration layer. It measures whether changes to `sp-*` agent prompts or `/stackpilot` orchestration are positive or negative optimizations. The skill runs a three-legged comparison (naive_zero / naive_savvy / stackpilot pipeline) across three fixed workloads (trap-heavy-bash, doc-consistency, cross-file-refactor), capturing tokens, duration, tool use counts, and QA verdicts. Results append to `.stackpilot/benchmarks/history.csv` as a time series and generate a per-run report with a single POSITIVE/MARGINAL/NEGATIVE verdict. Unlike `/stackpilot` sprints, `/stackpilot-bench` produces no merge-ready code — it is purely a measurement tool. Invoke after editing `sp-*` agent prompts or `/stackpilot` orchestration logic to confirm the change improves end-to-end quality without cost regression.
 
+**Sandbox isolation**: each leg dispatch operates inside `.worktrees/bench-run/bench-sandbox/`, a throwaway subdirectory populated from the workload's `sandbox/` fixture. The rest of the bench worktree retains main's files so sub-agents have project context; `reset-worktree.sh` resets to `base_sha` between legs and commits a fresh leg-start SHA for scoped diff capture.
+
 ---
 
 ## Agent Responsibilities
