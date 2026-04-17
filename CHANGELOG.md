@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   All three fixed: frontmatter corrected, `install.sh` now prints a RESTART reminder, all dispatch sites include `subagent_type="sp-*"`. Activation requires Claude Code restart after install.
 
 ### Added
+- **`/stackpilot-bench` skill** — continuous quantitative benchmark for stackpilot. Runs naive_zero / naive_savvy / stackpilot legs across 3 fixed workloads, writes CSV time series + verdict report. Use after editing `sp-*` prompts or `/stackpilot` orchestration to confirm the change is a positive optimization. See `claude-config/skills/stackpilot-bench/SKILL.md` for the full protocol and `docs/architecture.md` for high-level description.
 - **Task-type routing for sp-docs** — `type: docs` tasks now route to `sp-docs` (haiku model). Previously all types went to `sp-dev` (sonnet), making the haiku cost optimization dead code.
 - **`tests/test-e2e.sh` +8 structural assertions** — guards against the registration regression returning: frontmatter `tools:` format on all 4 agents, `subagent_type="sp-*"` on all SKILL.md dispatches, sp-docs routing.
 

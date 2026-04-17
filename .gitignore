@@ -1,5 +1,9 @@
 .worktrees/
 
+# Session-local skill working dirs (untracked, not part of repo)
+.superpowers/
+claude-config/skills/*/systematic-debugging/
+
 # OS
 .DS_Store
 Thumbs.db

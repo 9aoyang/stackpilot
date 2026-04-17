@@ -1,0 +1,9 @@
+zero: "Add a --verbose flag to scripts/detector.sh that echoes each detected file check and the matched framework."
+
+savvy: |
+  Before making changes, read scripts/detector.sh fully and CLAUDE.md if present. Plan your approach. Write tests for the new flag. Follow existing style. Use shell-safe quoting. Avoid conflicts with existing flags.
+
+  Feature request: add a --verbose flag to scripts/detector.sh. When set, the script should print a line for each detection check attempted and another line when a framework matches. Make sure verbose output goes to the right stream so existing pipes (e.g. detector.sh | jq) are not broken.
+
+stackpilot: |
+  Feature: add --verbose flag to scripts/detector.sh. When set, it echoes 'CHECK: <check_name>' for each detection attempt and 'MATCHED: <framework>' when a framework matches. Include tests.
