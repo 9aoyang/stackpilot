@@ -242,7 +242,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | 日期 | 变更 |
 |------|------|
-| 2026-04-17 | Opus 4.7 管线适配：`stackpilot.config.yml` 新增 per-phase effort advisory（architect/dev/qa/docs）；4 个 agent 加 effort posture 一行；跨 sprint 记忆——`.stackpilot/sprint-metrics.md`（sprint-finish 追加）和 `.stackpilot/decisions.md`（sp-architect 在 HIGH 风险时追加）；Sprint Clean 读取最近 3 次 sprint 趋势并提示；auto-verify 循环从 3 轮降到 2 轮；SKILL.md 12-QA 表格抽到 `references/12-qa-matrix.md`。 |
+| 2026-04-17 | **v1.10.0**：Opus 4.7 管线适配：`stackpilot.config.yml` 新增 per-phase effort advisory（architect/dev/qa/docs）；4 个 agent 加 effort posture 一行；跨 sprint 记忆——`.stackpilot/sprint-metrics.md`（sprint-finish 追加）和 `.stackpilot/decisions.md`（sp-architect 在 HIGH 风险时追加）；Sprint Clean 读取最近 3 次 sprint 趋势并提示；auto-verify 循环从 3 轮降到 2 轮；SKILL.md 12-QA 表格抽到 `references/12-qa-matrix.md`。 |
 | 2026-04-16 | **v1.9.1**：移除 sp-qa 的 codex-plugin-cc 跨模型审查集成。HIGH 风险任务改为可选调用 Claude Code `/ultrareview`（需 Opus 4.7+）。工具链单一来源，对齐 Claude Code 原生定位。 |
 | 2026-04-16 | **v1.9.0**：借鉴 gstack 强化 sprint 管线：sp-qa WTF 自监控启发式（revert/fix 比率、硬上限 15 次修复），Phase 1 探索阶段反谄媚与强迫性追问，sprint-finish 新增 Step 0 合并前门禁（type check + lint + tests），systematic-debugging 3-strike 上报规则，sync-skills `--quick` 标志。 |
 | 2026-04-13 | **v1.8.0**：Skill 自动同步（`sync-skills.sh --auto-update`），post-commit hook 自动检测新 skill，`/stackpilot` Step 0 版本自检，修复 `install.sh` 用 `cp -r` 保留 `references/` 子目录。 |

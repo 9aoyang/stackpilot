@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-04-17
+
+### Added
+- **Per-phase effort advisory** — `stackpilot.config.yml` gains an `effort:` block (architect: xhigh, dev: high, qa: medium, docs: low). All 4 agent prompts include a one-line effort posture that reflects this allocation. Users set matching Claude Code effort for best cost/quality.
+- **Cross-sprint memory files** — `.stackpilot/sprint-metrics.md` (appended by `sprint-finish` Step 0.5) and `.stackpilot/decisions.md` (appended by `sp-architect` on HIGH-risk reviews). Sprint Clean now reads sprint-metrics.md and surfaces a SOFT-BLOCKED trend advisory when the rate climbs across 3 sprints. Append failures are non-blocking (supplementary memory, not critical path).
+- **`references/12-qa-matrix.md`** — consolidated 12-dimension scenario coverage tables for both Spec and Plan reviews.
+
+### Changed
+- **Verify/fix loops reduced 3 → 2 rounds** — SKILL.md Phase 3/4 auto-verify, sp-dev Fix Loop Rules, sp-qa Verify/Fix Loop. Rationale: Opus 4.7 self-catches most issues earlier; the third round was rarely productive.
+- **SKILL.md token trim** — 12-QA tables extracted to `references/12-qa-matrix.md`. SKILL.md net -26 lines, saves ~1.5k tokens per `/stackpilot` invocation.
+- **`sp-architect`** — now reads `.stackpilot/decisions.md` (if present) before producing reviews and cites relevant prior decisions in "Existing Patterns".
+
 ## [1.9.1] - 2026-04-16
 
 ### Removed
