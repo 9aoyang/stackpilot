@@ -9,3 +9,12 @@ qa:
   #   test_command: go test ./...
   #   test_command: cargo test
   #   test_command: bundle exec rspec
+
+# Effort budget per phase (advisory for Claude Opus 4.7+)
+# Set your Claude Code session effort to match these when running stackpilot for best cost/quality ratio.
+# Unknown values are silently ignored; missing block = all defaults.
+effort:
+  architect: xhigh   # HIGH-risk architectural decisions — deep analysis worth the cost
+  dev: high          # TDD implementation — balanced rigor
+  qa: medium         # Opus 4.7 self-verifies; QA can be lighter
+  docs: low          # Mechanical updates — no deep analysis needed

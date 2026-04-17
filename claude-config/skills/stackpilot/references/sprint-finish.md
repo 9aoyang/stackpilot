@@ -33,6 +33,24 @@ Auto-detect which checks exist (don't fail on missing tools). Report results:
 
 Do NOT silently skip verification.
 
+## Step 0.5 — Append sprint metrics
+
+After the pre-merge gate passes, append a summary to `.stackpilot/sprint-metrics.md` (create the file if absent). Gather the metrics from this sprint's TaskList + git log + QA reports:
+
+```markdown
+## YYYY-MM-DD — <sprint title>
+
+- Tasks planned: N
+- Tasks completed: N
+- SOFT-BLOCKED events: N
+- QA [CRITICAL] events: N
+- Architecture reviews: N (HIGH-risk: N)
+- Verify/fix rounds median: N
+- Tests passing: N/N
+```
+
+If the append fails (permission / disk issue), log a one-line warning and continue — this is supplementary memory, not the critical path. Do NOT block the merge decision on this.
+
 ## Step 1 — Detect dev server command
 
 Auto-detect from project files. Only detect when there is a clear web server signal.

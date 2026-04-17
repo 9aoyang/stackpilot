@@ -205,7 +205,11 @@ Completed: 2/4  |  Remaining: 2
 
 ### Sprint Clean
 
-If no plans/specs exist (or they were just cleared), ask what to build.
+If no plans/specs exist (or they were just cleared), first check sprint history for context.
+
+**Sprint history check** — if `.stackpilot/sprint-metrics.md` exists, read the last 3 sprint sections and print a one-line summary each (date, title, tasks completed / planned, SOFT-BLOCKED count). If SOFT-BLOCKED events climbed across those 3 sprints (0 → 1 → 2+), surface a one-line advisory: `⚠️ SOFT-BLOCKED rate rising — consider smaller tasks or architecture review for next sprint`. If the file is absent, skip silently.
+
+Then ask what to build.
 
 > If the request is about **improving something measurable** (performance, error rate, bundle size), read [references/optimize-sprint.md](references/optimize-sprint.md) and follow the Optimize Sprint path.
 
@@ -260,32 +264,17 @@ Read [references/visual-companion.md](references/visual-companion.md) for setup 
 **Phase 3: Spec + Auto-Verify Loop**
 
 6. Write spec → `.stackpilot/specs/YYYY-MM-DD-<topic>-design.md`
-7. Run verification (up to 3 self-fix rounds):
+7. Run verification (up to 2 self-fix rounds):
    ```bash
    grep -inE "TBD|TODO|FIXME|\bplaceholder\b" .stackpilot/specs/*.md | wc -l  # must be 0
    grep -c "^## " .stackpilot/specs/*.md  # must be >= 4
    wc -w .stackpilot/specs/*.md | tail -1  # must be >= 300
    ```
-   All pass → proceed to **Phase 3.5: Spec 12-QA** (do NOT skip). Fail after 3 → escalate specific failures.
+   All pass → proceed to **Phase 3.5: Spec 12-QA** (do NOT skip). Fail after 2 → escalate specific failures.
 
 **Phase 3.5: Spec 12-QA**
 
-After spec passes auto-verify, review it against the 12 scenario dimensions. For each dimension, check whether the spec adequately addresses it — mark as ✅ covered, ⚠️ partially covered, ❌ missing, or N/A:
-
-| # | Dimension | Check against spec |
-|---|-----------|-------------------|
-| 1 | **Happy path** | Is the primary success flow clearly defined? |
-| 2 | **Error / failure** | Are error cases and failure modes specified? |
-| 3 | **Edge case** | Are boundary values and limits addressed? |
-| 4 | **Abuse / invalid** | Are invalid inputs and misuse scenarios covered? |
-| 5 | **Scale** | Are performance/scale considerations mentioned? |
-| 6 | **Concurrent** | Are race conditions or parallel access addressed? |
-| 7 | **Temporal** | Are timeouts, retries, ordering dependencies covered? |
-| 8 | **Data variation** | Are different valid input shapes considered? |
-| 9 | **Permission** | Are auth/access control requirements defined? |
-| 10 | **Integration** | Are integration points and contracts specified? |
-| 11 | **Recovery** | Is partial failure recovery behavior defined? |
-| 12 | **State transition** | Are before/after states clearly described? |
+After spec passes auto-verify, read [references/12-qa-matrix.md](references/12-qa-matrix.md) §Spec and mark each dimension ✅ / ⚠️ / ❌ / N/A against the spec.
 
 **Rules:**
 - Any ❌ on dimensions 1-4 → **must fix spec** before proceeding (these are fundamental)
@@ -298,33 +287,18 @@ After spec passes auto-verify, review it against the 12 scenario dimensions. For
 
 8. Map file structure
 9. Write plan → `.stackpilot/plans/YYYY-MM-DD-<feature>-plan.md`
-10. Verify:
+10. Verify (up to 2 self-fix rounds):
     ```bash
     grep -inE "TBD|TODO|FIXME|\bplaceholder\b" .stackpilot/plans/*.md | wc -l  # 0
     grep -c "^### TASK-" .stackpilot/plans/*.md  # >= 3
     grep -cE "relevant_files:|depends_on:|complexity:" .stackpilot/plans/*.md  # task_count * 3
     ```
     Check 4 — type consistency across tasks (manual scan).
-    All pass → proceed to **Phase 4.5: Plan 12-QA** (do NOT skip).
+    All pass → proceed to **Phase 4.5: Plan 12-QA** (do NOT skip). Fail after 2 → escalate.
 
 **Phase 4.5: Plan 12-QA**
 
-After plan passes auto-verify, review it against the same 12 dimensions — but now checking whether the **tasks** cover each scenario:
-
-| # | Dimension | Check against plan |
-|---|-----------|-------------------|
-| 1 | **Happy path** | Is there a task for the primary success flow? |
-| 2 | **Error / failure** | Are error handling tasks included? |
-| 3 | **Edge case** | Do tasks cover boundary/edge conditions? |
-| 4 | **Abuse / invalid** | Are input validation tasks present? |
-| 5 | **Scale** | Are performance-related tasks included if needed? |
-| 6 | **Concurrent** | Are concurrency-safe implementations planned? |
-| 7 | **Temporal** | Are timeout/retry tasks included if needed? |
-| 8 | **Data variation** | Do tasks handle multiple input shapes? |
-| 9 | **Permission** | Are auth/permission tasks included? |
-| 10 | **Integration** | Are integration/contract tasks present? |
-| 11 | **Recovery** | Are rollback/cleanup tasks included? |
-| 12 | **State transition** | Do tasks verify state before/after? |
+After plan passes auto-verify, read [references/12-qa-matrix.md](references/12-qa-matrix.md) §Plan and mark each dimension against the tasks.
 
 **Rules:**
 - Cross-reference against Phase 3.5 results: every ✅/⚠️ from the spec review must have a corresponding task in the plan
