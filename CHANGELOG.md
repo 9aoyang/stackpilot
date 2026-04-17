@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-04-16
+
+### Removed
+- **codex-plugin-cc cross-model review integration** — sp-qa no longer invokes `/codex:adversarial-review`. Removed tracking from `docs/sync.md`. Removed `CODEX_CI` environment detection from preview server.
+
+### Changed
+- **sp-qa deep review** — optional `/ultrareview` (Claude Code Opus 4.7+) replaces codex cross-model review for HIGH-risk tasks. Still non-blocking, still supplementary.
+
 ## [1.9.0] - 2026-04-16
 
 ### Added

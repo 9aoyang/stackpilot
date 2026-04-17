@@ -242,7 +242,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | 日期 | 变更 |
 |------|------|
-| 2026-04-16 | 移除 sp-qa 的 codex-plugin-cc 跨模型审查集成。HIGH 风险任务改为可选调用 Claude Code `/ultrareview`（需 Opus 4.7+）。工具链单一来源，对齐 Claude Code 原生定位。 |
+| 2026-04-16 | **v1.9.1**：移除 sp-qa 的 codex-plugin-cc 跨模型审查集成。HIGH 风险任务改为可选调用 Claude Code `/ultrareview`（需 Opus 4.7+）。工具链单一来源，对齐 Claude Code 原生定位。 |
 | 2026-04-16 | **v1.9.0**：借鉴 gstack 强化 sprint 管线：sp-qa WTF 自监控启发式（revert/fix 比率、硬上限 15 次修复），Phase 1 探索阶段反谄媚与强迫性追问，sprint-finish 新增 Step 0 合并前门禁（type check + lint + tests），systematic-debugging 3-strike 上报规则，sync-skills `--quick` 标志。 |
 | 2026-04-13 | **v1.8.0**：Skill 自动同步（`sync-skills.sh --auto-update`），post-commit hook 自动检测新 skill，`/stackpilot` Step 0 版本自检，修复 `install.sh` 用 `cp -r` 保留 `references/` 子目录。 |
 | 2026-04-13 | **v1.7.0**：新增 `/stackpilot-research` skill——横纵分析法深度研报（纵向发展史 + 横向竞品切面），3 波研究策略，叙事驱动输出，质量自检。仅显式调用触发。 |
