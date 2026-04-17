@@ -75,9 +75,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **pre-commit hook** — expanded doc check to include README.md and CONTRIBUTING.md
 - **`/release` skill** — support `patch`/`minor`/`major` bump types with auto-calculation; auto-detect bump type from commits when no args provided
 
-### Changed
-- **`docs/sync.md`** — track `codex-plugin-cc` as evaluated external skill reference
-
 ## [1.3.0] - 2026-04-11
 
 ### Changed
@@ -90,7 +87,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 - **sp-qa Stage 3: Adversarial Review** — attacker-mindset review checking 6 attack surfaces (auth, data integrity, rollback, race conditions, null/timeout, version skew). Full review for HIGH risk tasks, top 3 for others.
 - **Review Patterns (cross-sprint memory)** — `.stackpilot/review-patterns.md` accumulates recurring QA findings across sprints. Frequency-based retention (max 20, lowest-count pruned first). sp-qa reads patterns on startup and actively watches for known issues.
-- **Cross-model review (optional)** — when codex-plugin-cc is installed, sp-qa automatically requests `/codex:adversarial-review` as supplementary second opinion. Silently skipped when unavailable.
 - **Risk-aware QA dispatch** — architecture review risk level passed to sp-qa, controlling adversarial review depth.
 
 ## [1.1.0] - 2026-04-10
@@ -146,7 +142,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `claude-config/agents/sp-pm.md` — task decomposition inlined into skill
 - `claude-config/agents/sp-coordinator.md` — orchestration inlined into skill
 - `templates/backlog.yml`, `templates/in-progress.yml` — replaced by TaskCreate
-- Cross-provider support (Codex/Gemini/custom) — now Claude Code-only
+- Cross-provider support (Gemini/custom) — now Claude Code-only
 - Provider detection, model routing matrix, worktree management, file locking from init.sh
 
 ## [0.3.0] - 2026-04-07

@@ -88,7 +88,7 @@ sp-dev → sp-qa
 |-------|------|---------|
 | **sp-architect** | 对照代码库审查任务；返回架构决策 | 先分析现有代码模式（file:line 引用）；唯一的架构决策；完整实现蓝图；HIGH 风险多角色对抗分析；新依赖/结构冲突返回 `[ESCALATION]` |
 | **sp-dev** | 实现任务 | 读 `git log` 避免重复失败路径；追踪入口点+调用链；强制 TDD（RED-GREEN-REFACTOR）；4 阶段根因调查；verify/fix 循环含卡住检测；失败后回滚；3 轮后返回 `[SOFT-BLOCKED]` |
-| **sp-qa** | 审查代码、编写测试 | 三阶段审查（spec 合规 + 代码质量 + 对抗性审查）；12 维场景测试；跨 sprint 审查记忆（`.stackpilot/review-patterns.md`）；可选 codex-plugin-cc 跨模型审查；置信度 ≥ 80 才上报；返回 `[CRITICAL]` 或 `[SOFT-BLOCKED]` |
+| **sp-qa** | 审查代码、编写测试 | 三阶段审查（spec 合规 + 代码质量 + 对抗性审查）；12 维场景测试；跨 sprint 审查记忆（`.stackpilot/review-patterns.md`）；HIGH 风险任务可选 Claude Code `/ultrareview` 深度审查（Opus 4.7+）；置信度 ≥ 80 才上报；返回 `[CRITICAL]` 或 `[SOFT-BLOCKED]` |
 | **sp-docs** | 更新 README、注释、API 文档 | QA 通过后运行；只改文档不改逻辑 |
 
 ---
@@ -242,6 +242,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-16 | 移除 sp-qa 的 codex-plugin-cc 跨模型审查集成。HIGH 风险任务改为可选调用 Claude Code `/ultrareview`（需 Opus 4.7+）。工具链单一来源，对齐 Claude Code 原生定位。 |
 | 2026-04-16 | **v1.9.0**：借鉴 gstack 强化 sprint 管线：sp-qa WTF 自监控启发式（revert/fix 比率、硬上限 15 次修复），Phase 1 探索阶段反谄媚与强迫性追问，sprint-finish 新增 Step 0 合并前门禁（type check + lint + tests），systematic-debugging 3-strike 上报规则，sync-skills `--quick` 标志。 |
 | 2026-04-13 | **v1.8.0**：Skill 自动同步（`sync-skills.sh --auto-update`），post-commit hook 自动检测新 skill，`/stackpilot` Step 0 版本自检，修复 `install.sh` 用 `cp -r` 保留 `references/` 子目录。 |
 | 2026-04-13 | **v1.7.0**：新增 `/stackpilot-research` skill——横纵分析法深度研报（纵向发展史 + 横向竞品切面），3 波研究策略，叙事驱动输出，质量自检。仅显式调用触发。 |

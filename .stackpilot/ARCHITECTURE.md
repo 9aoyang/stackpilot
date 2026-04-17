@@ -28,7 +28,7 @@ Stackpilot is a sprint orchestration layer for Claude Code. `/stackpilot` skill 
 ## Agent Pipeline
 
 ```
-sp-architect (HIGH complexity only) → sp-dev (TDD, worktree) → sp-qa (12-dim + optional codex) → sp-docs
+sp-architect (HIGH complexity only) → sp-dev (TDD, worktree) → sp-qa (12-dim + optional /ultrareview) → sp-docs
 ```
 
 ## Key Design Decisions
@@ -36,7 +36,7 @@ sp-architect (HIGH complexity only) → sp-dev (TDD, worktree) → sp-qa (12-dim
 - **Fork-pattern caching**: agents share parent context → ~66% token savings
 - **Worktree isolation**: each dev task runs in its own git worktree
 - **Zero custom infra**: everything uses Claude Code native tools
-- **Cross-model review**: sp-qa calls `/codex:adversarial-review` when codex-plugin-cc is present
+- **Deep review**: sp-qa optionally requests `/ultrareview` for HIGH-risk tasks (Claude Code Opus 4.7+)
 
 ## External Skill Dependencies
 

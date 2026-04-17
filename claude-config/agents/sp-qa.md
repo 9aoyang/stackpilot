@@ -83,19 +83,13 @@ After Stage 2, switch to attacker mindset. Review the `git diff` for:
 **Reporting:** Same rules as Stage 2 — confidence >= 80, `file:line` evidence required.
 Adversarial findings use the same `[CRITICAL]` / fix-directly classification.
 
-### Cross-Model Review (optional — requires codex-plugin-cc)
+### Deep Review (optional — requires Claude Code `/ultrareview`)
 
-After completing Stage 3, check if Codex is available:
+After completing Stage 3, for HIGH-risk tasks (from architecture review), request the orchestrator to run `/ultrareview` on the current diff. Append any NEW findings (not already covered by Stage 1-3) to this QA report.
 
-```bash
-command -v codex >/dev/null 2>&1 && echo "CODEX_AVAILABLE" || echo "CODEX_NOT_AVAILABLE"
-```
+If `/ultrareview` is unavailable (older Claude Code version without Opus 4.7), skip silently — Stage 1-3 is already comprehensive.
 
-If available, request the orchestrator to run `/codex:adversarial-review` on the current diff. Append any NEW findings (not already covered by Stage 1-3) to this QA report.
-
-If not available, skip silently — Stage 1-3 is already comprehensive.
-
-Do NOT block on Codex availability. Do NOT modify the pass/fail decision based solely on Codex findings — treat them as supplementary.
+Do NOT block on `/ultrareview` availability. Treat its findings as supplementary — do NOT flip the pass/fail decision solely on them.
 
 ## Review Patterns (cross-sprint memory)
 
