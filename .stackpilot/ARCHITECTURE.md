@@ -20,6 +20,7 @@ Stackpilot is a sprint orchestration layer for Claude Code. `/stackpilot` skill 
 | `claude-config/skills/stackpilot/SKILL.md` | Main `/stackpilot` entry point |
 | `claude-config/skills/stackpilot/references/` | Sub-protocols (sprint-finish, optimize-sprint, visual-companion) |
 | `claude-config/skills/stackpilot-bench/` | `/stackpilot-bench` benchmark skill — separate from `/stackpilot` |
+| `docs/bench-implementation.md` | Bench v1 implementation walkthrough + known limitations + v2 backlog |
 | `docs/architecture.md` | Full architecture reference |
 | `docs/sync.md` | External skill dependency tracking |
 | `.stackpilot/` | Per-project: specs, plans |
