@@ -200,7 +200,7 @@ Iterate the three workloads and nine (3 × 3) leg dispatches. After all dispatch
 
 ### 2.1 Load workload list
 
-Iterate `claude-config/skills/stackpilot-bench/workloads/*/` in sorted alphanumeric order: `01-trap-heavy-bash`, `02-doc-consistency`, `03-cross-file-refactor`.
+Iterate `claude-config/skills/stackpilot-bench/workloads/*/` in sorted alphanumeric order. If the directory is empty (no workloads installed yet), abort with `"no workloads installed under workloads/ — design and add representative workloads before invoking /stackpilot-bench"` (see ARCHITECTURE.md "workloads must match real /stackpilot usage scope").
 
 ### 2.2 Per-workload loop
 

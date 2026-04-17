@@ -1,9 +1,0 @@
-zero: "Rename 'Stage 4 Consistency Audit' to 'Stage 4 Cross-File Audit' everywhere."
-
-savvy: |
-  Before making changes, grep the entire repository for every occurrence of 'Stage 4 Consistency Audit'. List all matching files and line numbers. Then update each occurrence to 'Stage 4 Cross-File Audit'. After editing, grep again to confirm zero occurrences of the old name remain. Commit with a message that summarises the rename scope.
-
-stackpilot: |
-  Rename the sp-qa review stage: change 'Stage 4 Consistency Audit' to 'Stage 4 Cross-File Audit' in all files.
-
-  The primary definition is in agents/sp-qa.md. Sibling files that reference the stage name must be updated too — do not leave any dead references. After applying changes, verify with a grep that the old name no longer appears anywhere. Include the rename in a single coherent commit.
