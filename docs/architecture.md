@@ -86,10 +86,10 @@ sp-architect is skipped for light tasks. sp-docs runs when plan includes docs ta
 
 | Agent | Role | Key Protocol |
 |-------|------|-------------|
-| **sp-architect** | Reviews task against codebase; returns architecture decision | Analyzes existing patterns first (file:line references); one decisive choice; full implementation blueprint; multi-persona adversarial review (Security/Performance/Reliability) for HIGH-risk tasks; returns `[ESCALATION]` for new deps or structural conflicts |
+| **sp-architect** | Reviews task against codebase; returns architecture decision | Extended thinking on EVERY review (not just HIGH); enumerates ≥2 concrete failure modes BEFORE rating risk; mandatory risk-level justification tied to blast radius / rollback cost; reads `.stackpilot/ARCHITECTURE.md § Key Design Decisions`; one decisive choice + implementation blueprint; full 3-persona adversarial review on HIGH (single-persona on LOW/MEDIUM); emits `## Decision Candidates`; returns `[ESCALATION]` for new deps or structural conflicts |
 | **sp-dev** | Implements the task | Reads `git log` to avoid repeating failed approaches; traces entry point and call chain; enforces TDD (RED-GREEN-REFACTOR); 4-phase root cause investigation (observe/reproduce/trace/hypothesize); verify/fix loop (BUILD/LINT/TEST/SCOPE) with stuck detection; reverts on failure; returns `[SOFT-BLOCKED]` after 3 failed rounds |
-| **sp-qa** | Reviews code, writes tests | Three-stage review (spec compliance + code quality + adversarial); 12-dimension scenario testing; cross-sprint review patterns (`.stackpilot/review-patterns.md`); optional deep review via Claude Code `/ultrareview` (Opus 4.7+); confidence >= 80 reporting; returns `[CRITICAL]` for bugs/security, `[SOFT-BLOCKED]` after 3 rounds |
-| **sp-docs** | Updates README, comments, API docs | Runs after QA passes; documentation only; verification before completion |
+| **sp-qa** | Reviews code, writes tests | Stages 1-3 semantic (spec compliance + code quality + adversarial); Stage 4 deterministic grep audit (absolute-claim / scope-completeness / dead-reference, HIGH-risk mandatory); reads `.stackpilot/ARCHITECTURE.md` for Review Patterns & Conventions; emits `## Pattern Candidates` (never writes); Layer 2 fresh-context Deep Review on HIGH-risk (default on); confidence >= 80 reporting. **Dispatches only on standard complexity** — light tasks rely on sp-dev's TDD. |
+| **sp-docs** | Updates README, comments, API docs | **Uses haiku 4.5** (mechanical task); runs after QA passes; documentation only. |
 
 ---
 
@@ -140,7 +140,7 @@ Phase 2: design proposal (sectioned, user approves each)
 Phase 3: spec auto-verify loop (self-fix, escalates only on 3x failure)
 Phase 3.5: spec 12-QA (12-dimension scenario coverage review of spec)
 Phase 4: plan auto-verify loop (self-fix, escalates only on 3x failure)
-Phase 4.5: plan 12-QA (12-dimension scenario coverage review of plan, cross-ref with spec)
+Phase 4.5: plan traceability check (spec→task forward trace + task→spec reverse trace; no re-run of 12 dimensions)
 Pre-coding: confirm to start
 Coding: autonomous with per-task progress reporting
 Sprint finish: squash merge (1 commit on main) / PR / leave / discard choice
@@ -231,6 +231,14 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 **Soft-blocked retry.** Agents self-report failure via `[SOFT-BLOCKED]` output. The main session retries up to 3 times before requiring human input.
 
 **Git as memory.** sp-dev reads `git log --oneline -20` before every task. Prior failed approaches are visible in commit history.
+
+**Agents dispatch via explicit subagent_type.** SKILL.md's `Agent()` calls pass `subagent_type="sp-architect"` / `"sp-dev"` / `"sp-qa"` / `"sp-docs"` so Claude Code routes to the registered agent (with its frontmatter-declared model and tool restrictions) rather than falling back to `general-purpose`. Required path: agents must be registered at `~/.claude/agents/` or within an installed plugin. Claude Code caches the registry at session start — after install, restart Claude Code to activate. sp-docs is routed by task.type: `type: docs` tasks go to sp-docs (haiku), all others to sp-dev (sonnet).
+
+**Don't re-teach Claude what it knows.** Agent methodology files specify the stackpilot orchestration contract — input format, completion output format, escalation signals, cross-sprint memory hooks. They do NOT include generic engineering advice (how to TDD, how to review, how to debug) because Claude 4.7 does those natively. This principle drove a ~47% trim of sp-dev and sp-qa methodologies on 2026-04-17.
+
+**Self-verification at Sprint Finish.** When Step 2 starts the dev server, the main agent auto-curls the preview URL and reports HTTP status before handing control to the user. Non-2xx/3xx or connection failure is surfaced with the last 20 lines of server log — catches the "server binds but app 500s" class of regression without any per-task overhead.
+
+**Single-file project memory.** `.stackpilot/ARCHITECTURE.md` is the sole per-project memory surface. Fixed sections: What This Project Is / Stack / Key Directories / Data Flow / Key Design Decisions / Conventions & Gotchas / Review Patterns. Only the main agent writes it, and only at Sprint Finish (Step 4a). Sub-agents are read-only: `sp-architect` reads `§ Key Design Decisions` and surfaces new HIGH-risk decisions via a `## Decision Candidates` block in its report; `sp-qa` reads `§ Review Patterns` & `§ Conventions & Gotchas` and surfaces new patterns via a `## Pattern Candidates` block. The main agent merges both at Sprint Finish. This keeps writes serial on the feature branch and avoids worktree-level write contention.
 
 **TDD enforcement.** sp-dev enforces RED-GREEN-REFACTOR. Tests written before implementation.
 

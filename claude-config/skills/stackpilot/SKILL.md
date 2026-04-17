@@ -78,14 +78,14 @@ Re-run Step 0+1 after init. Only mention config if test_command binary was not f
    git log --oneline -10
    ```
 3. Read key entry points (e.g. `src/app/`, `src/lib/`, main config files)
-4. Write `.stackpilot/ARCHITECTURE.md` covering:
-   - Tech stack
-   - Route/module structure
-   - Data layer (DB tables, API surface)
-   - Key directories and their purpose
-   - Core data flows
-   - Design patterns in use
-   - Known constraints or gotchas
+4. Write `.stackpilot/ARCHITECTURE.md` with these top-level sections (use `##` headings):
+   - **What This Project Is** — one-paragraph overview
+   - **Stack** — tech stack
+   - **Key Directories** — purpose per directory
+   - **Data Flow / Agent Pipeline** — core data flows and route/module structure
+   - **Key Design Decisions** — design patterns in use
+   - **Conventions & Gotchas** — project-specific conventions and gotchas discovered across sprints (leave empty initially with a one-line comment `<!-- project-specific conventions, decisions, gotchas; add entries as they surface -->`)
+   - **Review Patterns** — recurring QA findings; max 20 entries; format `- [category] description ×N (TASK-NNN)` (leave empty initially with a one-line comment `<!-- maintained via Sprint Finish; sp-qa surfaces candidates, main agent merges -->`)
 5. Commit:
    ```bash
    git add .stackpilot/ARCHITECTURE.md
@@ -205,11 +205,7 @@ Completed: 2/4  |  Remaining: 2
 
 ### Sprint Clean
 
-If no plans/specs exist (or they were just cleared), first check sprint history for context.
-
-**Sprint history check** — if `.stackpilot/sprint-metrics.md` exists, read the last 3 sprint sections and print a one-line summary each (date, title, tasks completed / planned, SOFT-BLOCKED count). If SOFT-BLOCKED events climbed across those 3 sprints (0 → 1 → 2+), surface a one-line advisory: `⚠️ SOFT-BLOCKED rate rising — consider smaller tasks or architecture review for next sprint`. If the file is absent, skip silently.
-
-Then ask what to build.
+If no plans/specs exist (or they were just cleared), ask what to build.
 
 > If the request is about **improving something measurable** (performance, error rate, bundle size), read [references/optimize-sprint.md](references/optimize-sprint.md) and follow the Optimize Sprint path.
 
@@ -264,13 +260,13 @@ Read [references/visual-companion.md](references/visual-companion.md) for setup 
 **Phase 3: Spec + Auto-Verify Loop**
 
 6. Write spec → `.stackpilot/specs/YYYY-MM-DD-<topic>-design.md`
-7. Run verification (up to 2 self-fix rounds):
+7. Run verification (up to 1 self-fix round — 4.7 catches most issues first pass; escalate on second failure):
    ```bash
    grep -inE "TBD|TODO|FIXME|\bplaceholder\b" .stackpilot/specs/*.md | wc -l  # must be 0
    grep -c "^## " .stackpilot/specs/*.md  # must be >= 4
    wc -w .stackpilot/specs/*.md | tail -1  # must be >= 300
    ```
-   All pass → proceed to **Phase 3.5: Spec 12-QA** (do NOT skip). Fail after 2 → escalate specific failures.
+   All pass → proceed to **Phase 3.5: Spec 12-QA** (do NOT skip). Fail after 1 self-fix → escalate specific failures.
 
 **Phase 3.5: Spec 12-QA**
 
@@ -287,25 +283,23 @@ After spec passes auto-verify, read [references/12-qa-matrix.md](references/12-q
 
 8. Map file structure
 9. Write plan → `.stackpilot/plans/YYYY-MM-DD-<feature>-plan.md`
-10. Verify (up to 2 self-fix rounds):
+10. Verify (up to 1 self-fix round):
     ```bash
     grep -inE "TBD|TODO|FIXME|\bplaceholder\b" .stackpilot/plans/*.md | wc -l  # 0
     grep -c "^### TASK-" .stackpilot/plans/*.md  # >= 3
     grep -cE "relevant_files:|depends_on:|complexity:" .stackpilot/plans/*.md  # task_count * 3
     ```
     Check 4 — type consistency across tasks (manual scan).
-    All pass → proceed to **Phase 4.5: Plan 12-QA** (do NOT skip). Fail after 2 → escalate.
+    All pass → proceed to **Phase 4.5: Plan Traceability Check** (do NOT skip). Fail after 1 self-fix → escalate.
 
-**Phase 4.5: Plan 12-QA**
+**Phase 4.5: Plan Traceability Check**
 
-After plan passes auto-verify, read [references/12-qa-matrix.md](references/12-qa-matrix.md) §Plan and mark each dimension against the tasks.
+Spec 12-QA already evaluated 12 dimensions — don't re-run them. Read [references/12-qa-matrix.md](references/12-qa-matrix.md) §Plan and run the two-check trace:
 
-**Rules:**
-- Cross-reference against Phase 3.5 results: every ✅/⚠️ from the spec review must have a corresponding task in the plan
-- Any spec-covered dimension that has no plan task → **add a task**
-- Any plan task that doesn't trace back to a spec requirement → remove it (scope creep). Every task must justify its existence with one requirement.
-- Output the 12-QA result table, then update the plan if needed
-- Re-run auto-verify after any plan changes
+- **Forward**: every ✅/⚠️ spec dimension → at least one plan task. Missing → add a task.
+- **Reverse**: every plan task → traces to a spec requirement. Orphan → scope creep, remove.
+
+Output a two-column table (spec item → task ID). If both sides clean, pass. If you edit the plan, re-run auto-verify.
 
 11. **Create feature branch** → commit spec and plan → Run Sprint
 
@@ -346,22 +340,55 @@ For each task in dependency order:
 
 **2. Architecture review** (standard complexity only):
 ```
-Agent(description="Arch: TASK-NNN", prompt="<architecture-review skill instructions> + <task context>", model="opus")
+Agent(description="Arch: TASK-NNN",
+      subagent_type="sp-architect",
+      prompt="<task context>")
+```
+sp-architect's methodology is loaded from its registered agent file (frontmatter pins `model: opus` and `tools: Read, Glob, Grep, WebSearch` — enforces read-only). Main agent passes only the task context.
+
+**3. Development** (route by task.type):
+
+For `type: docs` tasks → `sp-docs` (haiku, cheaper for mechanical doc updates):
+```
+Agent(description="Docs: TASK-NNN",
+      subagent_type="sp-docs",
+      prompt="<task>",
+      isolation="worktree")
 ```
 
-**3. Development**:
+All other types → `sp-dev`:
 ```
-Agent(description="Dev: TASK-NNN", prompt="<tdd-development skill instructions> + <task> + <arch review>", isolation="worktree")
+Agent(description="Dev: TASK-NNN",
+      subagent_type="sp-dev",
+      prompt="<task> + <arch review output>",
+      isolation="worktree")
 ```
 
 **4. Handle dev result**:
 - `[ESCALATION]` → present to user, wait
 - `[SOFT-BLOCKED]` → retry up to 3 times, then ask user
 
-**5. QA review**:
+**5. QA review** (standard complexity only — light tasks rely on sp-dev's TDD verify/fix loop; Claude 4.7 self-catches unit-level issues during dev):
 ```
-Agent(description="QA: TASK-NNN", prompt="<qa-12-dimensions skill instructions> + <task> + <dev result> + Risk level: <from arch review, or LOW> + Review patterns: <.stackpilot/review-patterns.md content>")
+Agent(description="QA: TASK-NNN",
+      subagent_type="sp-qa",
+      prompt="<task> + <dev result> + Risk level: <from arch review, or LOW> + Project memory: <.stackpilot/ARCHITECTURE.md content>")
 ```
+
+For light tasks, skip the sp-qa dispatch. Main agent still runs the Stage 4 consistency audit grep checks inline (absolute-claim / scope-completeness / dead-reference) since these are deterministic and cheap.
+
+**5.5. Deep Review (default on, HIGH risk only)**:
+
+Read `qa.deep_review` from `stackpilot.config.yml`. Default is `true` if absent. Unless explicitly set to `false`, if Risk level is HIGH, dispatch a fresh-context reviewer to catch scope/consistency issues sp-qa may have anchored past:
+
+```
+Agent(description="DeepReview: TASK-NNN",
+      subagent_type="general-purpose",
+      model="sonnet",
+      prompt="You are an independent reviewer. You have NO prior context on this task — that is intentional. Review the following diff purely for scope/consistency issues:\n\n<git diff <pre-task-sha>..HEAD -- <relevant_files> output>\n\nTask description: <task.description>\n\nFind:\n1. Absolute claims (sole/only/never/always) that are factually wrong given the rest of the codebase\n2. Unmigrated call sites, dead references, or renamed symbols still appearing in unchanged files\n3. Cross-file inconsistencies (e.g., doc claims X but code says Y)\n\nReport confidence >= 80 with file:line evidence. Under 200 words. If no findings, reply 'No scope/consistency issues found.'")
+```
+
+Merge findings into the QA report before Step 6. If `qa.deep_review: false` is explicitly set, skip silently.
 
 **6. Handle QA result**:
 - `[CRITICAL]` → present to user

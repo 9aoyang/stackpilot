@@ -33,24 +33,6 @@ Auto-detect which checks exist (don't fail on missing tools). Report results:
 
 Do NOT silently skip verification.
 
-## Step 0.5 — Append sprint metrics
-
-After the pre-merge gate passes, append a summary to `.stackpilot/sprint-metrics.md` (create the file if absent). Gather the metrics from this sprint's TaskList + git log + QA reports:
-
-```markdown
-## YYYY-MM-DD — <sprint title>
-
-- Tasks planned: N
-- Tasks completed: N
-- SOFT-BLOCKED events: N
-- QA [CRITICAL] events: N
-- Architecture reviews: N (HIGH-risk: N)
-- Verify/fix rounds median: N
-- Tests passing: N/N
-```
-
-If the append fails (permission / disk issue), log a one-line warning and continue — this is supplementary memory, not the critical path. Do NOT block the merge decision on this.
-
 ## Step 1 — Detect dev server command
 
 Auto-detect from project files. Only detect when there is a clear web server signal.
@@ -68,16 +50,22 @@ Check in order, use the first match:
 
 Do NOT blindly run `cargo run`, `go run .`, `python app.py`, or `npm start`.
 
-## Step 2 — Start server and present preview URL
+## Step 2 — Start server, verify response, present preview URL
 
 1. Start detected command in background, capture PID: `<command> & echo $!`
 2. Wait for output containing `http://localhost:` (timeout 15s)
 3. If no URL detected → kill process, skip preview
-4. Present to user:
+4. **Auto-verify the URL responds** before handing off to the user:
+   ```bash
+   HTTP_CODE="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 "$URL" 2>/dev/null || echo "ERR")"
+   ```
+   - `2xx` or `3xx` → report `✅ URL responded (HTTP $HTTP_CODE)`
+   - `4xx` / `5xx` / `ERR` → report the code and the last 20 lines of the server log; ask user whether to proceed anyway or investigate
+5. Present to user:
 
 > "Sprint complete. All tests passing. Dev server running at:"
 >
-> `http://localhost:XXXX`  (PID: XXXX)
+> `http://localhost:XXXX`  (PID: XXXX) — responded HTTP 200
 >
 > "Please review in your browser, then tell me how to proceed."
 
@@ -96,15 +84,19 @@ Commit all housekeeping on the feature branch **before** touching the base branc
 
 **4a. Architecture Memory Check:**
 
-> "需要更新 `.stackpilot/ARCHITECTURE.md` 吗？（路由、数据库、API、产品设计有变化就建议更新）"
+> "需要更新 `.stackpilot/ARCHITECTURE.md` 吗？（结构 / 设计决策 / Conventions & Gotchas / Review Patterns 有变化都在这里更新）"
 > A. 要  B. 不用
 
-- **A**: Update `.stackpilot/ARCHITECTURE.md` in-place, then:
+- **A**: Before editing, scan this sprint's agent completion reports:
+  - `sp-architect` reports — collect any `## Decision Candidates` blocks; surface as suggested additions to `## Key Design Decisions`
+  - `sp-qa` reports — collect any `## Pattern Candidates` blocks; surface as suggested additions to `## Review Patterns` (merge counts for "merge with existing" candidates, append as new entries for others; enforce the 20-entry cap by pruning lowest-count entries, ties broken by oldest)
+
+  Then update `.stackpilot/ARCHITECTURE.md` in-place — sections include Stack / Key Directories / Data Flow / Key Design Decisions / Conventions & Gotchas / Review Patterns. Commit:
   ```bash
   git add .stackpilot/ARCHITECTURE.md
   git commit -m "docs(arch): update after sprint"
   ```
-- **B**: Skip silently
+- **B**: Skip silently. Any surfaced Pattern Candidates / Decision Candidates are discarded — sp-qa and sp-architect will re-surface them next sprint if the underlying issues or decisions recur.
 
 **4b. Clear sprint artifacts:**
 

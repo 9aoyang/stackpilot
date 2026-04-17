@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **sp-* agents now actually dispatch** — forensics on 171 real user stackpilot sessions showed `sp-architect` / `sp-dev` / `sp-qa` / `sp-docs` had NEVER been invoked. Three compounding bugs:
+  1. Frontmatter used non-standard `allowed-tools:` YAML list; Claude Code spec requires `tools:` comma-separated string. Silent non-registration.
+  2. Users installing via skill-only symlink never ran `install.sh`, so agents never landed in `~/.claude/agents/`.
+  3. `SKILL.md` `Agent()` calls never passed `subagent_type`, routing every dispatch to `general-purpose`.
+
+  All three fixed: frontmatter corrected, `install.sh` now prints a RESTART reminder, all dispatch sites include `subagent_type="sp-*"`. Activation requires Claude Code restart after install.
+
+### Added
+- **Task-type routing for sp-docs** — `type: docs` tasks now route to `sp-docs` (haiku model). Previously all types went to `sp-dev` (sonnet), making the haiku cost optimization dead code.
+- **`tests/test-e2e.sh` +8 structural assertions** — guards against the registration regression returning: frontmatter `tools:` format on all 4 agents, `subagent_type="sp-*"` on all SKILL.md dispatches, sp-docs routing.
+
+### Verified (benchmark evidence, 2026-04-17)
+- sp-docs live dispatch confirmed: identity "Stackpilot Docs Agent", model `haiku`, tools `Read, Edit, Write, Glob` (no Bash/Grep per frontmatter restriction).
+- sp-architect live dispatch confirmed: model `opus`, tools `Read, Glob, Grep, WebSearch` (read-only — cannot write code by construction).
+- sp-qa vs inline-methodology-on-general-purpose micro-benchmark on the same read-only task: **10.7k tokens / 13.6s vs 21.5k tokens / 31.1s** (2x cheaper, 2.3x faster). Root cause: registered agent methodology caches as Claude Code system prompt; inline methodology counts as input tokens every dispatch.
+- sp-dev benchmark (read-only analysis of `detect_test_command`): **9.8k tokens / 13.0s vs 21.4k tokens / 18.2s** (2.2x cheaper, 1.4x faster). Quality roughly equivalent.
+- sp-architect benchmark (LOW-risk architecture review): **19.7k tokens / 47.6s vs 32.5k tokens / 50.7s** (1.6x cheaper, similar duration). Quality regression flagged: general-purpose + opus + inline architect methodology caught a critical failure mode (dev hand-editing generated files silently skipped) and bumped risk LOW→MEDIUM; sp-architect missed it. Hypothesis: methodology-as-system-prompt dilutes "think deeply" directive vs. fresh in-prompt. n=1, but worth watching. Recommendation: promote extended thinking in sp-architect from HIGH-only to always-on, and require explicit risk-level justification in the review output.
+
 ## [1.10.0] - 2026-04-17
 
 ### Added

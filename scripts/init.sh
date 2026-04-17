@@ -21,13 +21,14 @@ echo "[stackpilot] Initializing Stackpilot in: $PROJECT_ROOT"
 mkdir -p "$PROJECT_ROOT/.stackpilot/specs"
 mkdir -p "$PROJECT_ROOT/.stackpilot/plans"
 
-# 2. Create review-patterns.md if missing
-if [ ! -f "$PROJECT_ROOT/.stackpilot/review-patterns.md" ]; then
-  cp "$STACKPILOT_DIR/templates/review-patterns.md" "$PROJECT_ROOT/.stackpilot/review-patterns.md"
-  echo "[stackpilot] Created .stackpilot/review-patterns.md"
-fi
+# 2. Legacy memory files (pre-single-file model) — notice only, never delete
+for legacy in review-patterns.md sprint-metrics.md decisions.md; do
+  if [ -f "$PROJECT_ROOT/.stackpilot/$legacy" ]; then
+    echo "[stackpilot] legacy .stackpilot/$legacy detected — content can be merged into ARCHITECTURE.md; file is no longer used"
+  fi
+done
 
-# 3. Create .stackpilot/.gitignore (review-patterns.md is tracked)
+# 3. Create .stackpilot/.gitignore
 if [ ! -f "$PROJECT_ROOT/.stackpilot/.gitignore" ]; then
   cp "$STACKPILOT_DIR/templates/stackpilot-inner-gitignore" "$PROJECT_ROOT/.stackpilot/.gitignore"
   echo "[stackpilot] Created .stackpilot/.gitignore"

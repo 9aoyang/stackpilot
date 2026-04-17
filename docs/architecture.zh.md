@@ -86,10 +86,10 @@ sp-dev → sp-qa
 
 | Agent | 职责 | 核心协议 |
 |-------|------|---------|
-| **sp-architect** | 对照代码库审查任务；返回架构决策 | 先分析现有代码模式（file:line 引用）；唯一的架构决策；完整实现蓝图；HIGH 风险多角色对抗分析；新依赖/结构冲突返回 `[ESCALATION]` |
+| **sp-architect** | 对照代码库审查任务；返回架构决策 | 每次 review 都用 extended thinking（不限 HIGH）；定风险前先列 ≥2 个具体失败模式；Risk 评级必须配一行说理（blast radius / rollback cost）；读取 `.stackpilot/ARCHITECTURE.md § Key Design Decisions`；唯一架构决策 + 完整蓝图；HIGH 跑 3 personas，LOW/MEDIUM 至少 1 个；输出 `## Decision Candidates`；新依赖/结构冲突返回 `[ESCALATION]` |
 | **sp-dev** | 实现任务 | 读 `git log` 避免重复失败路径；追踪入口点+调用链；强制 TDD（RED-GREEN-REFACTOR）；4 阶段根因调查；verify/fix 循环含卡住检测；失败后回滚；3 轮后返回 `[SOFT-BLOCKED]` |
-| **sp-qa** | 审查代码、编写测试 | 三阶段审查（spec 合规 + 代码质量 + 对抗性审查）；12 维场景测试；跨 sprint 审查记忆（`.stackpilot/review-patterns.md`）；HIGH 风险任务可选 Claude Code `/ultrareview` 深度审查（Opus 4.7+）；置信度 ≥ 80 才上报；返回 `[CRITICAL]` 或 `[SOFT-BLOCKED]` |
-| **sp-docs** | 更新 README、注释、API 文档 | QA 通过后运行；只改文档不改逻辑 |
+| **sp-qa** | 审查代码、编写测试 | Stage 1-3 语义审查（spec 合规 + 代码质量 + 对抗性）；Stage 4 确定性 grep 审计（absolute-claim / scope-completeness / dead-reference，HIGH 风险强制）；读取 `.stackpilot/ARCHITECTURE.md` 获取 Review Patterns 和 Conventions；输出 `## Pattern Candidates`（从不直接写）；Layer 2 全新上下文 Deep Review（HIGH 风险默认开）；置信度 ≥ 80。**只在 standard 复杂度下 dispatch** — 轻量任务靠 sp-dev 的 TDD 兜。 |
+| **sp-docs** | 更新 README、注释、API 文档 | **使用 haiku 4.5**（机械任务）；QA 通过后运行；只改文档不改逻辑。 |
 
 ---
 
@@ -140,7 +140,7 @@ Phase 2: 设计方案（分段展示，用户逐段确认）
 Phase 3: spec 自动验证循环（自修复，仅 3 次失败才升级）
 Phase 3.5: spec 12-QA（12 维度场景覆盖审查）
 Phase 4: plan 自动验证循环（自修复，仅 3 次失败才升级）
-Phase 4.5: plan 12-QA（12 维度场景覆盖审查，与 spec 交叉验证）
+Phase 4.5: plan 追溯检查（spec→task 正向追溯 + task→spec 反向追溯；不再重跑 12 维度）
 Pre-coding: 确认开始
 Coding: 自动执行 + 每 task 进度简报
 Sprint finish: squash merge（main 上仅一个 commit）/ PR / 保留 / 丢弃
@@ -231,6 +231,14 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 **Soft-blocked 重试。** Agent 返回 `[SOFT-BLOCKED]`，主会话重试最多 3 次才需人工。
 
 **Git 即记忆。** sp-dev 每次任务前读 `git log --oneline -20`，不重复已失败的方案。
+
+**显式 subagent_type 调度。** SKILL.md 的 `Agent()` 调用显式传 `subagent_type="sp-architect"` / `"sp-dev"` / `"sp-qa"` / `"sp-docs"`，让 Claude Code 路由到注册好的 agent（含 frontmatter 里的 model 和 tool 限制），不退化到 `general-purpose`。要求：agent 必须在 `~/.claude/agents/` 或已安装的 plugin 里。Claude Code 启动时缓存注册表——装完必须重启。sp-docs 按 task.type 路由：`type: docs` → sp-docs（haiku），其他 → sp-dev（sonnet）。
+
+**不和 Claude 抢活。** Agent 方法论文件只规定 stackpilot 的编排契约——输入格式、完成报告格式、升级信号、跨 sprint 记忆挂钩。**不**写"怎么做 TDD / 怎么做 code review / 怎么调试"这些通用工程方法论，因为 Claude 4.7 本来就会。2026-04-17 的重构按这条原则砍了 sp-dev 和 sp-qa 方法论 ~47%。
+
+**Sprint Finish 自验证。** Step 2 启动 dev server 后，主 agent 在交给用户前自动 curl 一次 preview URL 并报 HTTP 状态。非 2xx/3xx 或连接失败会打出 server log 尾 20 行——抓住"进程起来了但应用 500"这类回归，零 per-task 开销。
+
+**单文件项目记忆。** `.stackpilot/ARCHITECTURE.md` 是项目级记忆的唯一落点，固定章节：What This Project Is / Stack / Key Directories / Data Flow / Key Design Decisions / Conventions & Gotchas / Review Patterns。只有主 agent 在 Sprint Finish Step 4a 写它；子 agent 全部只读——`sp-architect` 读 `§ Key Design Decisions` 作为历史决策参考，HIGH 风险时通过完成报告里的 `## Decision Candidates` 块上交新决策；`sp-qa` 读 `§ Review Patterns` 与 `§ Conventions & Gotchas`，发现新模式时通过 `## Pattern Candidates` 块上交。主 agent 在 Sprint Finish 决定是否合入。写操作串行在 feature branch 上，规避 worktree 并发写冲突。
 
 **强制 TDD。** RED-GREEN-REFACTOR，先写测试再写实现。
 
