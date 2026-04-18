@@ -144,7 +144,7 @@ Agent(
 **Standard Feature — human intervention points:**
 
 ```
-Phase 1: clarifying questions (one at a time, deep exploration)
+Phase 1: scout code first (grep + read 2-5 files) → clarifying questions (one at a time) → canonical refs captured in spec
 Phase 1.5: visual companion (browser-based mockups, only when visual helps)
 Phase 2: design proposal (sectioned, user approves each)
 Phase 3: spec auto-verify loop (self-fix, escalates only on 3x failure)

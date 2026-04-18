@@ -237,7 +237,7 @@ Do NOT start implementation until a plan is written and committed.
 
 **Phase 1: Exploration**
 
-1. Read `CLAUDE.md`, source files, recent commits
+1. **Scout first — before ANY clarifying question**: grep request's key terms across the codebase, read `CLAUDE.md` + 2-5 most relevant files + recent commits. No question to the user until this completes (otherwise you end up asking about things discoverable by grep).
 2. If request spans multiple subsystems, flag and decompose first
 3. **Ask clarifying questions one at a time** — prefer multiple choice, focus on purpose/constraints/success criteria
 
@@ -246,6 +246,7 @@ Do NOT start implementation until a plan is written and committed.
 - **Push for specificity.** Vague requirements ("make it better", "add analytics") → ask one forcing question: "Who specifically benefits, and what do they do differently after this exists?"
 - **Challenge status-quo assumptions.** If the user describes a solution, ask "What problem does this solve that can't be solved by [simpler alternative]?" at least once.
 - **Two-push rule.** If the first answer is still vague, push once more. After two pushes, accept and move on — don't interrogate.
+- **Canonical Refs.** Any doc path the user cites mid-conversation → Read immediately; record with full relative path under a `## Canonical Refs` section in the spec (so sub-agents see the binding constraint, not just you).
 
 **Phase 1.5: Visual Companion** (only when a design question benefits from visualization)
 
