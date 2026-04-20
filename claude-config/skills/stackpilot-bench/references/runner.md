@@ -36,6 +36,17 @@ bash scripts/reset-worktree.sh <worktree_path> <sandbox_source>
 
 **Diff capture after the leg:**
 ```bash
+# Make newly-created untracked files visible to `git diff` without staging
+# content. Otherwise benchmark scoring misses files the agent added.
+git -C <worktree_path> add -N -- \
+  bench-sandbox/ \
+  ':(exclude)bench-sandbox/node_modules/**' \
+  ':(exclude)bench-sandbox/.next/**' \
+  ':(exclude)bench-sandbox/dist/**' \
+  ':(exclude)bench-sandbox/build/**' \
+  ':(exclude)bench-sandbox/coverage/**' \
+  ':(exclude)bench-sandbox/*.tsbuildinfo'
+
 git -C <worktree_path> diff <leg_start_sha> -- \
   bench-sandbox/ \
   ':(exclude)bench-sandbox/node_modules/**' \

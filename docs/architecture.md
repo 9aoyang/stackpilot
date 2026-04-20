@@ -135,6 +135,14 @@ removing the parent-session prompt-cache leak that biased v1 token
 counts. See `claude-config/skills/stackpilot-bench/references/headless-mode.md`
 for the flip checklist.
 
+**Codex execution** (added 2026-04-20): Codex runs use
+`run-codex-bench.sh`, which dispatches each leg through
+`codex exec --json --ephemeral`, parses `turn.completed.usage`, captures
+tool calls from `command_execution` events, and writes the same
+`history.csv` / `scorecard.md` outputs as the Claude runner. Before
+scoring, the runner performs `git add -N` on `bench-sandbox/` so newly
+created files are visible in the diff without staging content.
+
 ---
 
 ## Agent Responsibilities
@@ -333,6 +341,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-04-20 | **Codex benchmark runner.** Added `run-codex-bench.sh` and `run-leg-codex.sh` so `/stackpilot-bench` can measure Codex-side native zero / native savvy / stackpilot legs through `codex exec --json --ephemeral`. The runner writes the same durable history and human-readable scorecard as the Claude protocol, normalizes Codex usage fields, and uses `git add -N` before diff capture so untracked new files are scored. |
 | 2026-04-20 | **v3 workloads + scorecard discrimination check.** First post-baseline bench run (2026-04-20-0419) produced a misleading "stackpilot 明显落后" verdict because the v2 workloads were too simple — native zero scored 97/100, leaving no headroom for /stackpilot to earn its overhead. Post-mortem in `docs/bench-implementation.md § Workload selection error`. Fixes: (a) `compute-scorecard.sh` now marks any workload where zero-leg composite >90 as `🚫 NON-DISCRIMINATIVE` and excludes it from the overall composite; if all workloads are non-discriminative, headline reads `INCONCLUSIVE`. (b) v3 workloads installed — `01-saas-subscription-feature` (ambiguous scope), `02-search-migration-no-downtime` (dual-write hazards), `03-multi-tenant-audit-logging` (cross-system consistency) — designed around real /stackpilot usage patterns, not isolated well-specified tasks. The 2026-04-20-0419 run artifacts are kept under `.stackpilot/benchmarks/runs/` as a referenced negative example. |
 | 2026-04-20 | **Bench transformation + agent prompt reshape.** (1) `/stackpilot-bench` headline output switched from regression verdict to product-comparison scorecard (5 dimensions × 0-100, per-workload breakdown). (2) Verdict quality gate now counts `traps_caught_in_qa` at 0.5 weight so sp-qa improvements are visible. (3) Three representative workloads installed — `01-stripe-invoice-api`, `02-rate-limit-middleware`, `03-moment-to-datefns-refactor` — replacing those deleted 2026-04-17. (4) Headless `claude --print` execution scaffolded (not yet default). (5) sp-dev adds 6 explicit "Don't add X" over-engineering boundaries at prompt top. (6) sp-architect swaps prescriptive Process 1-5 for general instructions per Anthropic Claude 4.x guidance. (7) sp-qa reshaped around adversarial KPI + required evidence schema; deterministic Consistency Audit preserved. All changes grounded in 2026-04-20 Anthropic-docs + academic research survey (see `research/260420-1130-prompt-length-claims/`). |
 | 2026-04-17 | **v1.10.0**: Opus 4.7 pipeline adaptations: per-phase effort advisory in `stackpilot.config.yml` (architect/dev/qa/docs); effort posture lines in all 4 agents; cross-sprint memory via `.stackpilot/sprint-metrics.md` (appended by sprint-finish) and `.stackpilot/decisions.md` (appended by sp-architect on HIGH-risk); Sprint Clean surfaces 3-sprint trend advisory; auto-verify loops reduced 3→2 rounds; SKILL.md 12-QA tables extracted to `references/12-qa-matrix.md`. |

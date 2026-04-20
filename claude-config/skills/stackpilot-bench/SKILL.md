@@ -9,6 +9,24 @@ description: Continuous quantitative benchmark for stackpilot. Runs three-legged
 
 `/stackpilot-bench` runs a repeatable, three-legged benchmark comparing naive Claude Code usage against the full stackpilot pipeline. Each run dispatches three "legs" (`naive_zero`, `naive_savvy`, `stackpilot`) across three fixed workloads, collects token cost, wall-clock duration, trap-catch rate, and functional correctness signals, then appends one row per (workload × leg) to `.stackpilot/benchmarks/history.csv` and writes a markdown report. The result is a single POSITIVE / MARGINAL / NEGATIVE verdict answering the question: **is the current state of stackpilot better or worse than the last measured run?**
 
+## Codex Runtime
+
+When this skill is invoked from Codex, use the Codex headless runner instead of the Claude `Agent(...)` protocol:
+
+```bash
+bash claude-config/skills/stackpilot-bench/scripts/run-codex-bench.sh
+```
+
+The Codex runner uses `codex exec --json --ephemeral` for each leg, keeps edits scoped to the disposable `bench-sandbox/` worktree, writes raw artifacts under `.stackpilot/benchmarks/runs/<timestamp>/raw/`, appends rows to `.stackpilot/benchmarks/history.csv`, and renders `.stackpilot/benchmarks/runs/<timestamp>/scorecard.md`.
+
+For a targeted diagnostic run, use:
+
+```bash
+bash claude-config/skills/stackpilot-bench/scripts/run-codex-bench.sh --workload <id> --leg <zero|savvy|stackpilot> --no-history
+```
+
+The `--no-history` mode is for smoke diagnostics only; full benchmark runs should append to history so future AI-assisted analysis has a durable time series.
+
 ---
 
 ## Step 0 — Preflight
@@ -271,6 +289,15 @@ For each `leg` in the shuffled order:
 5. **Capture scoped diff** (bench-sandbox/ only, from leg-start SHA):
 
    ```bash
+   git -C .worktrees/bench-run add -N -- \
+     bench-sandbox/ \
+     ':(exclude)bench-sandbox/node_modules/**' \
+     ':(exclude)bench-sandbox/.next/**' \
+     ':(exclude)bench-sandbox/dist/**' \
+     ':(exclude)bench-sandbox/build/**' \
+     ':(exclude)bench-sandbox/coverage/**' \
+     ':(exclude)bench-sandbox/*.tsbuildinfo'
+
    git -C .worktrees/bench-run diff "$LEG_START_SHA" -- \
      bench-sandbox/ \
      ':(exclude)bench-sandbox/node_modules/**' \
