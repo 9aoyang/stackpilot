@@ -164,6 +164,32 @@ reason.
 
 ---
 
+## Discrimination check
+
+A workload is **NON-DISCRIMINATIVE** when native-zero composite scores above
+`DISCRIMINATION_THRESHOLD` (default 90). Meaning: Claude 4.7 handles the
+task zero-shot well enough that the stackpilot pipeline has no headroom
+to earn back its overhead. Including such workloads in the overall
+composite is selection-bias — real users do not invoke `/stackpilot` for
+tasks this simple, so scoring the tool on those tasks answers the wrong
+question.
+
+Behaviour:
+
+- Per-workload: flagged with `🚫 NON-DISCRIMINATIVE` in the per-workload
+  table. Data is kept in the CSV and the table so the bias is visible.
+- Overall composite: computed over the discriminative subset only.
+- If ALL workloads are non-discriminative: the overall falls back to
+  all-workload aggregates, and the headline reads `INCONCLUSIVE — all
+  workloads are NON-DISCRIMINATIVE` with a recommendation to design
+  harder workloads.
+
+This check is the mechanical version of the 2026-04-20 lesson recorded
+in `docs/bench-implementation.md § Workload selection error`: small
+well-specified tasks don't discriminate, because Claude 4.7 does them
+correctly on a one-line prompt. Testing `/stackpilot` on those tasks
+benchmarks it at a job it's not designed for.
+
 ## Known biases (same as verdict — scorecard inherits all of them)
 
 - **n=1 default** — single-run numbers fluctuate; adaptive sampling gives

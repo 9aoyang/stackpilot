@@ -1,0 +1,22 @@
+## QA Summary
+PASS_WITH_FIXES
+
+## Code Review Findings
+- [CRITICAL] middleware/auth.ts:63-65 — Race condition: non-atomic incr+expire can leave a permanent key if process dies between calls. User permanently blocked until manual DEL. Production fix is SET NX EX or Lua/MULTI. Stub masks this because awaits resolve in-memory.
+- [Important] middleware/auth.ts:76-80 — Fail-open on redis error not documented; future reader could "fix" it by re-throwing and break availability.
+
+## Adversarial Angles Tried
+over-engineering (clean: no metrics, no per-endpoint config, no unrequested abstractions) / race conditions (found incr+expire non-atomic) / off-by-one boundary (correct: count > limit) / retryAfter semantics (correct: Math.max(1, ceil(pttl/1000))) / missing userId (handled by defensive pass-through) / scope creep (requireAuth untouched) / status codes (429 correct)
+
+## Tests Written
+middleware/auth.test.ts — added 'redis error: fails open (calls next()) and logs error' covering auth.ts:77
+
+## QA Fixes Applied
+Yes: middleware/auth.test.ts — 1 test added.
+
+## Coverage
+middleware/auth.ts: 100% statements, 100% lines, 90.9% branches.
+
+## Pattern Candidates
+- [atomicity] incr+expire two-step in redis rate limiting creates permanent-key hazard; prefer SET NX EX / Lua for atomic window (TASK-001)
+- [fail-open-undocumented] redis error catch blocks that silently call next() should carry explicit "intentional fail-open" comment (TASK-001)

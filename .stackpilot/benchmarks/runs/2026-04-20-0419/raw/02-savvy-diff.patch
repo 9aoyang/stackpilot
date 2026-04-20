@@ -1,0 +1,163 @@
+diff --git a/bench-sandbox/middleware/auth.test.ts b/bench-sandbox/middleware/auth.test.ts
+index b1551c9..4f3da85 100644
+--- a/bench-sandbox/middleware/auth.test.ts
++++ b/bench-sandbox/middleware/auth.test.ts
+@@ -1,5 +1,8 @@
+-import { requireAuth, __seedSession, __clearSessions, type AuthedRequest } from './auth';
++import { requireAuth, rateLimit, __seedSession, __clearSessions, type AuthedRequest } from './auth';
+ import type { Response, NextFunction } from 'express';
++import { RATE_LIMITS } from '../config/limits';
++import { redis } from '../lib/redis';
++import { logger } from '../lib/logger';
+ 
+ function mockRes(): Response {
+   const res: Partial<Response> = {};
+@@ -62,3 +65,97 @@ describe('requireAuth', () => {
+     expect(next).not.toHaveBeenCalled();
+   });
+ });
++
++function authedReq(userId: string): AuthedRequest {
++  return { headers: {}, userId } as unknown as AuthedRequest;
++}
++
++describe('rateLimit', () => {
++  beforeEach(async () => {
++    await redis.__reset();
++  });
++
++  it('rejects requests without a resolved userId with 401', async () => {
++    const req = { headers: {} } as unknown as AuthedRequest;
++    const res = mockRes();
++    const next = jest.fn() as NextFunction;
++
++    await rateLimit(req, res, next);
++
++    expect(res.status).toHaveBeenCalledWith(401);
++    expect(next).not.toHaveBeenCalled();
++  });
++
++  it('lets requests through while under the per-minute budget', async () => {
++    const req = authedReq('user-1');
++    const res = mockRes();
++    const next = jest.fn() as NextFunction;
++
++    for (let i = 0; i < RATE_LIMITS.perUserPerMinute; i++) {
++      await rateLimit(req, res, next);
++    }
++
++    expect(next).toHaveBeenCalledTimes(RATE_LIMITS.perUserPerMinute);
++    expect(res.status).not.toHaveBeenCalled();
++  });
++
++  it('returns 429 with {error, retryAfter} when the budget is exceeded', async () => {
++    const req = authedReq('user-1');
++    const res = mockRes();
++    const next = jest.fn() as NextFunction;
++
++    for (let i = 0; i < RATE_LIMITS.perUserPerMinute; i++) {
++      await rateLimit(req, res, next);
++    }
++    // Next call is the (limit+1)-th request within the window.
++    await rateLimit(req, res, next);
++
++    expect(res.status).toHaveBeenCalledWith(429);
++    const jsonCalls = (res.json as jest.Mock).mock.calls;
++    const body = jsonCalls[jsonCalls.length - 1][0];
++    expect(body.error).toEqual(expect.any(String));
++    expect(typeof body.retryAfter).toBe('number');
++    expect(body.retryAfter).toBeGreaterThan(0);
++    expect(body.retryAfter).toBeLessThanOrEqual(Math.ceil(RATE_LIMITS.windowMs / 1000));
++    expect(next).toHaveBeenCalledTimes(RATE_LIMITS.perUserPerMinute);
++  });
++
++  it('logs a warn when a user is throttled', async () => {
++    const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
++    try {
++      const req = authedReq('user-42');
++      const res = mockRes();
++      const next = jest.fn() as NextFunction;
++
++      for (let i = 0; i < RATE_LIMITS.perUserPerMinute + 1; i++) {
++        await rateLimit(req, res, next);
++      }
++
++      expect(warnSpy).toHaveBeenCalledTimes(1);
++      const [msg, fields] = warnSpy.mock.calls[0];
++      expect(msg).toMatch(/rate limit/i);
++      expect(fields).toMatchObject({ userId: 'user-42' });
++    } finally {
++      warnSpy.mockRestore();
++    }
++  });
++
++  it('tracks budgets independently per user', async () => {
++    const resA = mockRes();
++    const resB = mockRes();
++    const nextA = jest.fn() as NextFunction;
++    const nextB = jest.fn() as NextFunction;
++
++    // Exhaust user-A's budget.
++    for (let i = 0; i < RATE_LIMITS.perUserPerMinute; i++) {
++      await rateLimit(authedReq('user-A'), resA, nextA);
++    }
++    // user-B should still be allowed through for its first request.
++    await rateLimit(authedReq('user-B'), resB, nextB);
++
++    expect(nextA).toHaveBeenCalledTimes(RATE_LIMITS.perUserPerMinute);
++    expect(resA.status).not.toHaveBeenCalled();
++    expect(nextB).toHaveBeenCalledTimes(1);
++    expect(resB.status).not.toHaveBeenCalled();
++  });
++});
+diff --git a/bench-sandbox/middleware/auth.ts b/bench-sandbox/middleware/auth.ts
+index 3a8ceb1..1ff4906 100644
+--- a/bench-sandbox/middleware/auth.ts
++++ b/bench-sandbox/middleware/auth.ts
+@@ -1,4 +1,7 @@
+ import type { Request, Response, NextFunction } from 'express';
++import { RATE_LIMITS } from '../config/limits';
++import { redis } from '../lib/redis';
++import { logger } from '../lib/logger';
+ 
+ export interface AuthedRequest extends Request {
+   userId?: string;
+@@ -46,3 +49,38 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
+   req.sessionId = token;
+   next();
+ }
++
++export async function rateLimit(
++  req: AuthedRequest,
++  res: Response,
++  next: NextFunction,
++): Promise<void> {
++  const userId = req.userId;
++  if (!userId) {
++    res.status(401).json({ error: 'missing bearer token' });
++    return;
++  }
++
++  const windowSeconds = Math.ceil(RATE_LIMITS.windowMs / 1000);
++  const key = `ratelimit:user:${userId}`;
++
++  const count = await redis.incr(key);
++  if (count === 1) {
++    await redis.expire(key, windowSeconds);
++  }
++
++  if (count > RATE_LIMITS.perUserPerMinute) {
++    const pttl = await redis.pttl(key);
++    const retryAfter = pttl > 0 ? Math.ceil(pttl / 1000) : windowSeconds;
++    logger.warn('rate limit exceeded', {
++      userId,
++      count,
++      limit: RATE_LIMITS.perUserPerMinute,
++      retryAfter,
++    });
++    res.status(429).json({ error: 'rate limit exceeded', retryAfter });
++    return;
++  }
++
++  next();
++}

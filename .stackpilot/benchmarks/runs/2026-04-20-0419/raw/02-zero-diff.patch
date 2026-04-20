@@ -1,0 +1,192 @@
+diff --git a/bench-sandbox/middleware/auth.test.ts b/bench-sandbox/middleware/auth.test.ts
+index b1551c9..b14f6fb 100644
+--- a/bench-sandbox/middleware/auth.test.ts
++++ b/bench-sandbox/middleware/auth.test.ts
+@@ -1,5 +1,7 @@
+ import { requireAuth, __seedSession, __clearSessions, type AuthedRequest } from './auth';
+ import type { Response, NextFunction } from 'express';
++import { RATE_LIMITS } from '../config/limits';
++import { redis } from '../lib/redis';
+ 
+ function mockRes(): Response {
+   const res: Partial<Response> = {};
+@@ -14,51 +16,123 @@ function mockReq(headers: Record<string, string> = {}): AuthedRequest {
+ }
+ 
+ describe('requireAuth', () => {
+-  beforeEach(() => __clearSessions());
++  beforeEach(async () => {
++    __clearSessions();
++    await redis.__reset();
++  });
+ 
+-  it('rejects requests without a bearer token with 401', () => {
++  it('rejects requests without a bearer token with 401', async () => {
+     const req = mockReq();
+     const res = mockRes();
+     const next = jest.fn() as NextFunction;
+ 
+-    requireAuth(req, res, next);
++    await requireAuth(req, res, next);
+ 
+     expect(res.status).toHaveBeenCalledWith(401);
+     expect(next).not.toHaveBeenCalled();
+   });
+ 
+-  it('rejects unknown session tokens with 401', () => {
++  it('rejects unknown session tokens with 401', async () => {
+     const req = mockReq({ authorization: 'Bearer nope' });
+     const res = mockRes();
+     const next = jest.fn() as NextFunction;
+ 
+-    requireAuth(req, res, next);
++    await requireAuth(req, res, next);
+ 
+     expect(res.status).toHaveBeenCalledWith(401);
+     expect(next).not.toHaveBeenCalled();
+   });
+ 
+-  it('populates req.userId and calls next() on valid session', () => {
++  it('populates req.userId and calls next() on valid session', async () => {
+     __seedSession('tok-abc', 'user-1');
+     const req = mockReq({ authorization: 'Bearer tok-abc' });
+     const res = mockRes();
+     const next = jest.fn() as NextFunction;
+ 
+-    requireAuth(req, res, next);
++    await requireAuth(req, res, next);
+ 
+     expect(req.userId).toBe('user-1');
+     expect(next).toHaveBeenCalledTimes(1);
+   });
+ 
+-  it('rejects expired sessions with 401', () => {
++  it('rejects expired sessions with 401', async () => {
+     __seedSession('tok-expired', 'user-2', -1);
+     const req = mockReq({ authorization: 'Bearer tok-expired' });
+     const res = mockRes();
+     const next = jest.fn() as NextFunction;
+ 
+-    requireAuth(req, res, next);
++    await requireAuth(req, res, next);
+ 
+     expect(res.status).toHaveBeenCalledWith(401);
+     expect(next).not.toHaveBeenCalled();
+   });
++
++  describe('rate limiting', () => {
++    it('allows requests up to the per-user budget', async () => {
++      __seedSession('tok-ok', 'user-3');
++
++      for (let i = 0; i < RATE_LIMITS.perUserPerMinute; i++) {
++        const req = mockReq({ authorization: 'Bearer tok-ok' });
++        const res = mockRes();
++        const next = jest.fn() as NextFunction;
++
++        await requireAuth(req, res, next);
++
++        expect(next).toHaveBeenCalledTimes(1);
++        expect(res.status).not.toHaveBeenCalled();
++      }
++    });
++
++    it('returns 429 with retryAfter once the budget is exceeded', async () => {
++      __seedSession('tok-burst', 'user-4');
++
++      for (let i = 0; i < RATE_LIMITS.perUserPerMinute; i++) {
++        const req = mockReq({ authorization: 'Bearer tok-burst' });
++        const res = mockRes();
++        const next = jest.fn() as NextFunction;
++        await requireAuth(req, res, next);
++      }
++
++      const req = mockReq({ authorization: 'Bearer tok-burst' });
++      const res = mockRes();
++      const next = jest.fn() as NextFunction;
++
++      await requireAuth(req, res, next);
++
++      expect(next).not.toHaveBeenCalled();
++      expect(res.status).toHaveBeenCalledWith(429);
++      const body = (res.json as jest.Mock).mock.calls[0][0];
++      expect(body.error).toBe('rate limit exceeded');
++      expect(typeof body.retryAfter).toBe('number');
++      expect(body.retryAfter).toBeGreaterThan(0);
++      expect(body.retryAfter).toBeLessThanOrEqual(
++        Math.ceil(RATE_LIMITS.windowMs / 1000),
++      );
++    });
++
++    it('tracks budgets independently per user', async () => {
++      __seedSession('tok-a', 'user-a');
++      __seedSession('tok-b', 'user-b');
++
++      for (let i = 0; i < RATE_LIMITS.perUserPerMinute; i++) {
++        await requireAuth(
++          mockReq({ authorization: 'Bearer tok-a' }),
++          mockRes(),
++          jest.fn() as NextFunction,
++        );
++      }
++
++      const overReq = mockReq({ authorization: 'Bearer tok-a' });
++      const overRes = mockRes();
++      await requireAuth(overReq, overRes, jest.fn() as NextFunction);
++      expect(overRes.status).toHaveBeenCalledWith(429);
++
++      const freshReq = mockReq({ authorization: 'Bearer tok-b' });
++      const freshRes = mockRes();
++      const freshNext = jest.fn() as NextFunction;
++      await requireAuth(freshReq, freshRes, freshNext);
++      expect(freshNext).toHaveBeenCalledTimes(1);
++      expect(freshRes.status).not.toHaveBeenCalled();
++    });
++  });
+ });
+diff --git a/bench-sandbox/middleware/auth.ts b/bench-sandbox/middleware/auth.ts
+index 3a8ceb1..f61cc21 100644
+--- a/bench-sandbox/middleware/auth.ts
++++ b/bench-sandbox/middleware/auth.ts
+@@ -1,4 +1,7 @@
+ import type { Request, Response, NextFunction } from 'express';
++import { RATE_LIMITS } from '../config/limits';
++import { redis } from '../lib/redis';
++import { logger } from '../lib/logger';
+ 
+ export interface AuthedRequest extends Request {
+   userId?: string;
+@@ -24,7 +27,11 @@ function extractBearer(req: Request): string | null {
+   return token;
+ }
+ 
+-export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction): void {
++export async function requireAuth(
++  req: AuthedRequest,
++  res: Response,
++  next: NextFunction,
++): Promise<void> {
+   const token = extractBearer(req);
+   if (!token) {
+     res.status(401).json({ error: 'missing bearer token' });
+@@ -44,5 +51,21 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
+ 
+   req.userId = session.userId;
+   req.sessionId = token;
++
++  const rlKey = `ratelimit:user:${session.userId}`;
++  const count = await redis.incr(rlKey);
++  if (count === 1) {
++    await redis.expire(rlKey, Math.ceil(RATE_LIMITS.windowMs / 1000));
++  }
++
++  if (count > RATE_LIMITS.perUserPerMinute) {
++    const ttlMs = await redis.pttl(rlKey);
++    const retryAfter =
++      ttlMs > 0 ? Math.ceil(ttlMs / 1000) : Math.ceil(RATE_LIMITS.windowMs / 1000);
++    logger.warn('rate limit exceeded', { userId: session.userId, count, retryAfter });
++    res.status(429).json({ error: 'rate limit exceeded', retryAfter });
++    return;
++  }
++
+   next();
+ }

@@ -95,17 +95,27 @@ dispatches three legs (`naive_zero` / `naive_savvy` / `stackpilot`) across
 the fixed workloads, appends rows to `.stackpilot/benchmarks/history.csv`,
 and writes both scorecard and verdict to `runs/<timestamp>/`.
 
-**Installed workloads** (2026-04-20):
+**Installed workloads** (v3, 2026-04-20 post-mortem rebuild):
 
-| ID | Complexity | Task | Trap focus |
+| ID | Complexity | Task | Why /stackpilot matters |
 |---|---|---|---|
-| `01-stripe-invoice-api` | simple (single file) | Next.js GET handler fetching Stripe invoices | over-engineering: unrequested retry/cache/helpers/defensive code |
-| `02-rate-limit-middleware` | medium (3 files) | Per-user rate limit on existing auth middleware | scope creep: over-abstraction, refactor of surrounding auth code |
-| `03-moment-to-datefns-refactor` | complex (5-6 files) | Replace all moment() with date-fns across a codebase | bait-resistant refactor: must ignore ESLint warnings / format drift |
+| `01-saas-subscription-feature` | complex (19 files) | Add subscription management to an existing SaaS with ~500 free-tier users and upcoming enterprise plan | ambiguous requirements — needs architect to surface assumptions and stage the rollout |
+| `02-search-migration-no-downtime` | complex (20 files) | Migrate full-text search from Postgres ILIKE to Meilisearch with no downtime | dual-write + backfill + rollback + response-shape preservation |
+| `03-multi-tenant-audit-logging` | complex (25 files) | Add audit logging across an existing multi-tenant admin panel | cross-system consistency: tenant isolation, retention, PII handling, central helper vs scattered calls |
 
-Replaces the first-cut workloads deleted 2026-04-17 as too small to
-represent real `/stackpilot` usage. Every trap is tagged
-`category: over-engineering | correctness`.
+The v1 workloads (deleted 27f1838) and v2 workloads (deleted
+2026-04-20) both scored the zero leg at ≥97, meaning the tasks were
+simple enough for Claude 4.7 zero-shot — `/stackpilot` had no headroom
+to earn its overhead. These v3 workloads are designed around the
+actual scenarios users invoke `/stackpilot` for: ambiguous scope,
+migration hazards, cross-system consistency. See
+`docs/bench-implementation.md § Workload selection error (2026-04-20
+post-mortem)` for the full lesson.
+
+Every trap carries `category: over-engineering | correctness`.
+Scorecard automatically flags any workload where the zero leg scores
+>90 as `🚫 NON-DISCRIMINATIVE` and excludes it from the overall
+composite (see `references/scoring.md § Discrimination check`).
 
 **Sandbox isolation**: each leg dispatch operates inside
 `.worktrees/bench-run/bench-sandbox/`, a throwaway subdirectory populated
@@ -298,6 +308,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-04-20 | **v3 workloads + scorecard discrimination check.** First post-baseline bench run (2026-04-20-0419) produced a misleading "stackpilot 明显落后" verdict because the v2 workloads were too simple — native zero scored 97/100, leaving no headroom for /stackpilot to earn its overhead. Post-mortem in `docs/bench-implementation.md § Workload selection error`. Fixes: (a) `compute-scorecard.sh` now marks any workload where zero-leg composite >90 as `🚫 NON-DISCRIMINATIVE` and excludes it from the overall composite; if all workloads are non-discriminative, headline reads `INCONCLUSIVE`. (b) v3 workloads installed — `01-saas-subscription-feature` (ambiguous scope), `02-search-migration-no-downtime` (dual-write hazards), `03-multi-tenant-audit-logging` (cross-system consistency) — designed around real /stackpilot usage patterns, not isolated well-specified tasks. The 2026-04-20-0419 run artifacts are kept under `.stackpilot/benchmarks/runs/` as a referenced negative example. |
 | 2026-04-20 | **Bench transformation + agent prompt reshape.** (1) `/stackpilot-bench` headline output switched from regression verdict to product-comparison scorecard (5 dimensions × 0-100, per-workload breakdown). (2) Verdict quality gate now counts `traps_caught_in_qa` at 0.5 weight so sp-qa improvements are visible. (3) Three representative workloads installed — `01-stripe-invoice-api`, `02-rate-limit-middleware`, `03-moment-to-datefns-refactor` — replacing those deleted 2026-04-17. (4) Headless `claude --print` execution scaffolded (not yet default). (5) sp-dev adds 6 explicit "Don't add X" over-engineering boundaries at prompt top. (6) sp-architect swaps prescriptive Process 1-5 for general instructions per Anthropic Claude 4.x guidance. (7) sp-qa reshaped around adversarial KPI + required evidence schema; deterministic Consistency Audit preserved. All changes grounded in 2026-04-20 Anthropic-docs + academic research survey (see `research/260420-1130-prompt-length-claims/`). |
 | 2026-04-17 | **v1.10.0**: Opus 4.7 pipeline adaptations: per-phase effort advisory in `stackpilot.config.yml` (architect/dev/qa/docs); effort posture lines in all 4 agents; cross-sprint memory via `.stackpilot/sprint-metrics.md` (appended by sprint-finish) and `.stackpilot/decisions.md` (appended by sp-architect on HIGH-risk); Sprint Clean surfaces 3-sprint trend advisory; auto-verify loops reduced 3→2 rounds; SKILL.md 12-QA tables extracted to `references/12-qa-matrix.md`. |
 | 2026-04-16 | **v1.9.1**: Removed codex-plugin-cc cross-model review integration from sp-qa. Replaced with optional Claude Code `/ultrareview` for HIGH-risk tasks (requires Opus 4.7+). Cleaner single-source toolchain aligned with Claude Code native stance. |

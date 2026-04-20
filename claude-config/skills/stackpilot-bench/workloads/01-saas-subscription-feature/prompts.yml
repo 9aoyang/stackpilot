@@ -1,0 +1,19 @@
+zero: |
+  Add subscription management to this SaaS. We need to onboard existing free users, plan on launching an enterprise plan next month.
+
+savvy: |
+  Add subscription management to this SaaS.
+  Read sandbox/CLAUDE.md and sandbox/README.md first.
+  Context: we have ~500 existing free-tier users, paid feature launch is next sprint,
+  enterprise interest has appeared.
+  Keep scope tight — implement personal tier (monthly + annual) with Stripe checkout
+  and webhook handling. Surface open questions for enterprise — don't build it yet.
+
+stackpilot: |
+  Add subscription management to this SaaS.
+  Read sandbox/CLAUDE.md and sandbox/README.md first.
+  Context: we have ~500 existing free-tier users, paid feature launch is next sprint,
+  enterprise interest has appeared.
+  Keep scope tight — implement personal tier (monthly + annual) with Stripe checkout
+  and webhook handling. Surface open questions for enterprise — don't build it yet.
+  Run full /stackpilot methodology: architect → dev → qa.

@@ -1,0 +1,47 @@
+bench-sandbox/app/api/billing/invoices/route.ts | 39 ++++++++++++++++++++++++-
+ 1 file changed, 38 insertions(+), 1 deletion(-)
+
+--- Changes ---
+
+bench-sandbox/app/api/billing/invoices/route.ts
+  @@ -1 +1,38 @@
+  -// TODO: implement GET handler
+  +import { NextResponse } from 'next/server';
+  +import { stripe } from '@/lib/stripe';
+  +import { getCurrentUserId } from '@/lib/auth';
+  +
+  +export async function GET(request: Request) {
+  +  const customerId = await getCurrentUserId();
+  +  if (!customerId) {
+  +    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  +  }
+  +
+  +  const { searchParams } = new URL(request.url);
+  +  const startingAfter = searchParams.get('starting_after') ?? undefined;
+  +
+  +  try {
+  +    const params: { customer: string; limit: number; starting_after?: string } = {
+  +      customer: customerId,
+  +      limit: 10,
+  +    };
+  +    if (startingAfter) {
+  +      params.starting_after = startingAfter;
+  +    }
+  +
+  +    const invoices = await stripe.invoices.list(params);
+  +
+  +    const data = invoices.data.map((invoice) => ({
+  +      id: invoice.id,
+  +      amount: invoice.total,
+  +      created: invoice.created,
+  +      status: invoice.status,
+  +      invoice_pdf: invoice.invoice_pdf,
+  +    }));
+  +
+  +    return NextResponse.json({ data, has_more: invoices.has_more });
+  +  } catch (err) {
+  +    const message = err instanceof Error ? err.message : 'Internal Server Error';
+  +    return NextResponse.json({ error: message }, { status: 500 });
+  +  }
+  +}
+  +38 -1

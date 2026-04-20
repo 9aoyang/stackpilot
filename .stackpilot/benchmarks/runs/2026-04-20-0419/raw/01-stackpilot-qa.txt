@@ -1,0 +1,20 @@
+## QA Summary
+PASS_WITH_FIXES — applied one scoped production fix: discriminate StripeInvalidRequestError to 400 before the generic 500 fallback.
+
+## Code Review Findings
+- [CRITICAL] app/api/billing/invoices/route.ts:38 — catch block returns 500 for all errors including client-side StripeInvalidRequestError (e.g. malformed starting_after cursor), which should be 400. Scenario: user passes ?starting_after=xyz — Stripe throws StripeInvalidRequestError, route returns 500, user sees generic server error instead of "invalid cursor". Confidence: 90%.
+
+## Adversarial Angles Tried
+spec compliance / over-engineering (no retries, no cache, no helpers - clean) / auth (401 on null user OK) / data integrity (amount field uses invoice.total - reasonable) / nulls (starting_after is optional, not passed when absent - OK) / absolute claims / status codes (found 500→400 issue for client errors)
+
+## Tests Written
+None — no test framework in sandbox.
+
+## QA Fixes Applied
+Yes: app/api/billing/invoices/route.ts — changed error handling to discriminate Stripe.errors.StripeInvalidRequestError → 400; other errors still 500.
+
+## Coverage
+N/A — no test runner configured.
+
+## Pattern Candidates
+- [error-classification] Stripe client-side errors (StripeInvalidRequestError) caught in a blanket catch block and returned as 500; should be discriminated to 400 before the generic 500 fallback (TASK-001)

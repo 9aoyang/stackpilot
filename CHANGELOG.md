@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed (2026-04-20 post-mortem — v3 workloads)
+- **`/stackpilot-bench` workloads rebuilt** after first baseline run
+  (2026-04-20-0419) produced a misleading "stackpilot 明显落后"
+  verdict. Root cause: v2 workloads were too simple — native zero
+  scored 97/100 on all three, so `/stackpilot` had no headroom to
+  earn its overhead. Post-mortem: `docs/bench-implementation.md §
+  Workload selection error (2026-04-20 post-mortem)`.
+- **v3 workloads** target real `/stackpilot` scenarios:
+  `01-saas-subscription-feature` (ambiguous scope with existing user
+  base + enterprise pressure), `02-search-migration-no-downtime`
+  (dual-write + backfill + rollback), `03-multi-tenant-audit-logging`
+  (cross-system consistency in existing codebase). Each fixture is
+  15-25 files of realistic code.
+- **Scorecard discrimination check** (`compute-scorecard.sh`): any
+  workload where zero-leg composite >90 is flagged
+  `🚫 NON-DISCRIMINATIVE` and excluded from the overall composite. If
+  all workloads trip the check, headline reads `INCONCLUSIVE`, not a
+  false-negative verdict. Guards against repeating the 2026-04-20
+  workload-selection error.
+- **Kept 2026-04-20-0419 run artifacts** under
+  `.stackpilot/benchmarks/runs/2026-04-20-0419/` as the negative
+  example referenced by the post-mortem.
+
 ### Changed
 - **`/stackpilot-bench` headline output is now a scorecard, not a verdict.**
   Scorecard answers "is stackpilot worth using over native Claude Code?"

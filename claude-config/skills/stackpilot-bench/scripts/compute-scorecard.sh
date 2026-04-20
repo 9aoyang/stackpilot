@@ -191,9 +191,71 @@ def leg_overall(leg_name):
     overall = total_score / total_w if total_w > 0 else None
     return avg, overall
 
-savvy_dims,   savvy_overall   = leg_overall('savvy')
-sp_dims,      sp_overall      = leg_overall('stackpilot')
-zero_dims,    zero_overall    = leg_overall('zero')
+# ─── Discrimination check ─────────────────────────────────────────────────────
+# A workload is NON-DISCRIMINATIVE if native-zero already scores > 90 on it:
+# Claude 4.7 can do the task zero-shot, so the stackpilot overhead has nothing
+# to earn back. Real users would not invoke /stackpilot for such tasks, so
+# including them in the overall score is a selection-bias error. Flag them,
+# exclude from overall composite, but keep their data in the CSV and the
+# per-workload table so the bias is visible.
+
+DISCRIMINATION_THRESHOLD = 90.0
+
+def composite(dims):
+    if dims is None:
+        return None
+    total_w = 0.0
+    total_s = 0.0
+    for k, w in WEIGHTS.items():
+        if dims.get(k) is not None:
+            total_s += dims[k] * w
+            total_w += w
+    return total_s / total_w if total_w > 0 else None
+
+non_discriminative = set()
+for wid in workload_ids:
+    zero_scores = compute_leg_scores(wid, 'zero')
+    zc = composite(zero_scores)
+    if zc is not None and zc > DISCRIMINATION_THRESHOLD:
+        non_discriminative.add(wid)
+
+discriminative_ids = [w for w in workload_ids if w not in non_discriminative]
+
+def leg_overall_filtered(leg_name, wids):
+    dims = {k: [] for k in WEIGHTS.keys()}
+    for wid in wids:
+        s = compute_leg_scores(wid, leg_name)
+        if s is None:
+            continue
+        for k in dims:
+            if s.get(k) is not None:
+                dims[k].append(s[k])
+    avg = {k: mean_or_none(v) for k, v in dims.items()}
+    total_w = 0.0
+    total_score = 0.0
+    for k, w in WEIGHTS.items():
+        if avg.get(k) is not None:
+            total_score += avg[k] * w
+            total_w += w
+    overall = total_score / total_w if total_w > 0 else None
+    return avg, overall
+
+# All-workloads view (for per-dimension table display)
+savvy_dims_all, savvy_overall_all = leg_overall('savvy')
+sp_dims_all,    sp_overall_all    = leg_overall('stackpilot')
+zero_dims_all,  zero_overall_all  = leg_overall('zero')
+
+# Discriminative-only view (for headline overall score)
+savvy_dims,   savvy_overall   = leg_overall_filtered('savvy', discriminative_ids)
+sp_dims,      sp_overall      = leg_overall_filtered('stackpilot', discriminative_ids)
+zero_dims,    zero_overall    = leg_overall_filtered('zero', discriminative_ids)
+
+# If ALL workloads are non-discriminative, fall back to all-workloads so we
+# still produce numbers, but flag the run in the headline.
+if not discriminative_ids:
+    savvy_dims,   savvy_overall   = savvy_dims_all,   savvy_overall_all
+    sp_dims,      sp_overall      = sp_dims_all,      sp_overall_all
+    zero_dims,    zero_overall    = zero_dims_all,    zero_overall_all
 
 # ─── Formatting helpers ───────────────────────────────────────────────────────
 
@@ -237,7 +299,11 @@ lines = []
 lines.append(border)
 lines.append(f"  STACKPILOT vs NATIVE Claude Code — Performance Scorecard")
 lines.append(border)
-lines.append(f"  run: {ts_display}  |  n={sample_n} per leg  |  workloads: {len(workload_ids)}")
+if non_discriminative:
+    nd_note = f" ({len(non_discriminative)} NON-DISCRIMINATIVE excluded)"
+else:
+    nd_note = ""
+lines.append(f"  run: {ts_display}  |  n={sample_n} per leg  |  workloads: {len(discriminative_ids)}/{len(workload_ids)}{nd_note}")
 lines.append('')
 
 # Overall row
@@ -280,30 +346,24 @@ lines.append(f"  PER-WORKLOAD (stackpilot vs savvy)")
 for wid in workload_ids:
     sav = compute_leg_scores(wid, 'savvy')
     sp  = compute_leg_scores(wid, 'stackpilot')
-    # Per-workload composite using same weights
-    def composite(dims):
-        if dims is None:
-            return None
-        total_w = 0.0
-        total_s = 0.0
-        for k, w in WEIGHTS.items():
-            if dims.get(k) is not None:
-                total_s += dims[k] * w
-                total_w += w
-        return total_s / total_w if total_w > 0 else None
     sav_c = composite(sav)
     sp_c  = composite(sp)
     delta_wl = None
     if sav_c is not None and sp_c is not None:
         delta_wl = sp_c - sav_c
-    note = ''
-    if delta_wl is not None:
+    if wid in non_discriminative:
+        note = '  🚫 NON-DISCRIMINATIVE (zero >90, excluded)'
+    elif delta_wl is not None:
         if delta_wl < -5:
             note = '  ⚠️  开销不回本'
         elif delta_wl > 15:
             note = '  ✓✓'
         elif delta_wl > 5:
             note = '  ✓'
+        else:
+            note = ''
+    else:
+        note = ''
     lines.append(f"    {wid:<24}  savvy {fmt(sav_c, 3)}  |  stackpilot {fmt(sp_c, 3)}   {fmt_delta(sp_c, sav_c):>6}{note}")
 lines.append('')
 
@@ -313,7 +373,14 @@ if zero_overall is not None:
     lines.append('')
 
 # Headline verdict
-if sp_overall is not None and savvy_overall is not None:
+if not discriminative_ids:
+    lines.append("  HEADLINE: ⚠️  INCONCLUSIVE — all workloads are NON-DISCRIMINATIVE.")
+    lines.append("            Native zero scored >90 on every workload, meaning the")
+    lines.append("            tasks are too simple for /stackpilot to have a reason to")
+    lines.append("            run. Design harder workloads and re-bench before drawing")
+    lines.append("            conclusions from this report.")
+    lines.append('')
+elif sp_overall is not None and savvy_overall is not None:
     if sp_overall > savvy_overall + 10:
         headline = "✅  stackpilot 显著领先"
     elif sp_overall > savvy_overall + 3:

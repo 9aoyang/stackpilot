@@ -1,1 +1,0 @@
-Next.js 14 App Router SaaS starter. Stripe integration pending — the billing API routes under `app/api/billing/` are stubs waiting to be implemented against the `lib/stripe.ts` singleton and the `getCurrentUserId()` auth helper.

@@ -123,6 +123,116 @@ Then: release lock, remove worktree, delete bench branch.
 
 ---
 
+## Workload selection error (2026-04-20 post-mortem)
+
+This section exists so the next person designing workloads — or the next
+Claude session optimising `/stackpilot` — does not repeat the mistake.
+
+### What happened
+
+On 2026-04-20 the bench was re-run for the first time after the v2
+scorecard transformation (M1-M6) and the sp-\* prompt reshape. Three
+fresh workloads had just been installed — `01-stripe-invoice-api`
+(simple API route), `02-rate-limit-middleware` (3-file middleware),
+`03-moment-to-datefns-refactor` (mechanical cross-file refactor).
+
+The scorecard came back "stackpilot 明显落后" (overall -16 vs savvy):
+
+```
+Correctness         100 vs 100   +0
+Over-eng resist      98 vs  98   +0
+Bug catch rate      N/A vs  78
+Token efficiency     96 vs  53  -43
+Wall-clock speed     94 vs  34  -61
+```
+
+`stackpilot` was 1.9× more expensive and 2.7× slower than `savvy`, with
+zero quality advantage in diff-trap counts. Looked like a clear "the
+overhead doesn't pay".
+
+### Why the result was misleading
+
+The conclusion is wrong because the workloads were the wrong benchmark:
+
+1. **Zero leg already scored 97.** Native Claude 4.7 given a one-line
+   prompt like `"Add rate limiting to middleware/auth.ts"` writes clean,
+   scope-bounded code and avoided 12/13 traps unprompted. The ceiling
+   was near-saturated before `/stackpilot` got involved.
+2. **`/stackpilot` is explicitly invoked**, not auto-routed. A user
+   types `/stackpilot` precisely when they've judged the task is
+   beyond one-shot — ambiguous scope, cross-system risk, dual-write,
+   etc. The tasks in the 2026-04-20 workloads were clear specifications
+   with a single right answer. Real users would not have invoked
+   `/stackpilot` for them. Measuring `/stackpilot`'s cost on those
+   tasks answers a question nobody asked.
+3. **sp-qa caught real CRITICAL issues** on W02 (race condition
+   between `redis.incr` and `redis.expire` that would silently lock
+   users out permanently) and W03 (week-start spec-vs-behavior
+   conflict). These are exactly the kinds of findings `/stackpilot`
+   exists to produce. But because the diff itself was fine, the
+   scorecard's Bug Catch dimension (weight 0.15) was not enough to
+   overcome the token / speed dimensions (combined weight 0.25).
+
+The bench was testing the tool at a job it's not designed for, and
+unsurprisingly it failed at that job.
+
+### Mechanical guard added (same day)
+
+`compute-scorecard.sh` now runs a **discrimination check**: any
+workload where the zero leg's composite score exceeds
+`DISCRIMINATION_THRESHOLD` (default 90) is marked
+`🚫 NON-DISCRIMINATIVE` and excluded from the overall composite.
+If every workload trips the check, the headline reads
+`INCONCLUSIVE — all workloads are NON-DISCRIMINATIVE`, not a
+false-negative verdict. See `references/scoring.md § Discrimination
+check`.
+
+### Rules for workload design (derived from this post-mortem)
+
+When designing a new workload, it **must** satisfy both before it's
+accepted:
+
+1. **"Would I actually type /stackpilot for this prompt?"** If the
+   prompt can be answered by directly pasting into Claude, it's not a
+   stackpilot workload. Real stackpilot invocations are at least one
+   of: ambiguous scope, dual-write / migration hazards, cross-system
+   risk, real codebase with conventions to obey, hard-to-detect
+   regressions.
+
+2. **The fixture must be substantial enough to need reading, not just
+   a toy skeleton.** If sp-architect can derive the right answer
+   without `Read`-ing multiple files, the task is too small.
+
+Concrete heuristics that correlate with discrimination power:
+
+- Fixture ≥ 15 files with real (non-stub) logic.
+- Prompt under-specifies at least one load-bearing decision.
+- At least one trap that only fires when the agent **fails to ask**
+  (e.g., "assumed all existing users get 'free' plan without a
+  backfill question").
+- At least one trap that requires reading an existing convention file
+  (CLAUDE.md / prior patterns) to recognise.
+
+The first-cut v1 workloads (deleted 27f1838) and the second-cut v2
+workloads (2026-04-20) both violated these rules — different sizes,
+same failure mode. The discrimination check is the mechanical
+safeguard; these design rules are the human one.
+
+### What replaced them
+
+The v3 workloads installed 2026-04-20 (after this post-mortem) target
+real /stackpilot scenarios:
+
+- `01-saas-subscription-feature` — ambiguous prompt (enterprise plan
+  intent, 500 existing free users, no clear migration path)
+- `02-search-migration-no-downtime` — dual-write + rollback +
+  backfill + response-shape preservation
+- `03-multi-tenant-audit-logging` — cross-system consistency in an
+  existing multi-tenant codebase with conventions to obey
+
+Each one can fail silently in ways that only architect-grade review
+catches. This is the right kind of test for `/stackpilot`.
+
 ## v1 known limitations
 
 These are real and intentional trade-offs — listed so v2 work knows what to attack.
