@@ -227,7 +227,7 @@ For each workload `<id>`:
 **a. Load workload definition**
 
 - Read `workloads/<id>/prompts.yml` → extract keys `zero`, `stackpilot`.
-- Read `workloads/<id>/traps.yml` → extract trap list and `functional_assertions`.
+- Read `workloads/<id>/traps.yml` → extract trap list, `functional_assertions`, and `verification_commands`.
 
 **b. Compute leg order**
 
@@ -310,7 +310,7 @@ For each `leg` in the shuffled order:
 
    Write diff to `.stackpilot/benchmarks/runs/$RUN_TS/raw/<id>-<leg>-diff.patch`. Changes made by the agent OUTSIDE `bench-sandbox/` are intentionally excluded from the diff — they're either stray accidental edits (caught at next reset) or context reads (no-op). Generated dependency/build artifacts inside `bench-sandbox/` are also excluded; if generated files still appear in a raw diff, mark the leg `measurement_invalid` and do not use that run as a baseline.
 
-6. **For `stackpilot` leg only**: write the sp-qa dispatch's return text to `.stackpilot/benchmarks/runs/$RUN_TS/raw/<id>-stackpilot-qa.txt`.
+6. **For `stackpilot` leg only**: verify Codex Stackpilot orchestration evidence. A valid stackpilot leg must leave `bench-sandbox/.stackpilot-bench/architect.md`, `bench-sandbox/.stackpilot-bench/dev-report.md`, and `bench-sandbox/.stackpilot-bench/qa-report.md`. Copy these files to the raw run directory and write the QA report text to `.stackpilot/benchmarks/runs/$RUN_TS/raw/<id>-stackpilot-qa.txt`. If any required artifact is missing or generic/empty, mark the row `status=orchestration_invalid`.
 
 7. **Parse token usage** from the dispatch result's `<usage>` block. See runner.md §Capturing Metrics for field names. Compute:
 
@@ -321,11 +321,12 @@ For each `leg` in the shuffled order:
 8. **Run trap assertions** against the captured diff. For each trap in `traps.yml`:
    - `check_mode: diff` (default): evaluate `diff_bad_regex` against the scoped diff (from step 5). No match → trap avoided.
    - `check_mode: final_file`: read the file at `<worktree>/bench-sandbox/<trap.check_file>` (check_file is relative to the sandbox root). Evaluate `diff_bad_regex` against its FINAL content. No match → trap avoided.
+   - `must_match_regex`: optional string or list of strings evaluated against the same target text. If any required regex is missing, the trap is NOT avoided even when `diff_bad_regex` does not match.
    - For `stackpilot` leg only: check `qa_good_regex` against the sp-qa report text.
    - If any regex is invalid, abort the run immediately (no CSV write); point to the offending trap ID.
    - Accumulate `traps_avoided_in_diff` and `traps_caught_in_qa` counts.
 
-9. **Run functional assertions**: each `diff_must_match_regex` in `functional_assertions` must match the diff. `functional_pass = true` iff ALL pass. A failed assertion does not abort; record it in the row.
+9. **Run functional assertions and verification commands**: each `diff_must_match_regex` in `functional_assertions` must match the diff, and each command in `verification_commands` must exit 0 when run inside `bench-sandbox/`. `functional_pass = true` iff ALL regex assertions and verification commands pass. A failed assertion or command does not abort; record it in the row.
 
 10. **Accumulate in-memory row**:
 
@@ -500,6 +501,7 @@ Summary of per-failure behavior:
 |---|---|---|---|---|
 | Timeout (> 30 min) | `timed_out` | No (held in memory) | Yes | No |
 | Dispatch error | `error` | No (held in memory) | Yes | No |
+| Missing stackpilot phase evidence | `orchestration_invalid` | No (held in memory) | Yes | No |
 | Regex compile error | — | No | No | Yes |
 | CSV schema mismatch | — | File backed up, fresh header written | Yes | No |
 | Mid-run crash | — | `history.csv` untouched | Restart required | — |
@@ -589,7 +591,7 @@ Column definitions:
 - `timestamp`: ISO-8601 UTC, e.g., `2026-04-17T14:30:00Z`. Use the moment the row is being written (not leg start).
 - `git_sha`: `git rev-parse HEAD` on the main worktree.
 - `stackpilot_version`: contents of the `VERSION` file at project root, trimmed. If absent: `unknown`.
-- `status`: one of `ok`, `timed_out`, `error`.
+- `status`: one of `ok`, `timed_out`, `error`, `orchestration_invalid`.
 - All null metric fields are written as the literal string `null` (not empty, not `NA`).
 
 ### 4.2 — Build CSV content in memory
@@ -723,13 +725,13 @@ Rationale: `compute-verdict.sh` is a stateless script that reads only CSV rows. 
 
 The rule:
 
-1. Inspect the in-memory rows. For each workload, check whether any leg has `status=timed_out` or `status=error`.
+1. Inspect the in-memory rows. For each workload, check whether any leg has `status=timed_out`, `status=error`, or `status=orchestration_invalid`.
 2. If any workload has an INCOMPLETE leg:
    - That workload's per-workload verdict is overridden to `INCOMPLETE` (replaces any PASS/FAIL from the script's output).
    - The overall run verdict collapses as follows:
      - If the remaining complete workloads would all be POSITIVE per the script: overall verdict becomes `MARGINAL` (not POSITIVE — an INCOMPLETE workload prevents a POSITIVE claim).
      - If any complete workload is FAIL per the script: overall verdict becomes `NEGATIVE`.
-   - Insert a note in `VERDICT_OUTPUT` before printing: `note: workload-<id> INCOMPLETE (<leg> timed_out|error) — overall verdict capped`.
+   - Insert a note in `VERDICT_OUTPUT` before printing: `note: workload-<id> INCOMPLETE (<leg> timed_out|error|orchestration_invalid) — overall verdict capped`.
 3. If no workload has an INCOMPLETE leg: use `VERDICT_OUTPUT` as-is.
 
 Apply the INCOMPLETE-adjusted `VERDICT_OUTPUT` as the value for `{{VERDICT}}` during Step 4.5 template substitution. Because Step 4.5 (report write) happens before `compute-verdict.sh` is called here, the report must be re-rendered with the final verdict, OR the verdict block is appended to the report in-place:

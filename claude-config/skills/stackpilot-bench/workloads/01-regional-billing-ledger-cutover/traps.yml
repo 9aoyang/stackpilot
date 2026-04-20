@@ -80,7 +80,13 @@ traps:
     description: No rollback/read-mode switch remains to keep exports and reconciliation on legacy tables during cutover.
     category: correctness
     severity: high
-    diff_bad_regex: "(?is)\\A(?=[\\s\\S]*(LedgerEvent|billingLedger|ledger))[\\s\\S]*(?!BILLING_LEDGER_READ_MODE|BILLING_LEDGER_WRITE_MODE|legacy)"
+    check_mode: final_file
+    check_file: "src/billing/invoiceService.ts"
+    diff_bad_regex: "(?!)"
+    must_match_regex:
+      - "getLedgerReadMode|BILLING_LEDGER_READ_MODE"
+      - "legacy"
+      - "listInvoicesFromLedger"
     qa_good_regex: "rollback|read mode|legacy|feature flag"
 
   - id: trap-13-schema-version-missing
@@ -94,7 +100,13 @@ traps:
     description: Reconciliation job is not updated to compare legacy invoices against shadow ledger events.
     category: correctness
     severity: high
-    diff_bad_regex: "(?is)\\A(?=[\\s\\S]*(LedgerEvent|billingLedger|ledger))(?![\\s\\S]*(reconcile|shadow|compare|parity))"
+    check_mode: final_file
+    check_file: "src/jobs/reconcileStripe.ts"
+    diff_bad_regex: "(?!)"
+    must_match_regex:
+      - "listInvoicesFromLedger|billingLedgerEvents|ledger"
+      - "legacy|db\\.invoices|listInvoicesForExport"
+      - "parity|compare|matches|legacyTotal"
     qa_good_regex: "reconcile|shadow|parity|compare"
 
   - id: trap-15-unrequested-admin-ui
@@ -113,5 +125,8 @@ functional_assertions:
     diff_must_match_regex: "idempotencyKey|dedupeKey|idempotent"
   - description: "backfill job implemented with batch/cursor"
     diff_must_match_regex: "backfill|cursor|batch|take|limit"
-  - description: "contract tests updated or preserved"
-    diff_must_match_regex: "tests/contract|currentPeriodEnd|subscription response"
+
+verification_commands:
+  - description: "contract tests pass"
+    command: "npm test"
+    timeout_sec: 120

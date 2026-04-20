@@ -66,6 +66,36 @@ For code-changing workers, include this sentence:
 Use `update_plan` for the visible task list. Keep exactly one task
 `in_progress`. Mark a task `completed` only after dev and required QA pass.
 
+## Codex execution contract
+
+Codex must not treat `/stackpilot` as a style hint. A Codex Stackpilot run is
+valid only when it produces auditable phase evidence and obeys the same
+quality gates as the Claude Code agent pipeline.
+
+For every standard-or-higher task, create or update these artifacts in the
+task's allowed working directory:
+
+- `.stackpilot-bench/architect.md` — architecture decision, rejected
+  alternatives, relevant files, risks, and the implementation boundary.
+- `.stackpilot-bench/dev-report.md` — files changed, behavior implemented,
+  assumptions, and verification commands attempted.
+- `.stackpilot-bench/qa-report.md` — QA verdict, findings, exact commands
+  run, and whether fixes were required.
+
+If a benchmark or caller provides a different artifact directory, use that
+directory but keep the same filenames: `architect.md`, `dev-report.md`, and
+`qa-report.md`.
+
+The QA phase must inspect the final diff, not just summarize the implementation.
+If QA finds a `[CRITICAL]` issue, Codex must run one materially scoped fix loop,
+then update `dev-report.md` and `qa-report.md` with the new result. If the issue
+remains after that loop, leave the implementation in place but mark
+`qa-report.md` with `[CRITICAL]` and explain the blocker.
+
+If these artifacts are missing, empty, or only contain generic prose unrelated
+to the diff, the run is `orchestration_invalid`; consumers must not score it as
+a normal Stackpilot result.
+
 ## Result handling
 
 - `[ESCALATION]`: stop and present the decision.

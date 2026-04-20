@@ -19,6 +19,13 @@ separate Codex-only `stackpilot` skill.
 - Codex: translate task tracking and subagent dispatch using
   [references/codex-dispatch.md](references/codex-dispatch.md).
 
+Codex runs must obey the hard execution contract in
+`references/codex-dispatch.md`: standard-or-higher tasks require auditable
+`architect.md`, `dev-report.md`, and `qa-report.md` phase evidence, and QA
+blockers require one scoped fix loop before completion. Treat a Codex run that
+does not leave those artifacts as invalid orchestration rather than a successful
+Stackpilot execution.
+
 ## Step 0+1: Initialize (single bash call — do NOT split into separate Bash calls)
 
 ```bash

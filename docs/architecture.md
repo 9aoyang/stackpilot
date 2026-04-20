@@ -139,6 +139,13 @@ tool calls from `command_execution` events, and writes the same
 scoring, the runner performs `git add -N` on `bench-sandbox/` so newly
 created files are visible in the diff without staging content.
 
+For the `stackpilot` leg, the runner also verifies the Codex execution
+contract: `bench-sandbox/.stackpilot-bench/architect.md`,
+`dev-report.md`, and `qa-report.md` must exist and contain phase-specific
+evidence. Missing or generic phase evidence marks the row
+`orchestration_invalid`, and the scorecard treats that leg as zero quality
+instead of scoring it as a normal Stackpilot result.
+
 ---
 
 ## Agent Responsibilities
@@ -192,6 +199,11 @@ and dispatches the same methodology prompts through Codex subagents:
 This keeps skillshare as the single synchronization source for shared skills
 and avoids a false dependency on Claude Code's `subagent_type` registry inside
 Codex.
+
+Codex runs must leave auditable phase evidence (`architect.md`,
+`dev-report.md`, `qa-report.md`) and QA must inspect the final diff. This
+prevents `/stackpilot` in Codex from degrading into a style hint; consumers
+that cannot verify the evidence mark the run `orchestration_invalid`.
 
 ---
 
@@ -337,6 +349,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-04-20 | **Codex Stackpilot execution contract.** Codex `/stackpilot` now requires auditable `architect.md`, `dev-report.md`, and `qa-report.md` phase artifacts for standard-or-higher tasks. `/stackpilot-bench` verifies those artifacts for the stackpilot leg, excludes `.stackpilot-bench/**` from implementation diff scoring, runs workload verification commands (for example `npm test`), and marks missing phase evidence as `orchestration_invalid` with zero quality score. |
 | 2026-04-20 | **Single ultimate workload + two-leg Codex benchmark.** Removed the three v3 workloads after Codex zero-shot scored near ceiling on all of them. Active bench now uses one high-discrimination regional billing ledger cutover workload and compares only `zero` vs `stackpilot`; `savvy` is no longer part of default runs. History was reset so obsolete native-enough rows do not pollute future analysis. |
 | 2026-04-20 | **Codex benchmark runner.** Added `run-codex-bench.sh` and `run-leg-codex.sh` so `/stackpilot-bench` can measure Codex-side native zero / stackpilot legs through `codex exec --json --ephemeral`. The runner writes the same durable history and human-readable scorecard as the Claude protocol, normalizes Codex usage fields, and uses `git add -N` before diff capture so untracked new files are scored. |
 | 2026-04-20 | **v3 workloads + scorecard discrimination check.** First post-baseline bench run (2026-04-20-0419) produced a misleading "stackpilot 明显落后" verdict because the v2 workloads were too simple — native zero scored 97/100, leaving no headroom for /stackpilot to earn its overhead. Post-mortem in `docs/bench-implementation.md § Workload selection error`. Fixes: (a) `compute-scorecard.sh` now marks any workload where zero-leg composite >90 as `🚫 NON-DISCRIMINATIVE` and excludes it from the overall composite; if all workloads are non-discriminative, headline reads `INCONCLUSIVE`. (b) v3 workloads installed — `01-saas-subscription-feature` (ambiguous scope), `02-search-migration-no-downtime` (dual-write hazards), `03-multi-tenant-audit-logging` (cross-system consistency) — designed around real /stackpilot usage patterns, not isolated well-specified tasks. These v3 workloads were later removed after Codex zero-shot also saturated them. |

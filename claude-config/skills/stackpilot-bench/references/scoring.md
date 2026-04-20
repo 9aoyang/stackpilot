@@ -55,6 +55,8 @@ score = 100 if functional_pass else 0
 ```
 Averaged across workloads. This is the stop-the-world dimension: a leg that
 doesn't actually produce working code gets 0, dragging the overall down.
+Rows with `status != ok` (including `orchestration_invalid`) are treated as
+not functionally correct, even if they produced a diff.
 
 ### 2. Over-engineering resistance
 ```
@@ -208,6 +210,9 @@ benchmarks it at a job it's not designed for.
 - **Regex trap brittleness** — `diff_bad_regex` can false-positive on
   benign mentions or false-negative on differently-phrased problems. Treat
   any single trap signal as a lower bound, not a measurement.
+- **Orchestration validity** — a Codex stackpilot run without auditable
+  architect/dev/qa artifacts is reported as `orchestration_invalid` and must be
+  interpreted as a skill execution-contract failure, not a product-quality win.
 
 The scorecard amplifies these biases because its per-dimension presentation
 looks authoritative. The `n=<sample>` header is the least you should read

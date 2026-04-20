@@ -93,13 +93,17 @@ def median_or_none(vals):
     return statistics.median(clean)
 
 def aggregate(rows):
+    statuses = [(r.get('status') or 'ok').strip() for r in rows]
+    non_ok_statuses = [s for s in statuses if s and s != 'ok']
     return {
         'total_tokens':   median_or_none([safe_int(r.get('total_tokens'))   for r in rows]),
         'duration_sec':   median_or_none([safe_float(r.get('duration_sec')) for r in rows]),
         'traps_total':    median_or_none([safe_int(r.get('traps_total'))    for r in rows]),
         'traps_avoided':  median_or_none([safe_int(r.get('traps_avoided_in_diff')) for r in rows]),
         'traps_caught':   median_or_none([safe_int(r.get('traps_caught_in_qa'))    for r in rows]),
-        'functional_pass': sum(1 for r in rows if safe_bool(r.get('functional_pass'))) > len(rows)/2,
+        'functional_pass': not non_ok_statuses and sum(1 for r in rows if safe_bool(r.get('functional_pass'))) > len(rows)/2,
+        'status_ok':       not non_ok_statuses,
+        'statuses':        statuses,
     }
 
 grouped = defaultdict(list)
@@ -130,12 +134,16 @@ for wid in workload_ids:
 def correctness_score(leg):
     if leg is None:
         return None
+    if not leg.get('status_ok', True):
+        return 0.0
     return 100.0 if leg['functional_pass'] else 0.0
 
 def over_eng_score(leg):
     """Fraction of traps avoided in the diff, 0-100."""
     if leg is None or leg['traps_total'] in (None, 0):
         return None
+    if not leg.get('status_ok', True):
+        return 0.0
     avoided = leg['traps_avoided'] or 0
     total = leg['traps_total']
     return 100.0 * avoided / total
@@ -144,6 +152,8 @@ def bug_catch_score(leg, is_stackpilot):
     """Fraction of traps caught by sp-qa. Only defined for stackpilot leg."""
     if not is_stackpilot or leg is None or leg['traps_total'] in (None, 0):
         return None
+    if not leg.get('status_ok', True):
+        return 0.0
     caught = leg['traps_caught'] or 0
     total = leg['traps_total']
     return 100.0 * caught / total
@@ -251,6 +261,16 @@ def leg_overall_filtered(leg_name, wids):
 has_savvy = any(leg_data[wid].get('savvy') for wid in workload_ids)
 baseline_leg = 'savvy' if has_savvy else 'zero'
 baseline_label = 'Native Savvy' if has_savvy else 'Native Zero'
+
+invalid_legs = []
+for wid in workload_ids:
+    for leg_name in ('zero', 'savvy', 'stackpilot'):
+        leg = leg_data[wid].get(leg_name)
+        if not leg:
+            continue
+        bad_statuses = sorted({s for s in leg.get('statuses', []) if s and s != 'ok'})
+        for status in bad_statuses:
+            invalid_legs.append((wid, leg_name, status))
 
 # All-workloads view (for per-dimension table display)
 baseline_dims_all, baseline_overall_all = leg_overall(baseline_leg)
@@ -387,7 +407,10 @@ lines.append('')
 
 lines.append("## Headline")
 lines.append('')
-if not target_ids:
+if any(status == 'orchestration_invalid' for _, _, status in invalid_legs):
+    lines.append("Stackpilot 编排无效：至少一个 stackpilot leg 缺少可审计的 architect/dev/qa 阶段证据。")
+    lines.append("这次不能作为正常 Stackpilot 质量对比，只能作为 Codex skill 执行契约失败样本。")
+elif not target_ids:
     lines.append("这次结果不可作为 Stackpilot 价值判断：所有 workload 都属于 native-enough，原生 zero-shot 已经接近满分。")
     lines.append("下一步应该换更复杂的 workload，而不是调 agent prompt。")
 elif score_delta is not None and time_delta is not None:
@@ -444,6 +467,9 @@ lines.append("## Diagnostics")
 lines.append('')
 lines.append(f"- Target workloads: {len(target_ids)}")
 lines.append(f"- Native-enough workloads: {len(native_enough_ids)}")
+if invalid_legs:
+    rendered_invalid = ', '.join(f"{wid}/{leg}={status}" for wid, leg, status in invalid_legs)
+    lines.append(f"- Invalid legs: {rendered_invalid}")
 lines.append(f"- Raw rows: `.stackpilot/benchmarks/runs/{run_ts}/rows.csv`")
 lines.append(f"- Full history source: `.stackpilot/benchmarks/history.csv`")
 lines.append(border)

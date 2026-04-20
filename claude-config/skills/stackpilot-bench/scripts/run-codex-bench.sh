@@ -215,8 +215,17 @@ if leg == 'stackpilot':
 
         {preamble}
 
-        Use the Codex Stackpilot flow for this request. Keep planning artifacts inline unless a file under
-        `bench-sandbox/` is part of the actual implementation.
+        Use the Codex Stackpilot flow for this request.
+
+        Required orchestration evidence:
+        - Write `bench-sandbox/.stackpilot-bench/architect.md` with the architecture decision,
+          rejected alternatives, risks, and implementation boundary.
+        - Write `bench-sandbox/.stackpilot-bench/dev-report.md` with files changed, behavior
+          implemented, assumptions, and verification commands attempted.
+        - Write `bench-sandbox/.stackpilot-bench/qa-report.md` with the QA verdict, findings,
+          exact commands run, and whether fixes were required.
+        - QA must inspect the final diff. If QA finds a critical issue, run one scoped fix loop,
+          then update dev-report.md and qa-report.md with the result.
 
         User request:
         {task}
@@ -258,6 +267,7 @@ evaluate_leg() {
 import json
 import pathlib
 import re
+import subprocess
 import sys
 import yaml
 
@@ -277,6 +287,13 @@ def search(pattern, text, workload, trap_id, field):
         )
         sys.exit(17)
 
+def patterns(value):
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    return [value]
+
 workload = pathlib.Path(traps_yml).parent.name
 traps = config.get('traps') or []
 traps_avoided = 0
@@ -295,7 +312,13 @@ for trap in traps:
 
     bad_regex = trap.get('diff_bad_regex') or r'(?!)'
     bad_present = search(bad_regex, target_text, workload, trap_id, 'diff_bad_regex')
-    avoided = not bad_present
+
+    missing_required = []
+    for required in patterns(trap.get('must_match_regex')):
+        if not search(required, target_text, workload, trap_id, 'must_match_regex'):
+            missing_required.append(required)
+
+    avoided = (not bad_present) and not missing_required
     if avoided:
         traps_avoided += 1
 
@@ -309,6 +332,7 @@ for trap in traps:
     trap_results.append({
         'id': trap_id,
         'avoided': avoided,
+        'missing_required': missing_required,
         'caught_in_qa': caught,
     })
 
@@ -323,14 +347,76 @@ for idx, assertion in enumerate(config.get('functional_assertions') or [], start
     })
     functional_pass = functional_pass and ok
 
+verification_results = []
+for idx, verification in enumerate(config.get('verification_commands') or [], start=1):
+    command = verification.get('command')
+    if not command:
+        continue
+    timeout = int(verification.get('timeout_sec') or 120)
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=sandbox,
+            shell=True,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+        ok = completed.returncode == 0
+        stdout = completed.stdout[-4000:]
+        stderr = completed.stderr[-4000:]
+        exit_code = completed.returncode
+    except subprocess.TimeoutExpired as exc:
+        ok = False
+        stdout = (exc.stdout or '')[-4000:] if isinstance(exc.stdout, str) else ''
+        stderr = (exc.stderr or '')[-4000:] if isinstance(exc.stderr, str) else ''
+        exit_code = 'timeout'
+
+    verification_results.append({
+        'description': verification.get('description', f'verification-{idx}'),
+        'command': command,
+        'passed': ok,
+        'exit_code': exit_code,
+        'stdout_tail': stdout,
+        'stderr_tail': stderr,
+    })
+    functional_pass = functional_pass and ok
+
+orchestration_valid = None
+orchestration_results = []
+if leg == 'stackpilot':
+    artifact_dir = sandbox / '.stackpilot-bench'
+    required_artifacts = {
+        'architect.md': [r'(?i)architecture|decision|risk|boundary|rejected', r'bench-sandbox|src/'],
+        'dev-report.md': [r'(?i)files changed|changed files|implementation|implemented', r'(?i)verification|npm test|test'],
+        'qa-report.md': [r'(?i)QA|verdict|PASS|FAIL|CRITICAL', r'(?i)git diff|diff|npm test|test'],
+    }
+    orchestration_valid = True
+    for name, required_patterns in required_artifacts.items():
+        path = artifact_dir / name
+        text = path.read_text(encoding='utf-8', errors='replace') if path.exists() else ''
+        missing = [p for p in required_patterns if not search(p, text, workload, f'orchestration-{name}', 'must_match_regex')]
+        ok = path.exists() and len(text.strip()) >= 80 and not missing
+        orchestration_results.append({
+            'artifact': name,
+            'exists': path.exists(),
+            'non_empty': len(text.strip()) >= 80,
+            'missing_required': missing,
+            'passed': ok,
+        })
+        orchestration_valid = orchestration_valid and ok
+
 with open(eval_out, 'w', encoding='utf-8') as fh:
     json.dump({
         'traps_total': len(traps),
         'traps_avoided_in_diff': traps_avoided,
         'traps_caught_in_qa': traps_caught,
         'functional_pass': functional_pass,
+        'orchestration_valid': orchestration_valid,
         'trap_results': trap_results,
         'functional_results': functional_results,
+        'verification_results': verification_results,
+        'orchestration_results': orchestration_results,
     }, fh, indent=2)
 PYEOF
 }
@@ -361,6 +447,10 @@ def val(value):
         return 'true' if value else 'false'
     return value
 
+status = result.get('status') or 'error'
+if leg == 'stackpilot' and evaluation.get('orchestration_valid') is False and status == 'ok':
+    status = 'orchestration_invalid'
+
 row = {
     'timestamp': run_ts,
     'git_sha': git_sha,
@@ -381,7 +471,7 @@ row = {
     'functional_pass': val(evaluation.get('functional_pass')),
     'signals_critical': 0,
     'signals_soft_blocked': 0,
-    'status': result.get('status') or 'error',
+    'status': status,
 }
 
 with open(rows_csv, 'a', newline='', encoding='utf-8') as fh:
@@ -437,6 +527,7 @@ for workload_dir in "${workload_dirs[@]}"; do
 
     git -C "$WORKTREE" add -N -- \
       bench-sandbox/ \
+      ':(exclude)bench-sandbox/.stackpilot-bench/**' \
       ':(exclude)bench-sandbox/node_modules/**' \
       ':(exclude)bench-sandbox/.next/**' \
       ':(exclude)bench-sandbox/dist/**' \
@@ -447,6 +538,7 @@ for workload_dir in "${workload_dirs[@]}"; do
 
     git -C "$WORKTREE" diff "$leg_start_sha" -- \
       bench-sandbox/ \
+      ':(exclude)bench-sandbox/.stackpilot-bench/**' \
       ':(exclude)bench-sandbox/node_modules/**' \
       ':(exclude)bench-sandbox/.next/**' \
       ':(exclude)bench-sandbox/dist/**' \
@@ -456,7 +548,15 @@ for workload_dir in "${workload_dirs[@]}"; do
       > "$diff_file"
 
     if [[ "$leg" == "stackpilot" ]]; then
-      cp "${result_json%.json}.last.txt" "$qa_file" 2>/dev/null || : > "$qa_file"
+      artifact_dir="$WORKTREE/bench-sandbox/.stackpilot-bench"
+      for artifact in architect.md dev-report.md qa-report.md; do
+        if [[ -f "$artifact_dir/$artifact" ]]; then
+          cp "$artifact_dir/$artifact" "$RAW_DIR/$workload_id-stackpilot-$artifact"
+        fi
+      done
+      cp "$artifact_dir/qa-report.md" "$qa_file" 2>/dev/null \
+        || cp "${result_json%.json}.last.txt" "$qa_file" 2>/dev/null \
+        || : > "$qa_file"
     else
       : > "$qa_file"
     fi
