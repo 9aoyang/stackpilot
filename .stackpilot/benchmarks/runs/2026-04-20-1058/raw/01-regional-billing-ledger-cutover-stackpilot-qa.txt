@@ -1,0 +1,15 @@
+已完成 `stackpilot` leg 的 architect -> dev -> qa，并且只修改了 `bench-sandbox/`。
+
+实现内容：
+- 新增 v2 regional ledger event writer：[events.ts](/Users/gaoyang/Documents/github/stackpilot/.worktrees/bench-run/bench-sandbox/src/ledger/events.ts)
+- 扩展 DB/types 支持 `BillingLedgerEvent`：[types.ts](/Users/gaoyang/Documents/github/stackpilot/.worktrees/bench-run/bench-sandbox/src/db/types.ts)
+- `invoice`/`refund` 写入支持 `legacy`、`dual`、`ledger` 三种模式，`dual` shadow 写失败只告警不破坏现有路径：[invoiceService.ts](/Users/gaoyang/Documents/github/stackpilot/.worktrees/bench-run/bench-sandbox/src/billing/invoiceService.ts)、[refundService.ts](/Users/gaoyang/Documents/github/stackpilot/.worktrees/bench-run/bench-sandbox/src/billing/refundService.ts)
+- invoice export / reconciliation 默认继续 legacy 读，`BILLING_LEDGER_READ_MODE=ledger` 时从 ledger 视图重建：[currentLedgerView.ts](/Users/gaoyang/Documents/github/stackpilot/.worktrees/bench-run/bench-sandbox/src/ledger/currentLedgerView.ts)
+- backfill 改为 cursor/batch 模式：[backfillLedger.ts](/Users/gaoyang/Documents/github/stackpilot/.worktrees/bench-run/bench-sandbox/src/jobs/backfillLedger.ts)
+
+验证：
+- `npm test` 通过：4/4 contract tests。
+- `git diff --check -- bench-sandbox` 通过。
+- `npm run typecheck` 未能执行：本地缺少 `tsc`，当前环境禁止联网安装依赖。
+
+假设：`ledger` 写模式用于验证通过后的 cutover，因此 ledger 写失败应失败请求；`dual` 是 shadow/parity 阶段，因此不能影响现有 subscription、webhook、refund、export、reconciliation 行为。

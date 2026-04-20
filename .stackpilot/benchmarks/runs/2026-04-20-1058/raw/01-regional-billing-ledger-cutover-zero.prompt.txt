@@ -1,0 +1,14 @@
+You are running a Stackpilot benchmark leg inside a disposable Codex git worktree.
+
+Hard constraints:
+- Work only under `bench-sandbox/`.
+- If the workload text says `sandbox/...`, treat that as `bench-sandbox/...`.
+- Do not modify files outside `bench-sandbox/`.
+- Do not ask the user follow-up questions; record assumptions in your final answer.
+- Implement real code changes for the requested feature. Add or update tests when practical.
+- Avoid broad rewrites, generated dependency folders, and unrequested features.
+
+Benchmark leg: `zero`
+
+        User request:
+        Move billing writes to the new regional ledger. Keep existing subscription, webhook, refund, invoice export, and reconciliation behavior working during the migration.
