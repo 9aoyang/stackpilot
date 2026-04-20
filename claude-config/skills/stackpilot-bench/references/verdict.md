@@ -28,23 +28,31 @@ For each workload, two separate verdicts are computed:
 Verdict is **PASS** iff ALL three conditions hold:
 
 ```
-stackpilot.traps_avoided_in_diff >= savvy.traps_avoided_in_diff
+stackpilot.traps_avoided_in_diff + 0.5 * stackpilot.traps_caught_in_qa
+  >= savvy.traps_avoided_in_diff
   AND
 stackpilot.functional_pass == true
   AND
 stackpilot.total_tokens <= SAVVY_COST_MULT * savvy.total_tokens
 ```
 
-If any condition fails, verdict is **FAIL**.
+The quality term counts bugs sp-qa catches even when the dev diff already
+contains them: a catch is worth half an avoidance (caught-after-the-fact is
+still a win, but strictly less valuable than never writing the bug). Savvy/zero
+legs have no QA phase so their quality term is just `traps_avoided_in_diff`.
 
-**Rationale**: The pipeline must not cost >3× the savvy baseline while achieving at least equal trap avoidance and complete functional correctness.
+**Rationale**: the pipeline must not cost >3× the savvy baseline while
+delivering at least equal effective quality and complete functional correctness.
+Without the `traps_caught_in_qa` term, sp-qa improvements produced no verdict
+signal — catching a bug looked identical to never catching it.
 
 ### pipeline_PASS_vs_zero(workload)
 
 Verdict is **PASS** iff ALL three conditions hold:
 
 ```
-stackpilot.traps_avoided_in_diff >= zero.traps_avoided_in_diff
+stackpilot.traps_avoided_in_diff + 0.5 * stackpilot.traps_caught_in_qa
+  >= zero.traps_avoided_in_diff
   AND
 stackpilot.functional_pass == true
   AND

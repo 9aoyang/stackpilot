@@ -1,0 +1,13 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "extends": ["eslint:recommended"],
+  "rules": {
+    "eqeqeq": "error",
+    "no-unused-vars": "warn",
+    "quotes": ["warn", "single", { "avoidEscape": true }],
+    "require-jsdoc": "off",
+    "no-console": "warn"
+  }
+}

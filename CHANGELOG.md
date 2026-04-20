@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **`/stackpilot-bench` headline output is now a scorecard, not a verdict.**
+  Scorecard answers "is stackpilot worth using over native Claude Code?"
+  with 0-100 per-dimension scores (correctness / over-engineering
+  resistance / bug catch rate / token efficiency / wall-clock speed),
+  plus a per-workload decision guide. The POSITIVE / MARGINAL / NEGATIVE
+  verdict is still rendered as a secondary regression-tracking view. See
+  `claude-config/skills/stackpilot-bench/references/scoring.md`.
+- **Verdict quality gate now counts sp-qa catches.** Pairwise quality
+  condition is `stackpilot.traps_avoided_in_diff + 0.5 * traps_caught_in_qa
+  >= baseline.traps_avoided_in_diff`. Without this, any sp-qa improvement
+  was invisible to the bench.
+- **sp-dev agent prompt reshaped.** Six explicit "Don't add X"
+  boundaries at the top (primacy position) mirror Anthropic's official
+  "Avoid over-engineering" template for Claude Opus 4.5/4.6/4.7. Filler
+  posture lines removed; U-shape reminder at the bottom. Claude Opus's
+  acknowledged scope-creep tendency now has an explicit guardrail.
+- **sp-architect agent prompt reshaped.** Prescriptive Process 1-5 steps
+  replaced by general instructions ("What to ground the review in") per
+  Anthropic's "prefer general instructions over prescriptive steps"
+  guidance for Claude 4.x. Non-negotiable boundaries at the top
+  (read-only, one decision not a list, justified risk).
+- **sp-qa agent prompt reshaped.** Opens with an adversarial KPI ("your
+  job is finding reasons this PR should not ship"), requires every
+  finding to cite `file:line` + concrete failure scenario + ≥80%
+  confidence, and mandates an "Adversarial Angles Tried" completion
+  field so "no finding" has to be earned. The deterministic Consistency
+  Audit (stackpilot's unique value) is preserved verbatim.
+
+### Added
+- **Three representative workloads installed** under
+  `claude-config/skills/stackpilot-bench/workloads/`:
+  `01-stripe-invoice-api` (simple, 11 traps),
+  `02-rate-limit-middleware` (medium, 13 traps),
+  `03-moment-to-datefns-refactor` (complex, 15 traps). Every trap has a
+  `category: over-engineering | correctness` field for future scorecard
+  splits. Replaces workloads deleted in 27f1838.
+- **Headless execution scaffolded**
+  (`scripts/run-leg-headless.sh` + `references/headless-mode.md`). Each
+  leg runs as an isolated `claude --print` subprocess, eliminating
+  parent-session prompt-cache leak that biased v1 token counts. Not
+  wired as SKILL.md default yet — requires live CLI contract verify +
+  permissions guard + re-baseline. See `headless-mode.md § Flipping the
+  default`.
+
 ### Fixed
 - **sp-* agents now actually dispatch** — forensics on 171 real user stackpilot sessions showed `sp-architect` / `sp-dev` / `sp-qa` / `sp-docs` had NEVER been invoked. Three compounding bugs:
   1. Frontmatter used non-standard `allowed-tools:` YAML list; Claude Code spec requires `tools:` comma-separated string. Silent non-registration.

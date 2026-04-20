@@ -135,16 +135,26 @@ MARGINAL_HIGH                = 0.20    # 20%
 # ─── Per-workload pairwise verdicts ──────────────────────────────────────────
 
 def pairwise_pass_vs(sp, baseline, cost_mult):
-    """Return (pass_bool, reason_str) for a pairwise comparison."""
+    """Return (pass_bool, reason_str) for a pairwise comparison.
+
+    Quality gate counts both traps avoided in diff AND traps caught by sp-qa.
+    sp-qa catches are weighted 0.5 because catching-after-the-fact is less
+    valuable than never introducing the bug.
+    """
     if sp is None or baseline is None:
         return False, "missing data for one leg"
     reasons = []
 
-    sp_traps    = sp['traps_avoided_in_diff']
+    sp_avoided  = sp['traps_avoided_in_diff']
+    sp_caught   = sp.get('traps_caught_in_qa') or 0
     bl_traps    = baseline['traps_avoided_in_diff']
-    trap_ok     = (sp_traps is not None and bl_traps is not None and sp_traps >= bl_traps)
+    if sp_avoided is not None:
+        sp_quality = sp_avoided + 0.5 * sp_caught
+    else:
+        sp_quality = None
+    trap_ok     = (sp_quality is not None and bl_traps is not None and sp_quality >= bl_traps)
     if not trap_ok:
-        reasons.append(f"traps {sp_traps} < {bl_traps}")
+        reasons.append(f"quality {sp_quality} < {bl_traps}")
 
     func_ok = bool(sp.get('functional_pass'))
     if not func_ok:

@@ -1,6 +1,6 @@
 # Stackpilot Architecture
 
-> Last updated: 2026-04-16
+> Last updated: 2026-04-20
 
 Stackpilot is a methodology-driven sprint orchestration layer for Claude Code. It turns a specification into working code by driving Claude Code's native Agent tool, TaskCreate, and worktree isolation — no custom infrastructure needed.
 
@@ -84,11 +84,41 @@ sp-architect is skipped for light tasks. sp-docs runs when plan includes docs ta
 
 ## /stackpilot-bench (sibling skill)
 
-`/stackpilot-bench` is a standalone benchmark skill, separate from the `/stackpilot` orchestration layer. It measures whether changes to `sp-*` agent prompts or `/stackpilot` orchestration are positive or negative optimizations. The skill runs a three-legged comparison (naive_zero / naive_savvy / stackpilot pipeline) across a set of fixed workloads, capturing tokens, duration, tool use counts, and QA verdicts. Results append to `.stackpilot/benchmarks/history.csv` as a time series and generate a per-run report with a single POSITIVE/MARGINAL/NEGATIVE verdict. Unlike `/stackpilot` sprints, `/stackpilot-bench` produces no merge-ready code — it is purely a measurement tool. Invoke after editing `sp-*` agent prompts or `/stackpilot` orchestration logic to confirm the change improves end-to-end quality without cost regression.
+`/stackpilot-bench` is a standalone benchmark skill. Its primary output is
+a **scorecard** comparing stackpilot to native Claude Code across five
+dimensions — correctness, over-engineering resistance, bug catch rate,
+token efficiency, and wall-clock speed — on 0-100 scales. The scorecard
+answers "is stackpilot worth using over native Claude Code?"; a secondary
+verdict (POSITIVE/MARGINAL/NEGATIVE) answers the narrower "did the last
+change regress?" for iterative tuning. Under the hood each run still
+dispatches three legs (`naive_zero` / `naive_savvy` / `stackpilot`) across
+the fixed workloads, appends rows to `.stackpilot/benchmarks/history.csv`,
+and writes both scorecard and verdict to `runs/<timestamp>/`.
 
-**Workloads pending design**: the first-cut workloads (rename/flag-add/doc-edit) were deleted on 2026-04-17 as too small to be representative — users would never invoke `/stackpilot` for tasks that small. New workloads must mimic actual `/stackpilot` usage scope (multi-file features, cross-system refactors, risky bug fixes); see `.stackpilot/ARCHITECTURE.md` for the rule.
+**Installed workloads** (2026-04-20):
 
-**Sandbox isolation**: each leg dispatch operates inside `.worktrees/bench-run/bench-sandbox/`, a throwaway subdirectory populated from the workload's `sandbox/` fixture. The rest of the bench worktree retains main's files so sub-agents have project context; `reset-worktree.sh` resets to `base_sha` between legs and commits a fresh leg-start SHA for scoped diff capture.
+| ID | Complexity | Task | Trap focus |
+|---|---|---|---|
+| `01-stripe-invoice-api` | simple (single file) | Next.js GET handler fetching Stripe invoices | over-engineering: unrequested retry/cache/helpers/defensive code |
+| `02-rate-limit-middleware` | medium (3 files) | Per-user rate limit on existing auth middleware | scope creep: over-abstraction, refactor of surrounding auth code |
+| `03-moment-to-datefns-refactor` | complex (5-6 files) | Replace all moment() with date-fns across a codebase | bait-resistant refactor: must ignore ESLint warnings / format drift |
+
+Replaces the first-cut workloads deleted 2026-04-17 as too small to
+represent real `/stackpilot` usage. Every trap is tagged
+`category: over-engineering | correctness`.
+
+**Sandbox isolation**: each leg dispatch operates inside
+`.worktrees/bench-run/bench-sandbox/`, a throwaway subdirectory populated
+from the workload's `sandbox/` fixture. The rest of the bench worktree
+retains main's files so sub-agents have project context;
+`reset-worktree.sh` resets to `base_sha` between legs and commits a fresh
+leg-start SHA for scoped diff capture.
+
+**Headless execution** (scaffolded 2026-04-20, not yet default): each leg
+runs as an isolated `claude --print` subprocess via `run-leg-headless.sh`,
+removing the parent-session prompt-cache leak that biased v1 token
+counts. See `claude-config/skills/stackpilot-bench/references/headless-mode.md`
+for the flip checklist.
 
 ---
 
@@ -96,9 +126,9 @@ sp-architect is skipped for light tasks. sp-docs runs when plan includes docs ta
 
 | Agent | Role | Key Protocol |
 |-------|------|-------------|
-| **sp-architect** | Reviews task against codebase; returns architecture decision | Extended thinking on EVERY review (not just HIGH); enumerates ≥2 concrete failure modes BEFORE rating risk; mandatory risk-level justification tied to blast radius / rollback cost; reads `.stackpilot/ARCHITECTURE.md § Key Design Decisions`; one decisive choice + implementation blueprint; full 3-persona adversarial review on HIGH (single-persona on LOW/MEDIUM); emits `## Decision Candidates`; returns `[ESCALATION]` for new deps or structural conflicts |
-| **sp-dev** | Implements the task | Reads `git log` to avoid repeating failed approaches; traces entry point and call chain; enforces TDD (RED-GREEN-REFACTOR); 4-phase root cause investigation (observe/reproduce/trace/hypothesize); verify/fix loop (BUILD/LINT/TEST/SCOPE) with stuck detection; reverts on failure; returns `[SOFT-BLOCKED]` after 3 failed rounds |
-| **sp-qa** | Reviews code, writes tests | Stages 1-3 semantic (spec compliance + code quality + adversarial); Stage 4 deterministic grep audit (absolute-claim / scope-completeness / dead-reference, HIGH-risk mandatory); reads `.stackpilot/ARCHITECTURE.md` for Review Patterns & Conventions; emits `## Pattern Candidates` (never writes); Layer 2 fresh-context Deep Review on HIGH-risk (default on); confidence >= 80 reporting. **Dispatches only on standard complexity** — light tasks rely on sp-dev's TDD. |
+| **sp-architect** | Reviews task against codebase; returns architecture decision | Non-negotiable boundaries at top of prompt (read-only, one decision not a list, justified risk). Extended thinking on every review (not HIGH-only). Multi-persona: full 3 on HIGH, single on LOW/MEDIUM. Reads `.stackpilot/ARCHITECTURE.md § Key Design Decisions`, cites prior decisions verbatim. Prescriptive Process 1-5 steps replaced by general "what to ground in" instructions per Anthropic's Claude 4.x guidance ("prefer general instructions over prescriptive steps"). Emits `## Decision Candidates` on HIGH; returns `[ESCALATION]` for new deps or structural conflicts |
+| **sp-dev** | Implements the task | Six explicit "Don't add X" boundaries at the top (primacy position, mirroring Anthropic's "Avoid over-engineering" template): no error handling for impossible cases, no defensive validation on trusted inputs, no comments explaining well-named code, no single-use helpers, no unrelated refactors, no unrequested tests. Reads `git log` to avoid repeating failed approaches. TDD (RED-GREEN-REFACTOR). Verify/fix loop with stuck detection; reverts on failure; `[SOFT-BLOCKED]` after 2 failed rounds |
+| **sp-qa** | Reviews code, writes tests | Opens with adversarial KPI ("your job is finding reasons this PR should not ship"). Every finding requires `file:line` + concrete failure scenario + ≥80% confidence. Mandatory "Adversarial Angles Tried" completion field so "no findings" is earned, not assumed. Prescriptive Stages 1-3 replaced by open adversarial angles; deterministic Consistency Audit (absolute-claim / scope-completeness / dead-reference, HIGH-risk mandatory) preserved verbatim — stackpilot's unique value. Reads `.stackpilot/ARCHITECTURE.md` for Review Patterns; emits `## Pattern Candidates`. **Dispatches on standard complexity** — light tasks rely on sp-dev's TDD. |
 | **sp-docs** | Updates README, comments, API docs | **Uses haiku 4.5** (mechanical task); runs after QA passes; documentation only. |
 
 ---
@@ -260,6 +290,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-04-20 | **Bench transformation + agent prompt reshape.** (1) `/stackpilot-bench` headline output switched from regression verdict to product-comparison scorecard (5 dimensions × 0-100, per-workload breakdown). (2) Verdict quality gate now counts `traps_caught_in_qa` at 0.5 weight so sp-qa improvements are visible. (3) Three representative workloads installed — `01-stripe-invoice-api`, `02-rate-limit-middleware`, `03-moment-to-datefns-refactor` — replacing those deleted 2026-04-17. (4) Headless `claude --print` execution scaffolded (not yet default). (5) sp-dev adds 6 explicit "Don't add X" over-engineering boundaries at prompt top. (6) sp-architect swaps prescriptive Process 1-5 for general instructions per Anthropic Claude 4.x guidance. (7) sp-qa reshaped around adversarial KPI + required evidence schema; deterministic Consistency Audit preserved. All changes grounded in 2026-04-20 Anthropic-docs + academic research survey (see `research/260420-1130-prompt-length-claims/`). |
 | 2026-04-17 | **v1.10.0**: Opus 4.7 pipeline adaptations: per-phase effort advisory in `stackpilot.config.yml` (architect/dev/qa/docs); effort posture lines in all 4 agents; cross-sprint memory via `.stackpilot/sprint-metrics.md` (appended by sprint-finish) and `.stackpilot/decisions.md` (appended by sp-architect on HIGH-risk); Sprint Clean surfaces 3-sprint trend advisory; auto-verify loops reduced 3→2 rounds; SKILL.md 12-QA tables extracted to `references/12-qa-matrix.md`. |
 | 2026-04-16 | **v1.9.1**: Removed codex-plugin-cc cross-model review integration from sp-qa. Replaced with optional Claude Code `/ultrareview` for HIGH-risk tasks (requires Opus 4.7+). Cleaner single-source toolchain aligned with Claude Code native stance. |
 | 2026-04-16 | **v1.9.0**: Hardened sprint pipeline with gstack-inspired improvements: sp-qa WTF self-monitoring heuristic (revert/fix ratio, hard cap 15 fixes), anti-sycophancy and forcing questions in Phase 1 Exploration, Step 0 pre-merge verification gate in sprint-finish (typecheck + lint + tests), 3-strike escalation rule in systematic-debugging, `--quick` flag for sync-skills. |

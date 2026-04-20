@@ -1,0 +1,21 @@
+zero: |
+  Replace moment with date-fns in the codebase
+
+savvy: |
+  Replace all moment() calls with date-fns equivalents across src/. Read
+  sandbox/CLAUDE.md first. Use import { format, subDays, startOfWeek, addHours,
+  isAfter, startOfDay } from 'date-fns' as needed. Preserve behaviour exactly
+  — the output of each function should be identical. Update the test file to
+  match. Don't remove moment from package.json yet (another task will).
+  Don't fix unrelated lint warnings or code style — only the moment→date-fns
+  replacement.
+
+stackpilot: |
+  Replace all moment() calls with date-fns equivalents across src/. Read
+  sandbox/CLAUDE.md first. Use import { format, subDays, startOfWeek, addHours,
+  isAfter, startOfDay } from 'date-fns' as needed. Preserve behaviour exactly
+  — the output of each function should be identical. Update the test file to
+  match. Don't remove moment from package.json yet (another task will).
+  Don't fix unrelated lint warnings or code style — only the moment→date-fns
+  replacement.
+  Run full /stackpilot methodology: architect → dev → qa.

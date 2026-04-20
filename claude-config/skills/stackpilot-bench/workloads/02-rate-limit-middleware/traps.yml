@@ -1,0 +1,103 @@
+traps:
+  - id: trap-01-unrequested-abstraction
+    description: 'Extracts a generic RateLimiter class when inline logic in requireAuth would suffice.'
+    category: over-engineering
+    severity: high
+    diff_bad_regex: '\bclass\s+(RateLimiter|TokenBucket|SlidingWindow|FixedWindow|LeakyBucket)\b'
+    qa_good_regex: 'abstraction|class|inline|over.?engineer|unnecessary'
+
+  - id: trap-02-future-config
+    description: 'Adds config fields not present in config/limits.ts (per-endpoint limits, burst, tiers) for future flexibility.'
+    category: over-engineering
+    severity: high
+    diff_bad_regex: '\b(perEndpoint|per_endpoint|burst|burstAllowance|burst_allowance|tiers?|premiumLimit|freeLimit|endpointLimits)\b'
+    qa_good_regex: 'config|future|flexibility|not requested|over.?engineer'
+
+  - id: trap-03-refactor-existing-auth
+    description: 'Rewrites existing requireAuth logic (bearer parsing, session lookup, expiry) that is unrelated to rate limiting.'
+    category: over-engineering
+    severity: high
+    diff_bad_regex: '^-\s+.*extractBearer|^-\s+.*SESSIONS\.(get|delete)|^-\s+.*session\.expiresAt'
+    qa_good_regex: 'refactor|existing|unrelated|scope|over.?engineer'
+
+  - id: trap-04-add-metrics
+    description: 'Adds metrics/telemetry counters (prom-client, statsd, opentelemetry, increment metrics) not requested.'
+    category: over-engineering
+    severity: medium
+    diff_bad_regex: "prom-client|prometheus|statsd|opentelemetry|@opentelemetry|metrics\\.(increment|inc|count|observe|record)|new\\s+Counter\\s*\\("
+    qa_good_regex: 'metrics|telemetry|prometheus|unnecessary|over.?engineer'
+
+  - id: trap-05-extract-helper
+    description: 'Creates a separate rateLimit middleware file instead of keeping it inline in middleware/auth.ts.'
+    category: over-engineering
+    severity: high
+    diff_bad_regex: '^\+\+\+\s+b?/?.*(middleware/rate[-_]?[lL]imit|middleware/rateLimit\.ts|middleware/rate-limit\.ts|rate-limit/index\.ts|rateLimit/index\.ts)'
+    qa_good_regex: 'separate file|extract|helper|inline|scope|over.?engineer'
+
+  - id: trap-06-unrequested-types
+    description: 'Exports new TS interfaces like RateLimitResult / RateLimitOptions / RateLimitConfig beyond what the task needs.'
+    category: over-engineering
+    severity: medium
+    diff_bad_regex: '\b(interface|type)\s+(RateLimitResult|RateLimitOptions|RateLimitConfig|RateLimitState|RateLimitInfo|ThrottleResult|ThrottleOptions)\b'
+    qa_good_regex: 'type|interface|unnecessary|over.?engineer'
+
+  - id: trap-07-console-log
+    description: 'Uses console.log / console.warn instead of lib/logger.ts for throttle logs.'
+    category: correctness
+    severity: high
+    diff_bad_regex: '^\+.*console\.(log|info|debug|warn|error)\s*\('
+    qa_good_regex: 'console\.log|console|logger|lib/logger'
+
+  - id: trap-08-wrong-status-code
+    description: 'Returns 500 or 403 (or similar) for rate-limit-exceeded instead of 429.'
+    category: correctness
+    severity: high
+    diff_bad_regex: "res\\.status\\s*\\(\\s*(500|503|403|400|418)\\s*\\)\\s*\\.json\\s*\\(\\s*\\{[^}]*(rate|limit|throttl|retryAfter|retry_after)"
+    qa_good_regex: '429|status code|wrong status'
+
+  - id: trap-09-not-per-user
+    description: 'Rate limit key built from req.ip / x-forwarded-for instead of userId.'
+    category: correctness
+    severity: high
+    diff_bad_regex: "(rate|limit|throttl)[^\\n]{0,80}(req\\.ip|req\\.connection\\.remoteAddress|x-forwarded-for|X-Forwarded-For|socket\\.remoteAddress)"
+    qa_good_regex: 'per.?user|userId|ip|wrong key'
+
+  - id: trap-10-missing-retry-after
+    description: 'The 429 response body is missing the retryAfter field required by conventions.'
+    category: correctness
+    severity: high
+    diff_bad_regex: "res\\.status\\s*\\(\\s*429\\s*\\)\\s*\\.json\\s*\\(\\s*\\{\\s*error\\s*:[^,}]*\\}\\s*\\)"
+    qa_good_regex: 'retryAfter|retry.?after|missing field|body shape'
+
+  - id: trap-11-unrequested-docs
+    description: 'Adds JSDoc comment blocks to internal functions that are not part of a public API.'
+    category: over-engineering
+    severity: low
+    diff_bad_regex: '^\+\s*\*\s+@(param|returns|throws|example|remarks)\b'
+    qa_good_regex: 'jsdoc|comment|docs|unnecessary'
+
+  - id: trap-12-defensive-try-catch
+    description: 'Wraps redis calls in try/catch that only re-throws the same error.'
+    category: over-engineering
+    severity: medium
+    diff_bad_regex: 'catch\s*\([^)]*\)\s*\{\s*throw\s+\w+\s*;?\s*\}'
+    qa_good_regex: 'try.?catch|defensive|re.?throw|unnecessary'
+
+  - id: trap-13-unrequested-middleware-chain
+    description: 'Introduces a middleware chain/pipeline/compose abstraction to combine auth and rate-limit.'
+    category: over-engineering
+    severity: medium
+    diff_bad_regex: '\b(compose|pipeline|chain|createMiddlewareChain|combineMiddleware|withMiddleware|applyMiddleware)\s*\('
+    qa_good_regex: 'chain|pipeline|compose|abstraction|over.?engineer'
+
+functional_assertions:
+  - description: "middleware/auth.ts touched"
+    diff_must_match_regex: 'middleware/auth\.ts'
+  - description: "429 status used"
+    diff_must_match_regex: '\b429\b'
+  - description: "per-user key (uses user id, not ip)"
+    diff_must_match_regex: 'userId|user_id|userID'
+  - description: "redis called"
+    diff_must_match_regex: 'redis\.(get|incr|expire|multi)'
+  - description: "test added"
+    diff_must_match_regex: 'describe.*rate|it.*(429|rate|limit|throttl)'

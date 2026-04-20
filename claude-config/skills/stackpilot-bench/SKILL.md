@@ -645,9 +645,31 @@ echo "$NEW_ROWS" >> .stackpilot/benchmarks/runs/$RUN_TS/rows.csv
 
 ---
 
-## Step 5 — Verdict + Cleanup
+## Step 5 — Scorecard + Verdict + Cleanup
 
-### 5.1 — Run compute-verdict.sh
+The run produces two complementary summaries:
+
+- **Scorecard** (primary output, answers "is stackpilot worth using over
+  native Claude Code?"): 0-100 per-dimension scores across correctness,
+  over-engineering resistance, bug catch rate, token efficiency, and
+  wall-clock speed. This is what users read first.
+- **Verdict** (secondary, answers "did the last change regress vs the
+  prior run?"): POSITIVE / MARGINAL / NEGATIVE call used during iterative
+  tuning.
+
+### 5.1a — Run compute-scorecard.sh (primary output)
+
+```bash
+SCORECARD_OUTPUT=$(bash claude-config/skills/stackpilot-bench/scripts/compute-scorecard.sh \
+  .stackpilot/benchmarks/history.csv \
+  "$RUN_TS")
+```
+
+Capture stdout to `SCORECARD_OUTPUT`. See `references/scoring.md` for the
+weighting model and `references/scorecard-template.md` for the full
+rendered document.
+
+### 5.1b — Run compute-verdict.sh (regression tracking)
 
 ```bash
 VERDICT_OUTPUT=$(bash claude-config/skills/stackpilot-bench/scripts/compute-verdict.sh \
@@ -655,7 +677,9 @@ VERDICT_OUTPUT=$(bash claude-config/skills/stackpilot-bench/scripts/compute-verd
   "$RUN_TS")
 ```
 
-Capture stdout to `VERDICT_OUTPUT`. If the script exits non-zero, print its stderr to stdout and proceed to cleanup — do not abort cleanup on a verdict script failure.
+Capture stdout to `VERDICT_OUTPUT`. If either script exits non-zero, print
+its stderr to stdout and proceed to cleanup — do not abort cleanup on a
+summary-script failure.
 
 ### 5.2 — Apply INCOMPLETE workload rule
 
@@ -684,11 +708,21 @@ echo "$VERDICT_OUTPUT" >> .stackpilot/benchmarks/runs/$RUN_TS/report.md
 
 This append approach is preferred over a full re-render for simplicity.
 
-### 5.3 — Print verdict to stdout
+### 5.3 — Append scorecard to the run directory
 
-Print `VERDICT_OUTPUT` (after INCOMPLETE adjustment) to stdout:
+```bash
+echo "$SCORECARD_OUTPUT" > .stackpilot/benchmarks/runs/$RUN_TS/scorecard.md
+```
+
+### 5.3b — Print scorecard then verdict to stdout
+
+Print `SCORECARD_OUTPUT` first (primary product-comparison view), then a
+blank line, then `VERDICT_OUTPUT` (after INCOMPLETE adjustment — the
+regression-tracking view):
 
 ```
+echo "$SCORECARD_OUTPUT"
+echo ""
 echo "$VERDICT_OUTPUT"
 ```
 
@@ -714,7 +748,7 @@ If either command fails (e.g., the worktree was already removed by a parallel pr
 ### 5.6 — Final output line
 
 ```bash
-echo "Done. Full report: .stackpilot/benchmarks/runs/$RUN_TS/report.md"
+echo "Done. Scorecard: .stackpilot/benchmarks/runs/$RUN_TS/scorecard.md | Full report: .stackpilot/benchmarks/runs/$RUN_TS/report.md"
 ```
 
 ---

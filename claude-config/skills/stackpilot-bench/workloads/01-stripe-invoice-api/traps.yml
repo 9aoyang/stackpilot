@@ -1,0 +1,85 @@
+traps:
+  - id: trap-01-unrequested-retry
+    description: 'Adds retry logic with exponential backoff that was not asked for.'
+    category: over-engineering
+    severity: high
+    diff_bad_regex: 'maxRetries|exponential|backoff|Math\.pow\s*\(\s*2|retryCount|RETRY_'
+    qa_good_regex: 'retry|unnecessary|not requested|over.?engineer'
+
+  - id: trap-02-unrequested-cache
+    description: 'Adds a caching layer (in-memory map, Redis, unstable_cache, revalidate) never requested.'
+    category: over-engineering
+    severity: high
+    diff_bad_regex: 'unstable_cache|revalidate\s*[:=]|cacheMap|new\s+Map\s*\(\s*\)\s*;\s*//.*cache|redis|Redis'
+    qa_good_regex: 'cache|unnecessary|not requested|over.?engineer'
+
+  - id: trap-03-unrequested-ratelimit
+    description: 'Adds rate limiting middleware / token bucket logic beyond task scope.'
+    category: over-engineering
+    severity: high
+    diff_bad_regex: 'rateLimit|rate_limit|tokenBucket|Ratelimit|@upstash/ratelimit'
+    qa_good_regex: 'rate.?limit|unnecessary|not requested|over.?engineer'
+
+  - id: trap-04-defensive-try-catch
+    description: 'Wraps trusted internal calls (getCurrentUserId) in try/catch that only re-throws.'
+    category: over-engineering
+    severity: medium
+    diff_bad_regex: 'try\s*\{\s*[^}]*getCurrentUserId'
+    qa_good_regex: 'try.?catch|defensive|unnecessary'
+
+  - id: trap-05-unrequested-helper
+    description: 'Extracts a helper function that is only called once from the handler.'
+    category: over-engineering
+    severity: medium
+    diff_bad_regex: '(export\s+)?(async\s+)?function\s+(formatInvoice|mapInvoice|serializeInvoice|toInvoiceDTO|buildResponse|formatInvoices|mapInvoices)\b'
+    qa_good_regex: 'helper|extract|premature|single.?use|over.?engineer'
+
+  - id: trap-06-unrequested-types
+    description: 'Defines extra interfaces/types (InvoiceDTO, InvoiceResponse, PaginationParams) beyond inline shape.'
+    category: over-engineering
+    severity: medium
+    diff_bad_regex: '\b(interface|type)\s+(InvoiceDTO|InvoiceResponse|InvoicesResponse|PaginationParams|ListInvoicesParams|InvoiceItem)\b'
+    qa_good_regex: 'type|interface|unnecessary|over.?engineer'
+
+  - id: trap-07-redundant-comments
+    description: 'Adds comments that merely restate the next line of code.'
+    category: over-engineering
+    severity: low
+    diff_bad_regex: '//\s*(get|fetch|list)\s+invoices?\s+from\s+stripe|//\s*call\s+stripe|//\s*return\s+(the\s+)?(json|response|invoices)'
+    qa_good_regex: 'redundant|obvious|comment'
+
+  - id: trap-08-unrequested-validation
+    description: 'Adds zod/joi/yup schema validation for query params beyond a basic parse.'
+    category: over-engineering
+    severity: medium
+    diff_bad_regex: "from\\s+['\"]zod['\"]|from\\s+['\"]joi['\"]|from\\s+['\"]yup['\"]|z\\.object\\(|\\.safeParse\\("
+    qa_good_regex: 'validation|zod|joi|unnecessary|over.?engineer'
+
+  - id: trap-09-unrequested-logging
+    description: 'Adds console.log / logger calls that were not requested.'
+    category: over-engineering
+    severity: low
+    diff_bad_regex: 'console\.(log|info|debug|warn)\s*\(|logger\.(info|debug|warn)\s*\('
+    qa_good_regex: 'logging|console\.log|logger|unnecessary'
+
+  - id: trap-10-reimplement-stripe-singleton
+    description: 'Creates a new Stripe client instead of importing the lib/stripe.ts singleton.'
+    category: correctness
+    severity: high
+    diff_bad_regex: 'new\s+Stripe\s*\('
+    qa_good_regex: 'singleton|lib/stripe|duplicate|reimplement'
+
+  - id: trap-11-wrong-auth
+    description: 'Bypasses getCurrentUserId and invents its own auth / user lookup.'
+    category: correctness
+    severity: high
+    diff_bad_regex: 'getServerSession\s*\(|auth\s*\(\s*\)|cookies\s*\(\s*\)\.get\s*\(|headers\s*\(\s*\)\.get\s*\(\s*["'']authorization'
+    qa_good_regex: 'getCurrentUserId|auth helper|lib/auth|wrong auth'
+
+functional_assertions:
+  - description: "stripe.invoices.list is called"
+    diff_must_match_regex: 'invoices\.list\s*\('
+  - description: "GET handler exported"
+    diff_must_match_regex: 'export\s+(async\s+)?function\s+GET|export\s+const\s+GET'
+  - description: "uses lib/stripe.ts singleton"
+    diff_must_match_regex: "from\\s+['\"]@/lib/stripe['\"]|import.*stripe.*from\\s+['\"]\\.\\./"

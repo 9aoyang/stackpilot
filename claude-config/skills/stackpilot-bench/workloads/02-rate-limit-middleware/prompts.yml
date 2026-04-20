@@ -1,0 +1,21 @@
+zero: |
+  Add rate limiting to middleware/auth.ts
+
+savvy: |
+  Add per-user rate limiting to middleware/auth.ts. Read sandbox/CLAUDE.md
+  for conventions. Use config/limits.ts for the threshold (60 requests per
+  minute per user), lib/redis.ts for the counter store, and lib/logger.ts
+  for warn-level logs when a user is throttled. The middleware should return
+  429 with {error, retryAfter} when exceeded. Add jest tests in
+  middleware/auth.test.ts for the new behaviour. Don't refactor existing auth
+  code.
+
+stackpilot: |
+  Add per-user rate limiting to middleware/auth.ts. Read sandbox/CLAUDE.md
+  for conventions. Use config/limits.ts for the threshold (60 requests per
+  minute per user), lib/redis.ts for the counter store, and lib/logger.ts
+  for warn-level logs when a user is throttled. The middleware should return
+  429 with {error, retryAfter} when exceeded. Add jest tests in
+  middleware/auth.test.ts for the new behaviour. Don't refactor existing auth
+  code.
+  Run full /stackpilot methodology: architect → dev → qa.

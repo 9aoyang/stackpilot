@@ -138,8 +138,7 @@ These are real and intentional trade-offs — listed so v2 work knows what to at
 
 ### Verdict formula
 
-- **`compute-verdict.sh` ignores `traps_caught_in_qa`.** The CSV column exists, the data is captured, but the verdict math counts only `traps_avoided_in_diff`. This is the single biggest blind spot: stackpilot's main differentiator (sp-qa catching cross-file bugs) is invisible to the verdict. Improving sp-qa = no verdict signal.
-  - Proposed fix: `stackpilot.traps_avoided + 0.5 * stackpilot.qa_caught >= savvy.traps_avoided` for the pairwise-vs-savvy condition.
+- ~~**`compute-verdict.sh` ignores `traps_caught_in_qa`.**~~ **Resolved 2026-04-20.** The verdict quality term is now `stackpilot.traps_avoided_in_diff + 0.5 * stackpilot.traps_caught_in_qa >= baseline.traps_avoided_in_diff`. sp-qa catches count at half-weight (catching-after-the-fact < never-writing-the-bug). See `references/verdict.md` for details.
 
 ### Workloads
 
@@ -165,12 +164,7 @@ Ordered roughly by value-per-effort:
    - Risky bug fix with subtle failure modes (e.g., cache invalidation, concurrency)
    - Each workload should pass the test "would I actually invoke /stackpilot for this?"
 
-3. **Headless execution via `claude --print`.** Each leg runs as an independent `claude --print` subprocess. Benefits:
-   - True cache isolation between legs (cleanest measurement)
-   - Bench doesn't occupy user's main session
-   - Real error recovery (subprocess can be killed/retried)
-   - Can run scheduled / on CI
-   - Cost: significant engineering — output parsing, subprocess management, signal handling. Probably 1-2 days.
+3. **Headless execution via `claude --print`.** **Scaffolded 2026-04-20** — see `claude-config/skills/stackpilot-bench/scripts/run-leg-headless.sh` and `references/headless-mode.md`. Not yet wired as SKILL.md default; needs live CLI contract verification + permissions-guard + re-baselining (see `headless-mode.md § Flipping the default`). Expected impact: token efficiency dimension drops 10-25 points for stackpilot, which is the first honest measurement not biased by parent-session cache warmth.
 
 4. **Use dispatch-reported `duration_ms` instead of wall clock.** Cleaner numbers; no clock skew from main-agent overhead.
 
