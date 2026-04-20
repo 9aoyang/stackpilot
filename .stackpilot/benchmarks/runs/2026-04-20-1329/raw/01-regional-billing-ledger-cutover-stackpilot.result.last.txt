@@ -1,0 +1,9 @@
+已按 Stackpilot flow 完成，所有改动都限制在 `bench-sandbox/` 下，并写入 required evidence：
+
+- [architect.md](/Users/gaoyang/Documents/github/stackpilot/.worktrees/bench-run/bench-sandbox/.stackpilot-bench/architect.md)
+- [dev-report.md](/Users/gaoyang/Documents/github/stackpilot/.worktrees/bench-run/bench-sandbox/.stackpilot-bench/dev-report.md)
+- [qa-report.md](/Users/gaoyang/Documents/github/stackpilot/.worktrees/bench-run/bench-sandbox/.stackpilot-bench/qa-report.md)
+
+实现内容：新增 regional v2 ledger event writer，invoice/refund 写路径按 `BILLING_LEDGER_WRITE_MODE` 支持 `legacy/dual/ledger`，并保留 legacy compatibility writes；invoice export/reconciliation 通过 `BILLING_LEDGER_READ_MODE` 可切到 ledger projection；subscription API 未接入 ledger；backfill 改为 cursor/batch 写入 regional ledger。
+
+验证结果：`npm test` 通过，6/6。`npm run typecheck` 未能执行，因为本地 sandbox 缺少 `tsc`：`sh: tsc: command not found`。QA 检查 final diff 后发现并修复了一个 backfill cursor 边界问题，修复后测试通过。

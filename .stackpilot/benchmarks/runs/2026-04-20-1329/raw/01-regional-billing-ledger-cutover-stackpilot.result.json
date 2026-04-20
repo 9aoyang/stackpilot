@@ -1,0 +1,13 @@
+{
+  "leg": "stackpilot",
+  "status": "ok",
+  "duration_sec": 301,
+  "input_tokens": 826718,
+  "output_tokens": 8576,
+  "cache_read_tokens": 627584,
+  "cache_creation_tokens": 0,
+  "total_tokens": 835294,
+  "tool_uses_count": 37,
+  "jsonl_path": "/Users/gaoyang/Documents/github/stackpilot/.stackpilot/benchmarks/runs/2026-04-20-1329/raw/01-regional-billing-ledger-cutover-stackpilot.result.jsonl",
+  "last_message_path": "/Users/gaoyang/Documents/github/stackpilot/.stackpilot/benchmarks/runs/2026-04-20-1329/raw/01-regional-billing-ledger-cutover-stackpilot.result.last.txt"
+}
