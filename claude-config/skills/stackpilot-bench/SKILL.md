@@ -271,10 +271,17 @@ For each `leg` in the shuffled order:
 5. **Capture scoped diff** (bench-sandbox/ only, from leg-start SHA):
 
    ```bash
-   git -C .worktrees/bench-run diff "$LEG_START_SHA" -- bench-sandbox/
+   git -C .worktrees/bench-run diff "$LEG_START_SHA" -- \
+     bench-sandbox/ \
+     ':(exclude)bench-sandbox/node_modules/**' \
+     ':(exclude)bench-sandbox/.next/**' \
+     ':(exclude)bench-sandbox/dist/**' \
+     ':(exclude)bench-sandbox/build/**' \
+     ':(exclude)bench-sandbox/coverage/**' \
+     ':(exclude)bench-sandbox/*.tsbuildinfo'
    ```
 
-   Write diff to `.stackpilot/benchmarks/runs/$RUN_TS/raw/<id>-<leg>-diff.patch`. Changes made by the agent OUTSIDE `bench-sandbox/` are intentionally excluded from the diff — they're either stray accidental edits (caught at next reset) or context reads (no-op).
+   Write diff to `.stackpilot/benchmarks/runs/$RUN_TS/raw/<id>-<leg>-diff.patch`. Changes made by the agent OUTSIDE `bench-sandbox/` are intentionally excluded from the diff — they're either stray accidental edits (caught at next reset) or context reads (no-op). Generated dependency/build artifacts inside `bench-sandbox/` are also excluded; if generated files still appear in a raw diff, mark the leg `measurement_invalid` and do not use that run as a baseline.
 
 6. **For `stackpilot` leg only**: write the sp-qa dispatch's return text to `.stackpilot/benchmarks/runs/$RUN_TS/raw/<id>-stackpilot-qa.txt`.
 

@@ -1,8 +1,8 @@
 ---
 name: stackpilot
-description: Sprint orchestration for Claude Code. Turns feature requests into working code through a design→spec→plan→code→QA pipeline. Use when starting, resuming, tidying, or checking on development work. Drives Claude Code's native Agent tool for multi-agent execution with worktree isolation.
+description: Sprint orchestration for Claude Code and Codex. Turns feature requests into working code through a design→spec→plan→code→QA pipeline. Use when starting, resuming, tidying, or checking on development work. Claude uses native Agent/TaskCreate; Codex uses update_plan plus explorer/worker fallback.
 license: Apache-2.0
-compatibility: Requires Claude Code (uses native Agent tool, TaskCreate, worktree isolation)
+compatibility: Claude Code native; Codex via references/codex-dispatch.md. Sync skills through skillshare as the single target sync source.
 metadata:
   author: stackpilot
   version: "1.10.0"
@@ -10,12 +10,22 @@ metadata:
 
 # Stackpilot
 
+## Runtime
+
+This skill is synchronized to all targets by skillshare. Do not install a
+separate Codex-only `stackpilot` skill.
+
+- Claude Code: use the Agent / TaskCreate examples in this file directly.
+- Codex: translate task tracking and subagent dispatch using
+  [references/codex-dispatch.md](references/codex-dispatch.md).
+
 ## Step 0+1: Initialize (single bash call — do NOT split into separate Bash calls)
 
 ```bash
 # --- Version check (cache-gated, runs at most once/24h) ---
 SP_DIR="${STACKPILOT_DIR:-$HOME/.stackpilot}"
 [ -L ~/.claude/skills/stackpilot ] && SP_DIR="$(readlink ~/.claude/skills/stackpilot | sed 's|/claude-config/skills/stackpilot.*||')"
+[ -L ~/.codex/skills/stackpilot ] && SP_DIR="$(readlink ~/.codex/skills/stackpilot | sed 's|/claude-config/skills/stackpilot.*||')"
 [ -x "$SP_DIR/scripts/sync-skills.sh" ] && "$SP_DIR/scripts/sync-skills.sh" --auto-update --quick 2>&1 || true
 
 # --- State scan ---
@@ -320,6 +330,12 @@ B. Add a new feature to the current sprint
 ## Run Sprint
 
 Core coding phase. Reads plan, creates tasks, dispatches specialist agents.
+
+If running inside Codex, first read
+[references/codex-dispatch.md](references/codex-dispatch.md). In Codex,
+`TaskCreate` / `TaskUpdate` means `update_plan`, and each `Agent(...)` block
+below is delegated through the Codex dispatch mapping. Do not require Claude
+Code's `subagent_type` registry inside Codex.
 
 ### Pre-Sprint
 

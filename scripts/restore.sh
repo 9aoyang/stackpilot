@@ -86,8 +86,15 @@ fi
 echo ""
 echo "Skills (Claude Code only):"
 if $DRY_RUN; then
-  echo "[dry-run] rm -rf stackpilot* skills from $CLAUDE_DIR/skills/"
-  echo "[dry-run] cp skills from $CONFIG_DIR/skills/"
+  if [ -L "$CLAUDE_DIR/skills" ]; then
+    echo "[dry-run] $CLAUDE_DIR/skills externally managed — would skip direct skill copy"
+  else
+    echo "[dry-run] rm -rf stackpilot* skills from $CLAUDE_DIR/skills/"
+    echo "[dry-run] cp skills from $CONFIG_DIR/skills/"
+  fi
+elif [ -L "$CLAUDE_DIR/skills" ]; then
+  echo "  ⚠ $CLAUDE_DIR/skills is externally managed; skipping direct skill copy"
+  echo "    Run skillshare sync from your skillshare source instead."
 else
   # Remove old stackpilot skills
   rm -rf "$CLAUDE_DIR/skills/stackpilot" "$CLAUDE_DIR/skills/stackpilot-"*

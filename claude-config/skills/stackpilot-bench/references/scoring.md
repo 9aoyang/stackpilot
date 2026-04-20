@@ -5,6 +5,12 @@ performance scorecard. The scorecard answers **"is stackpilot worth using
 over native Claude Code?"**, which is a different question from the verdict
 block's "did the last change regress?".
 
+As of the score/time-first redesign, the human-facing `Score` is quality-only:
+correctness, trap avoidance, and stackpilot QA catch signal. Time and token
+cost are shown next to the score, not folded into it. This matches the way
+users read the report: "how much better did it get, and how much longer did it
+take?"
+
 If you only want to understand the final numbers, read §Dimensions and
 §Composite Score. §Rationale and §Known Biases are for anyone tuning the
 model or debating the weights.

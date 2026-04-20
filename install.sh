@@ -22,20 +22,25 @@ fi
 
 # --- 2. Copy agents + skills ---
 echo "[2/3] Installing agents and skills..."
-mkdir -p "$CLAUDE_DIR/agents"
+mkdir -p "$CLAUDE_DIR/agents" "$CLAUDE_DIR/skills"
 
 for f in "$STACKPILOT_DIR/claude-config/agents/"*.md; do
   [ -f "$f" ] && cp "$f" "$CLAUDE_DIR/agents/$(basename "$f")"
 done
 
-# Install skills — each subdirectory under claude-config/skills/ becomes a skill
-for skill_dir in "$STACKPILOT_DIR/claude-config/skills/"*/; do
-  [ -d "$skill_dir" ] || continue
-  skill_name="$(basename "$skill_dir")"
-  # Copy entire directory to preserve references/ subdirectories
-  rm -rf "$CLAUDE_DIR/skills/$skill_name"
-  cp -r "$skill_dir" "$CLAUDE_DIR/skills/$skill_name"
-done
+if [ -L "$CLAUDE_DIR/skills" ]; then
+  echo "  ⚠ $CLAUDE_DIR/skills is externally managed; skipping direct skill copy"
+  echo "    Run skillshare sync from your skillshare source instead."
+else
+  # Install skills — each subdirectory under claude-config/skills/ becomes a skill
+  for skill_dir in "$STACKPILOT_DIR/claude-config/skills/"*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name="$(basename "$skill_dir")"
+    # Copy entire directory to preserve references/ subdirectories
+    rm -rf "$CLAUDE_DIR/skills/$skill_name"
+    cp -r "$skill_dir" "$CLAUDE_DIR/skills/$skill_name"
+  done
+fi
 
 # --- 3. Install dependencies ---
 echo "[3/3] Installing dependencies..."

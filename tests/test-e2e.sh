@@ -33,6 +33,15 @@ check "sp-qa.md"          "$WORKTREE_DIR/claude-config/agents/sp-qa.md"
 check "sp-docs.md"        "$WORKTREE_DIR/claude-config/agents/sp-docs.md"
 echo ""
 
+# 1b. Codex-native agent source files in repo
+echo "--- Codex agent files (codex-config/agents/) ---"
+check "codex sp-architect.md" "$WORKTREE_DIR/codex-config/agents/sp-architect.md"
+check "codex sp-dev.md"       "$WORKTREE_DIR/codex-config/agents/sp-dev.md"
+check "codex sp-qa.md"        "$WORKTREE_DIR/codex-config/agents/sp-qa.md"
+check "codex sp-docs.md"      "$WORKTREE_DIR/codex-config/agents/sp-docs.md"
+check "shared codex dispatch reference" "$WORKTREE_DIR/claude-config/skills/stackpilot/references/codex-dispatch.md"
+echo ""
+
 # 2. Skill source files in repo
 echo "--- Skills (claude-config/skills/) ---"
 check "stackpilot/SKILL.md"              "$WORKTREE_DIR/claude-config/skills/stackpilot/SKILL.md"
@@ -216,6 +225,38 @@ done
 grep_in "subagent_type=\"sp-docs\"" "claude-config/skills/stackpilot/SKILL.md" \
   && { echo "  PASS: SKILL.md routes docs tasks to sp-docs"; PASS=$((PASS + 1)); } \
   || { echo "  FAIL: SKILL.md missing sp-docs routing — haiku cost savings will not apply"; FAIL=$((FAIL + 1)); }
+
+# Shared skill must support Codex without installing a second stackpilot skill.
+if ! grep -q "Requires Claude Code" "$WORKTREE_DIR/claude-config/skills/stackpilot/SKILL.md" \
+   && grep -q "references/codex-dispatch.md" "$WORKTREE_DIR/claude-config/skills/stackpilot/SKILL.md" \
+   && grep -q "update_plan" "$WORKTREE_DIR/claude-config/skills/stackpilot/references/codex-dispatch.md" \
+   && grep -q "explorer" "$WORKTREE_DIR/claude-config/skills/stackpilot/references/codex-dispatch.md" \
+   && grep -q "worker" "$WORKTREE_DIR/claude-config/skills/stackpilot/references/codex-dispatch.md"; then
+  echo "  PASS: shared stackpilot skill declares Codex-native dispatch"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: shared stackpilot skill missing Codex-native dispatch contract"
+  FAIL=$((FAIL + 1))
+fi
+
+for agent in sp-architect sp-dev sp-docs sp-qa; do
+  if grep -qE "^model: inherit" "$WORKTREE_DIR/codex-config/agents/${agent}.md"; then
+    echo "  PASS: Codex ${agent} inherits runtime model"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: Codex ${agent} should use model: inherit"
+    FAIL=$((FAIL + 1))
+  fi
+done
+
+if [ ! -e "$WORKTREE_DIR/codex-config/skills/stackpilot/SKILL.md" ] \
+   && [ ! -e "$WORKTREE_DIR/scripts/sync-codex-config.sh" ]; then
+  echo "  PASS: no direct Codex skill sync path"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: direct Codex skill sync path should not exist when skillshare owns sync"
+  FAIL=$((FAIL + 1))
+fi
 
 echo ""
 

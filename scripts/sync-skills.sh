@@ -106,6 +106,12 @@ fi
 
 # --- Sync: add missing skills (skipped with --quick) ---
 if ! $QUICK; then
+  if [ -L "$SKILLS_DST" ]; then
+    echo "[stackpilot] $SKILLS_DST is externally managed; skipping direct skill sync"
+    echo "[stackpilot] Run skillshare sync from your skillshare source instead."
+    exit 0
+  fi
+
   mkdir -p "$SKILLS_DST"
 
   changed=0

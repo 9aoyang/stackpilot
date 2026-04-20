@@ -2,7 +2,10 @@
 
 > Last updated: 2026-04-20
 
-Stackpilot is a methodology-driven sprint orchestration layer for Claude Code. It turns a specification into working code by driving Claude Code's native Agent tool, TaskCreate, and worktree isolation — no custom infrastructure needed.
+Stackpilot is a methodology-driven sprint orchestration layer for Claude Code
+and Codex. It turns a specification into working code by driving the host
+agent's native planning and delegation primitives, with no custom service
+infrastructure.
 
 ---
 
@@ -37,11 +40,13 @@ stackpilot/                        ← framework installation
 │       │   └── SKILL.md           ← /stackpilot-sync external skill tracking
 │       └── systematic-debugging/
 │           └── SKILL.md           ← /systematic-debugging (portable)
+├── codex-config/
+│   └── agents/                    ← Codex-native sp-* prompts
 ├── scripts/
 │   ├── init.sh                    ← project setup (minimal: dirs + test command detection)
 │   ├── lib/
 │   │   └── config.sh              ← YAML config reader
-│   ├── sync-skills.sh             ← idempotent skill sync (--auto-update for version self-check)
+│   ├── sync-skills.sh             ← idempotent Claude skill sync for non-skillshare installs
 │   ├── hooks/
 │   │   ├── post-commit            ← auto-sync new skills after commit
 │   │   ├── pre-merge-commit       ← blocks non-squash merges on main/master
@@ -143,9 +148,12 @@ for the flip checklist.
 
 ---
 
-## How Agents Are Dispatched (v2 — Native Claude Code)
+## How Agents Are Dispatched
 
-In v2, the `/stackpilot` skill orchestrates agents using Claude Code's native tools:
+### Claude Code
+
+The Claude `/stackpilot` skill orchestrates agents using Claude Code's native
+tools:
 
 ```
 Agent(
@@ -163,6 +171,23 @@ Agent(
 - Agent results flow as prompt context: architect output → dev prompt → QA prompt
 
 **Task tracking** uses Claude Code's native `TaskCreate`/`TaskUpdate` instead of YAML files.
+
+### Codex
+
+The Codex `/stackpilot` skill is the same shared skill synchronized by
+skillshare. It uses `references/codex-dispatch.md` for visible task tracking
+and dispatches the same methodology prompts through Codex subagents:
+
+| Stackpilot role | Codex dispatch |
+|---|---|
+| `sp-architect` | named role if available, otherwise `explorer` with `codex-config/agents/sp-architect.md` |
+| `sp-dev` | named role if available, otherwise `worker` with explicit file ownership |
+| `sp-qa` | named role if available, otherwise `worker` with QA-only ownership |
+| `sp-docs` | named role if available, otherwise `worker` with docs-only ownership |
+
+This keeps skillshare as the single synchronization source for shared skills
+and avoids a false dependency on Claude Code's `subagent_type` registry inside
+Codex.
 
 ---
 
@@ -232,7 +257,7 @@ Model routing is handled by Claude Code natively (agent frontmatter `model:` fie
 
 | Slash Command | Purpose |
 |--------------|---------|
-| `/stackpilot` | Main entry: tidy + resume + status + auto/interactive mode + sprint execution |
+| `/stackpilot` | Main entry: tidy + resume + status + auto/interactive mode + sprint execution. Claude and Codex share the same skill; Codex dispatch is described in `references/codex-dispatch.md`. |
 | `/stackpilot-compete` | Competitive gap analysis from power-user persona |
 | `/stackpilot-research` | Deep research reports using cross-longitudinal analysis (横纵分析法) |
 | `/stackpilot-sync` | External skill tracking and sync (developer maintenance) |

@@ -2,7 +2,7 @@
 
 > 最后更新：2026-04-16
 
-Stackpilot 是一个面向 Claude Code 的方法论驱动 Sprint 编排层。它将设计文档转化为可运行代码，通过驱动 Claude Code 原生的 Agent tool、TaskCreate 和 worktree 隔离能力完成——无需自建基础设施。
+Stackpilot 是一个面向 Claude Code 和 Codex 的方法论驱动 Sprint 编排层。它将设计文档转化为可运行代码，通过驱动宿主 agent 原生的计划和委派能力完成，无需自建服务基础设施。
 
 ---
 
@@ -37,11 +37,13 @@ stackpilot/                        ← 框架安装目录
 │       │   └── SKILL.md           ← /stackpilot-sync 外部 skill 同步
 │       └── systematic-debugging/
 │           └── SKILL.md           ← /systematic-debugging（便携式）
+├── codex-config/
+│   └── agents/                    ← Codex 原生 sp-* prompts
 ├── scripts/
 │   ├── init.sh                    ← 项目初始化（精简：目录 + 测试命令检测）
 │   ├── lib/
 │   │   └── config.sh              ← YAML 配置读取工具
-│   ├── sync-skills.sh             ← 幂等 skill 同步（--auto-update 版本自检）
+│   ├── sync-skills.sh             ← 非 skillshare 安装下的幂等 Claude skill 同步
 │   ├── hooks/
 │   │   ├── post-commit            ← commit 后自动同步新 skill
 │   │   ├── pre-merge-commit       ← 阻止非 squash merge 到 main/master
@@ -93,9 +95,11 @@ sp-dev → sp-qa
 
 ---
 
-## Agent 调度方式（v2 — Claude Code 原生）
+## Agent 调度方式
 
-v2 中，`/stackpilot` skill 使用 Claude Code 原生工具编排 agent：
+### Claude Code
+
+Claude 版 `/stackpilot` skill 使用 Claude Code 原生工具编排 agent：
 
 ```
 Agent(
@@ -113,6 +117,22 @@ Agent(
 - Agent 输出作为 prompt 上下文级联传递：architect → dev → QA
 
 **任务跟踪** 使用 Claude Code 原生 `TaskCreate`/`TaskUpdate`，替代 YAML 文件。
+
+### Codex
+
+Codex 版 `/stackpilot` 使用 skillshare 同步的同一个共享 skill。它通过
+`references/codex-dispatch.md` 做可见任务跟踪，并通过 Codex subagents
+调度同一套方法论：
+
+| Stackpilot role | Codex dispatch |
+|---|---|
+| `sp-architect` | 如有命名 role 就用命名 role，否则用 `explorer` + `codex-config/agents/sp-architect.md` |
+| `sp-dev` | 如有命名 role 就用命名 role，否则用 `worker` + 明确文件 ownership |
+| `sp-qa` | 如有命名 role 就用命名 role，否则用 `worker` + QA-only ownership |
+| `sp-docs` | 如有命名 role 就用命名 role，否则用 `worker` + docs-only ownership |
+
+这样 skillshare 是共享 skills 的唯一同步源，同时不把 Codex 伪装成
+Claude Code 的 `subagent_type` 注册表。
 
 ---
 
@@ -182,7 +202,7 @@ qa:
 
 | Slash Command | 用途 |
 |--------------|------|
-| `/stackpilot` | 主入口：tidy + resume + 状态 + 自动/交互模式 + Sprint 执行 |
+| `/stackpilot` | 主入口：tidy + resume + 状态 + 自动/交互模式 + Sprint 执行。Claude 和 Codex 共享同一个 skill；Codex 调度见 `references/codex-dispatch.md`。 |
 | `/stackpilot-compete` | 以竞品重度用户视角做差距分析 |
 | `/stackpilot-research` | 横纵分析法深度研报（纵向发展史 + 横向竞品切面） |
 | `/stackpilot-sync` | 外部 skill 追踪和同步（开发者维护） |

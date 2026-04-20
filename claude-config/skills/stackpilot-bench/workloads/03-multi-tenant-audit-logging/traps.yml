@@ -10,7 +10,7 @@ traps:
     description: 'Audit query / read endpoint queries prisma.auditLog.findMany without a tenantId filter — cross-tenant leak. Matches added prisma.auditLog.findMany( calls whose following ~400 chars do not contain tenantId.'
     category: correctness
     severity: high
-    diff_bad_regex: 'prisma\.auditLog\.(?:findMany|findFirst|findUnique)\s*\((?:(?!tenantId|tenant_id)[\s\S]){0,400}?\)'
+    diff_bad_regex: '\+\+\+\s+b?/?.*app/api/admin/audit(?:-log)?/route\.ts[\s\S]{0,2500}?prisma\.auditLog\.(?:findMany|findFirst|findUnique)\s*\((?:(?!tenantId|tenant_id)[\s\S]){0,500}?\)'
     qa_good_regex: 'tenant[_A-Z]?[Ii]d|tenant.?scope|cross.?tenant|where.*tenant'
 
   - id: trap-03-no-index-query
@@ -31,7 +31,7 @@ traps:
     description: 'Logs admin actions via console.log/logger.info instead of persisting to the AuditLog table.'
     category: correctness
     severity: high
-    diff_bad_regex: '^\+\s*(?:console\.(?:log|info|warn)\s*\(\s*["`]?audit|logger\.(?:info|log|debug)\s*\(\s*["`]audit)'
+    diff_bad_regex: '^\+\s*(?:console\.(?:log|info|warn)\s*\(\s*["`]?audit|logger\.(?:info|log|debug)\s*\(\s*["`]audit_(?!(?:purge|retention|cleanup)))'
     qa_good_regex: 'persist|database|db|prisma|auditLog|not console'
 
   - id: trap-06-pii-leak

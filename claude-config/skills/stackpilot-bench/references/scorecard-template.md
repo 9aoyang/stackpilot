@@ -1,81 +1,68 @@
-<!--
-  scorecard-template.md — rendered per run into
-    .stackpilot/benchmarks/runs/<timestamp>/scorecard.md
+# Stackpilot Bench Scorecard Template
 
-  Placeholder syntax: {{name}} — the runner substitutes at render time.
-  Any placeholder unsubstituted at render time → literal string "N/A".
+The primary scorecard is designed for a human who will ask AI for the
+interpretation later. It should read like a short decision memo, not like a
+CSV export.
 
-  Sections:
-    1. Header
-    2. ASCII scorecard block (from compute-scorecard.sh stdout)
-    3. Per-workload decision guide
-    4. Raw-data appendix
-    5. Caveats
--->
+## Required Shape
 
-# Stackpilot vs Native Claude Code — Scorecard ({{run_timestamp}})
+```md
+# Stackpilot Bench
 
-- **Stackpilot version**: {{stackpilot_version}}
-- **Git SHA**: {{git_sha}}
-- **Run ID**: {{run_id}}
-- **Sample size**: n={{sample_n}} per (workload, leg)
+Run: `<RUN_TS>` | n=<N> per leg | workloads: <target>/<total>
 
-## 1. Scorecard
+## Headline
 
+复杂任务建议使用 Stackpilot：质量 +14 分，额外耗时 +45m00s（+54%）。
+换算下来，每提升 1 分大约多花 3.2 分钟。
+
+## Overall
+
+Native Zero
+质量：★★★☆☆ 51/100
+耗时：37m15s（速度 ★★★★★）
+
+Native Savvy
+质量：★★★★☆ 77/100
+耗时：84m00s（速度 ★★★★☆）
+
+Stackpilot
+质量：★★★★★ 91/100
+耗时：129m00s（速度 ★★★☆☆）
+
+质量图
+Native Savvy  ████████░░ 77/100
+Stackpilot    █████████░ 91/100
+
+## Per Workload
+
+W01-subscription-ambiguity (target)
+Native Savvy：★★★★☆ 76/100 / 24m20s
+Stackpilot： ★★★★★ 91/100 / 39m05s
+差异：+15 分，耗时 +14m45s（+61%）
+建议：用 Stackpilot
+
+## Diagnostics
+
+- Target workloads: 3
+- Native-enough workloads: 1
+- Raw rows: `.stackpilot/benchmarks/runs/<RUN_TS>/rows.csv`
+- Full history source: `.stackpilot/benchmarks/history.csv`
 ```
-{{scorecard_block}}
-```
 
-## 2. How to read this
+## Formatting Rules
 
-The question this scorecard answers is "should I use stackpilot for my
-work, or is native Claude Code enough?" The answer is generally not "yes"
-or "no" uniformly — it depends on the workload.
+- Start with the decision, not the data table.
+- Score means quality only: correctness, trap avoidance, and QA catch signal.
+- Always show both score and elapsed time; do not blend time/token cost into
+  the displayed score.
+- Use five-star quality/velocity summaries for quick reading.
+- Use dense tables only in detailed reports, not the first screen.
+- Mark native-enough workloads explicitly so Stackpilot is not rewarded on
+  simple tasks.
 
-- **Quality dimensions** (correctness, over-engineering resistance, bug
-  catch rate) drive 75% of the composite. Stackpilot's thesis is that the
-  orchestration overhead buys more quality than it costs.
-- **Cost dimensions** (token efficiency, wall-clock speed) drive 25% of
-  the composite and are scored *relatively* within each workload — the
-  cheapest leg scores 100.
-- **Per-workload breakdown** (§3) is where the nuance lives. A positive
-  overall score masks workloads where native wins. Those are the cases
-  where you should skip stackpilot.
+## Data Source
 
-## 3. Per-workload decision guide
-
-| Workload | Complexity | Savvy | Stackpilot | Recommendation |
-|---|---|---:|---:|---|
-| {{wl01_id}} | {{wl01_complexity}} | {{wl01_savvy_score}} | {{wl01_stackpilot_score}} | {{wl01_recommendation}} |
-| {{wl02_id}} | {{wl02_complexity}} | {{wl02_savvy_score}} | {{wl02_stackpilot_score}} | {{wl02_recommendation}} |
-| {{wl03_id}} | {{wl03_complexity}} | {{wl03_savvy_score}} | {{wl03_stackpilot_score}} | {{wl03_recommendation}} |
-
-**Recommendation values**:
-- `use-stackpilot` — stackpilot wins by >5 composite points; overhead pays off
-- `either-works` — within ±5 points; choose by personal preference / cost sensitivity
-- `skip-stackpilot` — native savvy wins by >5 points; orchestration overhead not worth it
-
-## 4. Raw data
-
-Per-leg artefacts stored in `.stackpilot/benchmarks/runs/{{run_id}}/raw/`:
-
-- `wl*-zero-diff.patch`, `wl*-savvy-diff.patch`, `wl*-stackpilot-diff.patch`
-- `wl*-stackpilot-qa.txt` (sp-qa report per workload)
-- `rows.csv` (this run's CSV rows only)
-
-Full history: `.stackpilot/benchmarks/history.csv`.
-
-## 5. Caveats
-
-Scores in this scorecard inherit the biases documented in
-`references/scoring.md § Known Biases`:
-
-- n=1 default + adaptive n=3 on near-boundary pairs — not a full statistical
-  sample
-- Parent-session cache leak leaks between legs (pre-M4)
-- Trap regexes are conservative lower bounds, not precise measurements
-- Workload static-ness risks prompt overfit over time — rotate workloads
-  quarterly
-
-**Single-run scores are directional, not authoritative.** Trend across
-multiple runs (via `history.csv`) is the more reliable signal.
+`compute-scorecard.sh` renders the current concrete format directly from
+`history.csv`. This template documents the intended report shape and should be
+kept aligned with that script.

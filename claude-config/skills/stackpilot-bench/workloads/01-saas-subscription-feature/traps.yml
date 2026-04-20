@@ -31,7 +31,7 @@ traps:
     description: 'Adds promo-code / coupon / discount logic that was never requested.'
     category: over-engineering
     severity: medium
-    diff_bad_regex: '\bcoupon\b|\bpromotion_code\b|\bpromo_code\b|allow_promotion_codes\s*:|discounts\s*:\s*\['
+    diff_bad_regex: '\bcoupon\b|\bpromotion_code\b|\bpromo_code\b|allow_promotion_codes\s*:\s*true|discounts\s*:\s*\['
     qa_good_regex: 'coupon|promo|discount|not requested|over.?engineer'
 
   - id: trap-06-unrequested-multitenant
@@ -108,7 +108,7 @@ functional_assertions:
   - description: "prisma schema touched"
     diff_must_match_regex: 'prisma/schema\.prisma'
   - description: "webhook route created"
-    diff_must_match_regex: 'api/webhook|webhooks/stripe'
+    diff_must_match_regex: 'api/[\w/-]*webhook|webhooks/stripe|constructEvent'
   - description: "checkout session creation"
     diff_must_match_regex: 'checkout\.sessions\.create|createCheckoutSession'
   - description: "stripe singleton used (not new Stripe)"

@@ -36,10 +36,18 @@ bash scripts/reset-worktree.sh <worktree_path> <sandbox_source>
 
 **Diff capture after the leg:**
 ```bash
-git -C <worktree_path> diff <leg_start_sha> -- bench-sandbox/
+git -C <worktree_path> diff <leg_start_sha> -- \
+  bench-sandbox/ \
+  ':(exclude)bench-sandbox/node_modules/**' \
+  ':(exclude)bench-sandbox/.next/**' \
+  ':(exclude)bench-sandbox/dist/**' \
+  ':(exclude)bench-sandbox/build/**' \
+  ':(exclude)bench-sandbox/coverage/**' \
+  ':(exclude)bench-sandbox/*.tsbuildinfo'
 ```
 
 The `-- bench-sandbox/` pathspec excludes any stray edits the agent may have made outside the sandbox (CLAUDE.md etc.); those are cleaned up by the next leg's `reset --hard`.
+The exclude pathspecs keep dependency installs and generated build artifacts out of scoring. A raw diff containing `node_modules/`, `.next/`, `dist/`, `build/`, `coverage/`, or `*.tsbuildinfo` is measurement pollution and should invalidate the run.
 
 **Idempotency:** safe to call multiple times; each call produces a new leg-start commit and a freshly-installed sandbox.
 
