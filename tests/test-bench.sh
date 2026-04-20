@@ -7,6 +7,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUNNER="$ROOT_DIR/claude-config/skills/stackpilot-bench/scripts/run-codex-bench.sh"
 SCORECARD="$ROOT_DIR/claude-config/skills/stackpilot-bench/scripts/compute-scorecard.sh"
 TRAPS="$ROOT_DIR/claude-config/skills/stackpilot-bench/workloads/01-regional-billing-ledger-cutover/traps.yml"
+WORKLOAD="$ROOT_DIR/claude-config/skills/stackpilot-bench/workloads/01-regional-billing-ledger-cutover"
 CODEX_DISPATCH="$ROOT_DIR/claude-config/skills/stackpilot/references/codex-dispatch.md"
 
 PASS=0
@@ -74,6 +75,26 @@ grep_in "subprocess.run" "$RUNNER" \
 grep_not_in "contract tests updated or preserved" "$TRAPS" \
   && pass "workload removed diff-keyword contract-test assertion" \
   || fail "workload still uses diff-keyword contract-test assertion"
+
+if [ ! -d "$WORKLOAD/sandbox/tests/contract" ]; then
+  pass "workload sandbox does not expose contract tests to the model"
+else
+  fail "workload sandbox still exposes contract tests to the model"
+fi
+
+if [ -d "$WORKLOAD/evaluator/contract" ] && [ -f "$WORKLOAD/evaluator/helpers/read-file.mjs" ]; then
+  pass "workload stores hidden contract tests under evaluator/"
+else
+  fail "workload missing hidden evaluator contract tests"
+fi
+
+grep_in ".stackpilot-hidden-evaluator" "$RUNNER" \
+  && pass "runner injects hidden evaluator after model execution" \
+  || fail "runner does not inject hidden evaluator"
+
+grep_in ".stackpilot-hidden-evaluator/contract" "$TRAPS" \
+  && pass "verification command uses hidden evaluator tests" \
+  || fail "verification command still relies on visible tests"
 
 if grep -A8 "trap-12-missing-rollback-read-path" "$TRAPS" | grep -q "check_mode: final_file" \
    && grep -A12 "trap-12-missing-rollback-read-path" "$TRAPS" | grep -q "must_match_regex"; then

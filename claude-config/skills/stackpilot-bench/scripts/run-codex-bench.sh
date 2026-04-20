@@ -267,6 +267,7 @@ evaluate_leg() {
 import json
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import yaml
@@ -295,6 +296,9 @@ def patterns(value):
     return [value]
 
 workload = pathlib.Path(traps_yml).parent.name
+workload_dir = pathlib.Path(traps_yml).parent
+hidden_evaluator_src = workload_dir / 'evaluator'
+hidden_evaluator_dst = sandbox / '.stackpilot-hidden-evaluator'
 traps = config.get('traps') or []
 traps_avoided = 0
 traps_caught = None if leg != 'stackpilot' else 0
@@ -348,6 +352,12 @@ for idx, assertion in enumerate(config.get('functional_assertions') or [], start
     functional_pass = functional_pass and ok
 
 verification_results = []
+hidden_evaluator_present = hidden_evaluator_src.exists()
+if hidden_evaluator_present:
+    if hidden_evaluator_dst.exists():
+        shutil.rmtree(hidden_evaluator_dst)
+    shutil.copytree(hidden_evaluator_src, hidden_evaluator_dst)
+
 for idx, verification in enumerate(config.get('verification_commands') or [], start=1):
     command = verification.get('command')
     if not command:
@@ -413,6 +423,7 @@ with open(eval_out, 'w', encoding='utf-8') as fh:
         'traps_caught_in_qa': traps_caught,
         'functional_pass': functional_pass,
         'orchestration_valid': orchestration_valid,
+        'hidden_evaluator_present': hidden_evaluator_present,
         'trap_results': trap_results,
         'functional_results': functional_results,
         'verification_results': verification_results,
@@ -528,6 +539,7 @@ for workload_dir in "${workload_dirs[@]}"; do
     git -C "$WORKTREE" add -N -- \
       bench-sandbox/ \
       ':(exclude)bench-sandbox/.stackpilot-bench/**' \
+      ':(exclude)bench-sandbox/.stackpilot-hidden-evaluator/**' \
       ':(exclude)bench-sandbox/node_modules/**' \
       ':(exclude)bench-sandbox/.next/**' \
       ':(exclude)bench-sandbox/dist/**' \
@@ -539,6 +551,7 @@ for workload_dir in "${workload_dirs[@]}"; do
     git -C "$WORKTREE" diff "$leg_start_sha" -- \
       bench-sandbox/ \
       ':(exclude)bench-sandbox/.stackpilot-bench/**' \
+      ':(exclude)bench-sandbox/.stackpilot-hidden-evaluator/**' \
       ':(exclude)bench-sandbox/node_modules/**' \
       ':(exclude)bench-sandbox/.next/**' \
       ':(exclude)bench-sandbox/dist/**' \

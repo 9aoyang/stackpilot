@@ -33,6 +33,9 @@ bash scripts/reset-worktree.sh <worktree_path> <sandbox_source>
 - Workload edits are scoped to `bench-sandbox/` (a throwaway subdirectory).
 - The rest of the worktree retains main's files (CLAUDE.md, `claude-config/`, etc.), so dispatched agents have normal project context.
 - The leg-start commit lets the runner compute a CLEAN diff scoped to `bench-sandbox/` after the leg finishes, without fixture-install churn showing up as "agent changes".
+- If the workload has an `evaluator/` directory, it is intentionally NOT
+  copied here. The hidden evaluator is injected only after the model leg
+  completes and after the implementation diff is captured.
 
 **Diff capture after the leg:**
 ```bash
@@ -40,6 +43,8 @@ bash scripts/reset-worktree.sh <worktree_path> <sandbox_source>
 # content. Otherwise benchmark scoring misses files the agent added.
 git -C <worktree_path> add -N -- \
   bench-sandbox/ \
+  ':(exclude)bench-sandbox/.stackpilot-bench/**' \
+  ':(exclude)bench-sandbox/.stackpilot-hidden-evaluator/**' \
   ':(exclude)bench-sandbox/node_modules/**' \
   ':(exclude)bench-sandbox/.next/**' \
   ':(exclude)bench-sandbox/dist/**' \
@@ -49,6 +54,8 @@ git -C <worktree_path> add -N -- \
 
 git -C <worktree_path> diff <leg_start_sha> -- \
   bench-sandbox/ \
+  ':(exclude)bench-sandbox/.stackpilot-bench/**' \
+  ':(exclude)bench-sandbox/.stackpilot-hidden-evaluator/**' \
   ':(exclude)bench-sandbox/node_modules/**' \
   ':(exclude)bench-sandbox/.next/**' \
   ':(exclude)bench-sandbox/dist/**' \
@@ -254,8 +261,11 @@ For each leg, after capturing the diff:
    ```bash
    grep -q "<pattern>" <<< "$final_diff" && echo "PASS" || echo "FAIL"
    ```
-4. Run each command in `verification_commands` inside `bench-sandbox/`; every command must exit 0.
-5. All patterns and commands must pass (AND logic). If any fails:
+4. If the workload has an `evaluator/` directory, copy it into
+   `bench-sandbox/.stackpilot-hidden-evaluator/` now. This keeps evaluator
+   tests closed-book while still running them against the final implementation.
+5. Run each command in `verification_commands` inside `bench-sandbox/`; every command must exit 0.
+6. All patterns and commands must pass (AND logic). If any fails:
    - `functional_pass = false` for that leg.
    - Leg continues (do not abort; the CSV row is still written).
 
@@ -356,7 +366,7 @@ This demonstrates that order varies per workload but is deterministic within a r
 
 Each trap entry may optionally declare `check_mode`:
 
-- `check_mode: diff` (default, assumed if absent) — `diff_bad_regex` and optional `must_match_regex` are evaluated against the scoped diff (`git -C .worktrees/bench-run diff <leg_start_sha> -- bench-sandbox/`).
+- `check_mode: diff` (default, assumed if absent) — `diff_bad_regex` and optional `must_match_regex` are evaluated against the scoped diff (`git -C .worktrees/bench-run diff <leg_start_sha> -- bench-sandbox/`). The diff excludes `.stackpilot-bench/**` and `.stackpilot-hidden-evaluator/**`.
 - `check_mode: final_file` — the trap declares `check_file: <path relative to bench-sandbox/>`; `diff_bad_regex` and optional `must_match_regex` are evaluated against the final content of that file (read from `<worktree>/bench-sandbox/<check_file>` after dispatch completes, before reset). Use this mode when the trap condition is "old phrase X still exists in file Y" or "file Y must contain capability Z" — testable regardless of whether the agent touched the file.
 
 Pseudocode for trap evaluation:

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/contract/*.test.mjs",
+    "test": "node --test",
     "typecheck": "tsc --noEmit",
     "backfill:ledger": "node dist/jobs/backfillLedger.js"
   },

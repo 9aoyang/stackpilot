@@ -125,6 +125,13 @@ retains main's files so sub-agents have project context;
 `reset-worktree.sh` resets to `base_sha` between legs and commits a fresh
 leg-start SHA for scoped diff capture.
 
+**Hidden evaluator**: workload contract tests live outside the sandbox under
+`workloads/<id>/evaluator/`. The model cannot see them during implementation.
+After a leg finishes and after the scoped diff is captured, the runner copies
+that evaluator into `bench-sandbox/.stackpilot-hidden-evaluator/` and executes
+`verification_commands` against the final code. This prevents the benchmark
+from becoming an open-book test while preserving durable raw artifacts.
+
 **Headless execution** (scaffolded 2026-04-20, not yet default): each leg
 runs as an isolated `claude --print` subprocess via `run-leg-headless.sh`,
 removing the parent-session prompt-cache leak that biased v1 token
@@ -349,7 +356,8 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
-| 2026-04-20 | **Codex Stackpilot execution contract.** Codex `/stackpilot` now requires auditable `architect.md`, `dev-report.md`, and `qa-report.md` phase artifacts for standard-or-higher tasks. `/stackpilot-bench` verifies those artifacts for the stackpilot leg, excludes `.stackpilot-bench/**` from implementation diff scoring, runs workload verification commands (for example `npm test`), and marks missing phase evidence as `orchestration_invalid` with zero quality score. |
+| 2026-04-20 | **Closed-book benchmark evaluator.** Moved regional ledger contract tests out of the visible sandbox into `workloads/<id>/evaluator/`. The Codex bench runner now injects them only after model execution as `.stackpilot-hidden-evaluator/` and runs verification commands against that hidden suite, preventing zero-shot and stackpilot legs from reading or editing the answer key. |
+| 2026-04-20 | **Codex Stackpilot execution contract.** Codex `/stackpilot` now requires auditable `architect.md`, `dev-report.md`, and `qa-report.md` phase artifacts for standard-or-higher tasks. `/stackpilot-bench` verifies those artifacts for the stackpilot leg, excludes `.stackpilot-bench/**` from implementation diff scoring, runs workload verification commands, and marks missing phase evidence as `orchestration_invalid` with zero quality score. |
 | 2026-04-20 | **Single ultimate workload + two-leg Codex benchmark.** Removed the three v3 workloads after Codex zero-shot scored near ceiling on all of them. Active bench now uses one high-discrimination regional billing ledger cutover workload and compares only `zero` vs `stackpilot`; `savvy` is no longer part of default runs. History was reset so obsolete native-enough rows do not pollute future analysis. |
 | 2026-04-20 | **Codex benchmark runner.** Added `run-codex-bench.sh` and `run-leg-codex.sh` so `/stackpilot-bench` can measure Codex-side native zero / stackpilot legs through `codex exec --json --ephemeral`. The runner writes the same durable history and human-readable scorecard as the Claude protocol, normalizes Codex usage fields, and uses `git add -N` before diff capture so untracked new files are scored. |
 | 2026-04-20 | **v3 workloads + scorecard discrimination check.** First post-baseline bench run (2026-04-20-0419) produced a misleading "stackpilot 明显落后" verdict because the v2 workloads were too simple — native zero scored 97/100, leaving no headroom for /stackpilot to earn its overhead. Post-mortem in `docs/bench-implementation.md § Workload selection error`. Fixes: (a) `compute-scorecard.sh` now marks any workload where zero-leg composite >90 as `🚫 NON-DISCRIMINATIVE` and excludes it from the overall composite; if all workloads are non-discriminative, headline reads `INCONCLUSIVE`. (b) v3 workloads installed — `01-saas-subscription-feature` (ambiguous scope), `02-search-migration-no-downtime` (dual-write hazards), `03-multi-tenant-audit-logging` (cross-system consistency) — designed around real /stackpilot usage patterns, not isolated well-specified tasks. These v3 workloads were later removed after Codex zero-shot also saturated them. |

@@ -12,4 +12,4 @@ Current production state:
 
 Goal: introduce a regional billing ledger so finance can replay billing events by region and currency. The migration must be reversible because quarter-end close is in 9 days.
 
-Important context is intentionally spread across this repo. Read `CLAUDE.md`, `docs/ADR-019-ledger-cutover.md`, `docs/ops-ledger-runbook.md`, current source, and contract tests before changing code.
+Important context is intentionally spread across this repo. Read `CLAUDE.md`, `docs/ADR-019-ledger-cutover.md`, `docs/ops-ledger-runbook.md`, and current source before changing code.

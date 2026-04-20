@@ -139,6 +139,12 @@ Codex 运行必须留下可审计的阶段证据：`architect.md`、`dev-report.
 Codex 中不会退化成“风格提示”；如果调用方无法验证这些证据，则该次运行
 标记为 `orchestration_invalid`。
 
+`/stackpilot-bench` 的合同测试是闭卷的：测试文件不再放进
+`sandbox/`，而是放在 workload 的 `evaluator/` 目录。runner 在模型执行
+完成并捕获实现 diff 之后，才把它复制为
+`bench-sandbox/.stackpilot-hidden-evaluator/` 并运行 verification command。
+这样 zero 和 stackpilot 都不能提前读取或修改答案。
+
 ---
 
 ## 事件流
@@ -275,7 +281,8 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | 日期 | 变更 |
 |------|------|
-| 2026-04-20 | **Codex Stackpilot 执行契约**：Codex `/stackpilot` 对 standard 及以上任务要求产出可审计的 `architect.md`、`dev-report.md`、`qa-report.md` 阶段产物。`/stackpilot-bench` 会验证 stackpilot 腿的这些产物，将 `.stackpilot-bench/**` 排除出实现 diff 评分，执行 workload verification command（例如 `npm test`），缺少阶段证据时标记 `orchestration_invalid` 并给质量分 0。 |
+| 2026-04-20 | **闭卷 benchmark evaluator**：将 regional ledger 合同测试从可见 sandbox 移到 `workloads/<id>/evaluator/`。Codex bench runner 只在模型执行结束后注入 `.stackpilot-hidden-evaluator/` 并执行 verification command，避免 zero-shot 和 stackpilot 腿提前读取或修改答案。 |
+| 2026-04-20 | **Codex Stackpilot 执行契约**：Codex `/stackpilot` 对 standard 及以上任务要求产出可审计的 `architect.md`、`dev-report.md`、`qa-report.md` 阶段产物。`/stackpilot-bench` 会验证 stackpilot 腿的这些产物，将 `.stackpilot-bench/**` 排除出实现 diff 评分，执行 workload verification command，缺少阶段证据时标记 `orchestration_invalid` 并给质量分 0。 |
 | 2026-04-20 | **单一究极 workload + 双腿 bench**：移除当前 3 个 native-enough workload，改为单个 `01-regional-billing-ledger-cutover` 高区分度场景，只比较 `zero` 与 `stackpilot`，不再跑 `savvy`。历史 bench 数据重置，避免旧 workload 污染后续判断。 |
 | 2026-04-20 | **Codex bench runner**：新增 `run-codex-bench.sh` 与 `run-leg-codex.sh`，让 `/stackpilot-bench` 可以通过 `codex exec --json --ephemeral` 测 Codex 侧的 native zero / stackpilot 两条腿。输出沿用同一份 `history.csv` 与人可读 `scorecard.md`；runner 解析 Codex usage 字段，并在 diff 前执行 `git add -N`，确保新建未跟踪文件也进入评分。 |
 | 2026-04-17 | **v1.10.0**：Opus 4.7 管线适配：`stackpilot.config.yml` 新增 per-phase effort advisory（architect/dev/qa/docs）；4 个 agent 加 effort posture 一行；跨 sprint 记忆——`.stackpilot/sprint-metrics.md`（sprint-finish 追加）和 `.stackpilot/decisions.md`（sp-architect 在 HIGH 风险时追加）；Sprint Clean 读取最近 3 次 sprint 趋势并提示；auto-verify 循环从 3 轮降到 2 轮；SKILL.md 12-QA 表格抽到 `references/12-qa-matrix.md`。 |

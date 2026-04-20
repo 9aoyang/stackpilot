@@ -228,6 +228,9 @@ For each workload `<id>`:
 
 - Read `workloads/<id>/prompts.yml` → extract keys `zero`, `stackpilot`.
 - Read `workloads/<id>/traps.yml` → extract trap list, `functional_assertions`, and `verification_commands`.
+- If `workloads/<id>/evaluator/` exists, treat it as hidden evaluator input.
+  It is not copied into `bench-sandbox/` until after the model leg finishes and
+  after the implementation diff is captured.
 
 **b. Compute leg order**
 
@@ -291,6 +294,7 @@ For each `leg` in the shuffled order:
    ```bash
    git -C .worktrees/bench-run add -N -- \
      bench-sandbox/ \
+     ':(exclude)bench-sandbox/.stackpilot-hidden-evaluator/**' \
      ':(exclude)bench-sandbox/node_modules/**' \
      ':(exclude)bench-sandbox/.next/**' \
      ':(exclude)bench-sandbox/dist/**' \
@@ -300,6 +304,7 @@ For each `leg` in the shuffled order:
 
    git -C .worktrees/bench-run diff "$LEG_START_SHA" -- \
      bench-sandbox/ \
+     ':(exclude)bench-sandbox/.stackpilot-hidden-evaluator/**' \
      ':(exclude)bench-sandbox/node_modules/**' \
      ':(exclude)bench-sandbox/.next/**' \
      ':(exclude)bench-sandbox/dist/**' \
@@ -326,7 +331,7 @@ For each `leg` in the shuffled order:
    - If any regex is invalid, abort the run immediately (no CSV write); point to the offending trap ID.
    - Accumulate `traps_avoided_in_diff` and `traps_caught_in_qa` counts.
 
-9. **Run functional assertions and verification commands**: each `diff_must_match_regex` in `functional_assertions` must match the diff, and each command in `verification_commands` must exit 0 when run inside `bench-sandbox/`. `functional_pass = true` iff ALL regex assertions and verification commands pass. A failed assertion or command does not abort; record it in the row.
+9. **Run functional assertions and verification commands**: if `workloads/<id>/evaluator/` exists, copy it into `bench-sandbox/.stackpilot-hidden-evaluator/` now. Then each `diff_must_match_regex` in `functional_assertions` must match the diff, and each command in `verification_commands` must exit 0 when run inside `bench-sandbox/`. `functional_pass = true` iff ALL regex assertions and verification commands pass. A failed assertion or command does not abort; record it in the row.
 
 10. **Accumulate in-memory row**:
 
