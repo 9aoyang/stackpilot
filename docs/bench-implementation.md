@@ -38,7 +38,7 @@ git -C .worktrees/bench-run rev-parse HEAD > .worktrees/bench-run/.bench-base-sh
 
 The `.bench-base-sha` marker file is what `reset-worktree.sh` reads to know what to reset to.
 
-### 3. Main loop — 3 workloads × 3 legs (per-leg flow)
+### 3. Main loop — 1 workload × 2 legs (per-leg flow)
 
 For each workload, shuffle leg order using `md5(RUN_TS)` as seed (mitigates parent-session cache bias). Then for each leg:
 
@@ -55,12 +55,11 @@ git -C <worktree> commit --no-verify -m "bench: leg-start fixture"
 
 The leg-start SHA is the diff base for capturing the agent's edits later.
 
-**(b) Dispatch the leg.** Three different mechanisms:
+**(b) Dispatch the leg.** Two mechanisms:
 
 | Leg | Mechanism |
 |---|---|
 | `zero` | `Agent(subagent_type="general-purpose", prompt=PREAMBLE+ZERO_PROMPT)` |
-| `savvy` | `Agent(subagent_type="general-purpose", prompt=PREAMBLE+SAVVY_PROMPT)` |
 | `stackpilot` | Main agent itself runs the full /stackpilot pipeline: write mini spec/plan, dispatch sp-architect (if standard complexity), dispatch sp-dev, dispatch sp-qa |
 
 The PREAMBLE is critical: `"Working directory for this task: .worktrees/bench-run/bench-sandbox/. All file paths below are relative to that directory."` Without it, the sub-agent operates in the main repo's cwd and edits real files.
@@ -107,7 +106,7 @@ The tmp+mv pattern means a crash mid-write leaves the original `history.csv` int
 
 ### 6. Verdict + cleanup
 
-`compute-verdict.sh history.csv $RUN_TS` reads the CSV, computes per-workload pairwise verdicts (stackpilot vs savvy, stackpilot vs zero), aggregates to overall POSITIVE / MARGINAL / NEGATIVE / BASELINE_ESTABLISHED, prints the ASCII verdict block.
+`compute-scorecard.sh history.csv $RUN_TS` reads the CSV, compares stackpilot against the available native baseline (currently zero), and prints the score/time-first markdown scorecard.
 
 Then: release lock, remove worktree, delete bench branch.
 
@@ -220,18 +219,16 @@ safeguard; these design rules are the human one.
 
 ### What replaced them
 
-The v3 workloads installed 2026-04-20 (after this post-mortem) target
-real /stackpilot scenarios:
+The v3 workloads installed after this post-mortem still saturated current
+Codex zero-shot. The active v4 replacement is a single ultimate workload:
 
-- `01-saas-subscription-feature` — ambiguous prompt (enterprise plan
-  intent, 500 existing free users, no clear migration path)
-- `02-search-migration-no-downtime` — dual-write + rollback +
-  backfill + response-shape preservation
-- `03-multi-tenant-audit-logging` — cross-system consistency in an
-  existing multi-tenant codebase with conventions to obey
+- `01-regional-billing-ledger-cutover` — regional billing ledger migration
+  with hidden contracts across docs, tests, and source. It tests API response
+  compatibility, idempotent ledger writes, PII redaction, dual-write rollback,
+  cursor backfill, reconciliation, and avoiding deprecated helpers.
 
-Each one can fail silently in ways that only architect-grade review
-catches. This is the right kind of test for `/stackpilot`.
+The bench no longer runs `savvy`; it tests the actual adoption decision:
+native zero-shot versus explicit `/stackpilot`.
 
 ## v1 known limitations
 

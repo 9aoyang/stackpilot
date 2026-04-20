@@ -1,13 +1,13 @@
 ---
 name: stackpilot-bench
-description: Continuous quantitative benchmark for stackpilot. Runs three-legged comparison (naive_zero / naive_savvy / stackpilot) across fixed workloads, writes CSV time series and verdict report. Use when you want to know whether a recent change to sp-* agent prompts or /stackpilot skill is a positive or negative optimization.
+description: Continuous quantitative benchmark for stackpilot. Runs two-legged comparison (native zero / stackpilot) against one high-discrimination workload, writes CSV time series and scorecard report. Use when you want to know whether stackpilot creates quality lift over native Codex/Claude on tasks that actually warrant orchestration.
 ---
 
 # /stackpilot-bench
 
 ## Overview
 
-`/stackpilot-bench` runs a repeatable, three-legged benchmark comparing naive Claude Code usage against the full stackpilot pipeline. Each run dispatches three "legs" (`naive_zero`, `naive_savvy`, `stackpilot`) across three fixed workloads, collects token cost, wall-clock duration, trap-catch rate, and functional correctness signals, then appends one row per (workload × leg) to `.stackpilot/benchmarks/history.csv` and writes a markdown report. The result is a single POSITIVE / MARGINAL / NEGATIVE verdict answering the question: **is the current state of stackpilot better or worse than the last measured run?**
+`/stackpilot-bench` runs a repeatable, two-legged benchmark comparing native zero-shot usage against the full stackpilot pipeline. Each run dispatches `zero` and `stackpilot` against one high-discrimination workload, collects token cost, wall-clock duration, trap-catch rate, and functional correctness signals, then appends one row per leg to `.stackpilot/benchmarks/history.csv` and writes a markdown scorecard. The question is: **does stackpilot create quality lift over native zero-shot on a task that actually warrants orchestration?**
 
 ## Codex Runtime
 
@@ -22,7 +22,7 @@ The Codex runner uses `codex exec --json --ephemeral` for each leg, keeps edits 
 For a targeted diagnostic run, use:
 
 ```bash
-bash claude-config/skills/stackpilot-bench/scripts/run-codex-bench.sh --workload <id> --leg <zero|savvy|stackpilot> --no-history
+bash claude-config/skills/stackpilot-bench/scripts/run-codex-bench.sh --workload <id> --leg <zero|stackpilot> --no-history
 ```
 
 The `--no-history` mode is for smoke diagnostics only; full benchmark runs should append to history so future AI-assisted analysis has a durable time series.
@@ -214,7 +214,7 @@ Hold `RUN_TS` as a runtime variable for the remainder of the run. All raw artifa
 
 ## Step 2 — Main execution loop
 
-Iterate the three workloads and nine (3 × 3) leg dispatches. After all dispatches complete, hold all rows in memory — do NOT write to CSV until TASK-005 adaptive sampling is complete.
+Iterate the installed workload and two leg dispatches (`zero`, `stackpilot`). After all dispatches complete, hold all rows in memory — do NOT write to CSV until TASK-005 adaptive sampling is complete.
 
 ### 2.1 Load workload list
 
@@ -226,12 +226,12 @@ For each workload `<id>`:
 
 **a. Load workload definition**
 
-- Read `workloads/<id>/prompts.yml` → extract keys `zero`, `savvy`, `stackpilot`.
+- Read `workloads/<id>/prompts.yml` → extract keys `zero`, `stackpilot`.
 - Read `workloads/<id>/traps.yml` → extract trap list and `functional_assertions`.
 
 **b. Compute leg order**
 
-Shuffle `["zero", "savvy", "stackpilot"]` deterministically using `RUN_TS` as seed. See runner.md §Deterministic Leg-Order Shuffling for the full algorithm (seed = md5 of `RUN_TS`, each leg sorted by md5(seed + leg_name)). Record the shuffled order for the report.
+Shuffle `["zero", "stackpilot"]` deterministically using `RUN_TS` as seed. See runner.md §Deterministic Leg-Order Shuffling for the full algorithm (seed = md5 of `RUN_TS`, each leg sorted by md5(seed + leg_name)). Record the shuffled order for the report.
 
 **c. Per-leg loop**
 
@@ -267,7 +267,7 @@ For each `leg` in the shuffled order:
    """
    ```
 
-   - `zero` and `savvy` legs:
+   - `zero` leg:
      ```
      Agent(subagent_type="general-purpose", prompt=PREAMBLE)
      ```
@@ -797,7 +797,7 @@ Fixed workloads risk becoming stale if prompt engineering iteration overfits to 
 
 - **POSITIVE OPTIMIZATION**: safe to merge — stackpilot is measurably better or equal on all dimensions.
 - **MARGINAL**: use judgment — gains exist but are offset by a degradation in cost or trap-catch rate, or an INCOMPLETE workload prevented a full read.
-- **NEGATIVE OPTIMIZATION**: do not merge — at least one workload fails the pairwise quality check vs savvy; the pipeline is regressing.
+- **NEGATIVE OPTIMIZATION**: do not merge — the workload fails the pairwise quality check vs native zero; the pipeline is regressing.
 
 ### Known biases (summary)
 

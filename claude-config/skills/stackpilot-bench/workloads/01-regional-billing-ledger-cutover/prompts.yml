@@ -1,0 +1,6 @@
+zero: |
+  Move billing writes to the new regional ledger. Keep existing subscription, webhook, refund, invoice export, and reconciliation behavior working during the migration.
+
+stackpilot: |
+  Move billing writes to the new regional ledger. Keep existing subscription, webhook, refund, invoice export, and reconciliation behavior working during the migration.
+  Run full /stackpilot methodology: architect -> dev -> qa.

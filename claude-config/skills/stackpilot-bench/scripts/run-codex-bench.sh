@@ -3,10 +3,10 @@ set -euo pipefail
 
 # run-codex-bench.sh
 # Usage:
-#   run-codex-bench.sh [--workload <id>] [--leg <zero|savvy|stackpilot>] [--no-history]
+#   run-codex-bench.sh [--workload <id>] [--leg <zero|stackpilot>] [--no-history]
 #
 # Runs the stackpilot benchmark through Codex headless mode. By default this
-# executes all fixed workloads and all three legs, appends rows to history.csv,
+# executes all fixed workloads and the zero/stackpilot legs, appends rows to history.csv,
 # and renders a scorecard for the run.
 
 ROOT="$(git rev-parse --show-toplevel)"
@@ -49,8 +49,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -n "$LEG_FILTER" && "$LEG_FILTER" != "zero" && "$LEG_FILTER" != "savvy" && "$LEG_FILTER" != "stackpilot" ]]; then
-  echo "ERROR: --leg must be one of zero, savvy, stackpilot" >&2
+if [[ -n "$LEG_FILTER" && "$LEG_FILTER" != "zero" && "$LEG_FILTER" != "stackpilot" ]]; then
+  echo "ERROR: --leg must be one of zero, stackpilot" >&2
   exit 2
 fi
 
@@ -241,7 +241,7 @@ import sys
 
 run_ts = sys.argv[1]
 seed = hashlib.md5(run_ts.encode()).hexdigest()[:8]
-legs = ['zero', 'savvy', 'stackpilot']
+legs = ['zero', 'stackpilot']
 for leg in sorted(legs, key=lambda item: hashlib.md5((seed + item).encode()).hexdigest()):
     print(leg)
 PYEOF

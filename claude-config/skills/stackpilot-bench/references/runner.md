@@ -83,23 +83,6 @@ Agent(
 - The subagent is a stateless general-purpose agent — no stackpilot methodology injected.
 - Capture the result: tokens, duration, tool_uses count, final git diff.
 
-### Savvy Leg (best-practice baseline)
-
-**Purpose:** a prompt a prompt-literate user would write, including best practices like "read CLAUDE.md", "write tests", "explain plan before changes".
-
-**Dispatch:**
-```
-Agent(
-  subagent_type="general-purpose",
-  prompt=workload.prompts.savvy
-)
-```
-
-**Notes:**
-- `workload.prompts.savvy` is a string loaded from `prompts.yml` under the key `savvy`.
-- This is the upper-cost baseline; stackpilot must beat or match savvy on quality while staying within the 3x token budget.
-- Capture same metrics as zero leg.
-
 ### Stackpilot Leg (the pipeline under test)
 
 **Purpose:** full `/stackpilot` methodology applied to the workload prompt.
@@ -114,7 +97,7 @@ Agent(
 **Notes:**
 - Do NOT dispatch the stackpilot leg as `Agent(subagent_type="stackpilot", ...)`. Stackpilot is a skill, not an agent type; the main agent drives the pipeline.
 - The pipeline runs against `workload.prompts.stackpilot` as the initial user request (the "task spec" text).
-- Capture the same metrics as zero/savvy legs PLUS the sp-qa report text (see below).
+- Capture the same metrics as the zero leg PLUS the sp-qa report text (see below).
 
 ## Capturing Metrics
 
@@ -192,7 +175,7 @@ seed_hex = md5sum(seed_string) | head -c 8
 
 **Permutation algorithm:**
 ```
-legs = ["zero", "savvy", "stackpilot"]
+legs = ["zero", "stackpilot"]
 
 # Sort legs by md5(seed_hex + leg_name), lexicographically
 legs_with_hash = [
@@ -210,15 +193,13 @@ seed_hex = "a3f2d1b7"  # from md5sum
 
 Hash values:
   md5("a3f2d1b7" + "zero")     = "9c5f2e1a..."
-  md5("a3f2d1b7" + "savvy")    = "7d4e1b3c..."
   md5("a3f2d1b7" + "stackpilot") = "5a2f9d8e..."
 
 Sorted order (lexicographically by hash):
   1. "5a2f9d8e..." → stackpilot
-  2. "7d4e1b3c..." → savvy
-  3. "9c5f2e1a..." → zero
+  2. "9c5f2e1a..." → zero
 
-Execution order for this workload: stackpilot, savvy, zero
+Execution order for this workload: stackpilot, zero
 ```
 
 **Recording:**
@@ -240,7 +221,7 @@ For each leg, after capturing the diff:
 3. Count totals:
    - `traps_total` = count of trap entries in `traps.yml`.
    - `traps_avoided_in_diff` = count of traps where `diff_bad_regex` does NOT match.
-   - `traps_caught_in_qa` = count of traps where `qa_good_regex` matches (stackpilot leg only; `null` for zero/savvy).
+   - `traps_caught_in_qa` = count of traps where `qa_good_regex` matches (stackpilot leg only; `null` for zero).
 
 **Regex error handling:**
 If any regex (either `diff_bad_regex` or `qa_good_regex`) is invalid, the run aborts immediately with an error message pointing to the offending trap ID and workload file. No CSV is written.
@@ -305,7 +286,7 @@ functional_pass, signals_critical, signals_soft_blocked
 - `git_sha`: the current HEAD SHA of main (captured at the start of the run, before worktree creation).
 - `stackpilot_version`: from the `VERSION` file in the repo root, or `unknown` if file doesn't exist.
 - `workload_id`: e.g., `01-trap-heavy-bash`, `02-doc-consistency`, `03-cross-file-refactor`.
-- `leg`: `zero`, `savvy`, or `stackpilot`.
+- `leg`: `zero` or `stackpilot`.
 - `run_n`: iteration number (1, 2, 3 for adaptive sampling; usually 1).
 - Token fields: numeric or `null` if timed out / error.
 - `duration_sec`: numeric (float).
@@ -346,9 +327,7 @@ For reproducibility, include this mapping in the report:
 Run timestamp: 2026-04-17-1430
 Seed: a3f2d1b7
 
-Workload 01: [stackpilot, savvy, zero]
-Workload 02: [zero, stackpilot, savvy]
-Workload 03: [savvy, zero, stackpilot]
+Workload 01: [stackpilot, zero]
 ```
 
 This demonstrates that order varies per workload but is deterministic within a run.

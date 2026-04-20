@@ -5,7 +5,8 @@ set -euo pipefail
 # Usage: compute-scorecard.sh <history_csv_path> <run_timestamp> [config_path]
 #
 # Reads history.csv, extracts rows for run_timestamp, computes a product-
-# comparison scorecard (stackpilot vs native savvy, with zero as floor baseline)
+# comparison scorecard (stackpilot vs native zero by default; native savvy is
+# still supported for reading older 3-leg history)
 # and prints a score/time-first human-readable scorecard to stdout.
 #
 # Unlike compute-verdict.sh (which answers "did the last change regress?"),
@@ -247,22 +248,26 @@ def leg_overall_filtered(leg_name, wids):
     overall = total_score / total_w if total_w > 0 else None
     return avg, overall
 
+has_savvy = any(leg_data[wid].get('savvy') for wid in workload_ids)
+baseline_leg = 'savvy' if has_savvy else 'zero'
+baseline_label = 'Native Savvy' if has_savvy else 'Native Zero'
+
 # All-workloads view (for per-dimension table display)
-savvy_dims_all, savvy_overall_all = leg_overall('savvy')
-sp_dims_all,    sp_overall_all    = leg_overall('stackpilot')
-zero_dims_all,  zero_overall_all  = leg_overall('zero')
+baseline_dims_all, baseline_overall_all = leg_overall(baseline_leg)
+sp_dims_all,       sp_overall_all       = leg_overall('stackpilot')
+zero_dims_all,     zero_overall_all     = leg_overall('zero')
 
 # Discriminative-only view (for headline overall score)
-savvy_dims,   savvy_overall   = leg_overall_filtered('savvy', discriminative_ids)
-sp_dims,      sp_overall      = leg_overall_filtered('stackpilot', discriminative_ids)
-zero_dims,    zero_overall    = leg_overall_filtered('zero', discriminative_ids)
+baseline_dims,   baseline_overall   = leg_overall_filtered(baseline_leg, discriminative_ids)
+sp_dims,         sp_overall         = leg_overall_filtered('stackpilot', discriminative_ids)
+zero_dims,       zero_overall       = leg_overall_filtered('zero', discriminative_ids)
 
 # If ALL workloads are non-discriminative, fall back to all-workloads so we
 # still produce numbers, but flag the run in the headline.
 if not discriminative_ids:
-    savvy_dims,   savvy_overall   = savvy_dims_all,   savvy_overall_all
-    sp_dims,      sp_overall      = sp_dims_all,      sp_overall_all
-    zero_dims,    zero_overall    = zero_dims_all,    zero_overall_all
+    baseline_dims,   baseline_overall   = baseline_dims_all,   baseline_overall_all
+    sp_dims,         sp_overall         = sp_dims_all,         sp_overall_all
+    zero_dims,       zero_overall       = zero_dims_all,       zero_overall_all
 
 # ─── Human-readable formatting helpers ────────────────────────────────────────
 
@@ -356,16 +361,16 @@ target_ids = discriminative_ids
 native_enough_ids = [w for w in workload_ids if w in non_discriminative]
 display_ids = target_ids if target_ids else workload_ids
 
-savvy_time = aggregate_duration(display_ids, 'savvy')
+baseline_time = aggregate_duration(display_ids, baseline_leg)
 sp_time = aggregate_duration(display_ids, 'stackpilot')
 zero_time = aggregate_duration(display_ids, 'zero')
 
-savvy_speed = savvy_dims.get('speed') if savvy_dims else None
+baseline_speed = baseline_dims.get('speed') if baseline_dims else None
 sp_speed = sp_dims.get('speed') if sp_dims else None
 zero_speed = zero_dims.get('speed') if zero_dims else None
 
-score_delta = sp_overall - savvy_overall if sp_overall is not None and savvy_overall is not None else None
-time_delta = sp_time - savvy_time if sp_time is not None and savvy_time is not None else None
+score_delta = sp_overall - baseline_overall if sp_overall is not None and baseline_overall is not None else None
+time_delta = sp_time - baseline_time if sp_time is not None and baseline_time is not None else None
 extra_min_per_point = None
 if score_delta and score_delta > 0 and time_delta is not None and time_delta > 0:
     extra_min_per_point = (time_delta / 60.0) / score_delta
@@ -387,11 +392,11 @@ if not target_ids:
     lines.append("下一步应该换更复杂的 workload，而不是调 agent prompt。")
 elif score_delta is not None and time_delta is not None:
     if score_delta >= 8:
-        lines.append(f"复杂任务建议使用 Stackpilot：质量 {fmt_delta(sp_overall, savvy_overall)} 分，额外耗时 {fmt_duration_delta(sp_time, savvy_time)}（{fmt_pct_delta(sp_time, savvy_time)}）。")
+        lines.append(f"复杂任务建议使用 Stackpilot：质量 {fmt_delta(sp_overall, baseline_overall)} 分，额外耗时 {fmt_duration_delta(sp_time, baseline_time)}（{fmt_pct_delta(sp_time, baseline_time)}）。")
     elif score_delta >= 3:
-        lines.append(f"Stackpilot 略有质量收益：质量 {fmt_delta(sp_overall, savvy_overall)} 分，但额外耗时 {fmt_duration_delta(sp_time, savvy_time)}（{fmt_pct_delta(sp_time, savvy_time)}）。")
+        lines.append(f"Stackpilot 略有质量收益：质量 {fmt_delta(sp_overall, baseline_overall)} 分，但额外耗时 {fmt_duration_delta(sp_time, baseline_time)}（{fmt_pct_delta(sp_time, baseline_time)}）。")
     else:
-        lines.append(f"不建议为这类任务使用 Stackpilot：质量 {fmt_delta(sp_overall, savvy_overall)} 分，耗时 {fmt_duration_delta(sp_time, savvy_time)}。")
+        lines.append(f"不建议为这类任务使用 Stackpilot：质量 {fmt_delta(sp_overall, baseline_overall)} 分，耗时 {fmt_duration_delta(sp_time, baseline_time)}。")
     if extra_min_per_point is not None:
         lines.append(f"换算下来，每提升 1 分大约多花 {extra_min_per_point:.1f} 分钟。")
 else:
@@ -403,35 +408,36 @@ lines.append("Native Zero")
 lines.append(f"质量：{stars(zero_overall)} {fmt_score(zero_overall)}")
 lines.append(f"耗时：{fmt_duration(zero_time)}（速度 {stars(zero_speed)}）")
 lines.append('')
-lines.append("Native Savvy")
-lines.append(f"质量：{stars(savvy_overall)} {fmt_score(savvy_overall)}")
-lines.append(f"耗时：{fmt_duration(savvy_time)}（速度 {stars(savvy_speed)}）")
-lines.append('')
+if has_savvy:
+    lines.append("Native Savvy")
+    lines.append(f"质量：{stars(baseline_overall)} {fmt_score(baseline_overall)}")
+    lines.append(f"耗时：{fmt_duration(baseline_time)}（速度 {stars(baseline_speed)}）")
+    lines.append('')
 lines.append("Stackpilot")
 lines.append(f"质量：{stars(sp_overall)} {fmt_score(sp_overall)}")
 lines.append(f"耗时：{fmt_duration(sp_time)}（速度 {stars(sp_speed)}）")
 lines.append('')
 lines.append("质量图")
-lines.append(f"Native Savvy  {bar(savvy_overall)} {fmt_score(savvy_overall)}")
+lines.append(f"{baseline_label:<13} {bar(baseline_overall)} {fmt_score(baseline_overall)}")
 lines.append(f"Stackpilot    {bar(sp_overall)} {fmt_score(sp_overall)}")
 lines.append('')
 lines.append("## Per Workload")
 lines.append('')
 for wid in workload_ids:
     zero_c = workload_composite(wid, 'zero')
-    sav_c = workload_composite(wid, 'savvy')
+    base_c = workload_composite(wid, baseline_leg)
     sp_c = workload_composite(wid, 'stackpilot')
     zero_d = leg_data[wid]['zero']['duration_sec'] if leg_data[wid].get('zero') else None
-    sav_d = leg_data[wid]['savvy']['duration_sec'] if leg_data[wid].get('savvy') else None
+    base_d = leg_data[wid][baseline_leg]['duration_sec'] if leg_data[wid].get(baseline_leg) else None
     sp_d = leg_data[wid]['stackpilot']['duration_sec'] if leg_data[wid].get('stackpilot') else None
-    delta_wl = sp_c - sav_c if sp_c is not None and sav_c is not None else None
+    delta_wl = sp_c - base_c if sp_c is not None and base_c is not None else None
     rec = recommendation_for(wid, delta_wl)
     label = "native enough" if wid in non_discriminative else "target"
     lines.append(f"{wid} ({label})")
-    lines.append(f"Native Savvy：{stars(sav_c)} {fmt_score(sav_c)} / {fmt_duration(sav_d)}")
+    lines.append(f"{baseline_label}：{stars(base_c)} {fmt_score(base_c)} / {fmt_duration(base_d)}")
     lines.append(f"Stackpilot： {stars(sp_c)} {fmt_score(sp_c)} / {fmt_duration(sp_d)}")
     if delta_wl is not None:
-        lines.append(f"差异：{fmt_delta(sp_c, sav_c)} 分，耗时 {fmt_duration_delta(sp_d, sav_d)}（{fmt_pct_delta(sp_d, sav_d)}）")
+        lines.append(f"差异：{fmt_delta(sp_c, base_c)} 分，耗时 {fmt_duration_delta(sp_d, base_d)}（{fmt_pct_delta(sp_d, base_d)}）")
     lines.append(f"建议：{rec}")
     lines.append('')
 lines.append("## Diagnostics")

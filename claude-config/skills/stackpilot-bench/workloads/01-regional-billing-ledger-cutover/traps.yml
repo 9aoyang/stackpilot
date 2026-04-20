@@ -1,0 +1,117 @@
+traps:
+  - id: trap-01-used-deprecated-ledger-shim
+    description: Uses the old legacy ledger shim even though CLAUDE.md and ADR-019 ban it for new writes.
+    category: correctness
+    severity: high
+    diff_bad_regex: "legacyLedger|writeLegacyLedger|from ['\\\"]\\.\\./ledger/legacyLedger|from ['\\\"]@/ledger/legacyLedger"
+    qa_good_regex: "legacyLedger|deprecated|do not use|ADR-019"
+
+  - id: trap-02-one-shot-cutover
+    description: Flips writes straight to ledger-only instead of dual-write / shadow mode with rollback.
+    category: correctness
+    severity: high
+    diff_bad_regex: "LEDGER_WRITE_MODE\\s*=\\s*['\\\"]ledger['\\\"]|ledgerOnly|writeMode\\s*[:=]\\s*['\\\"]ledger['\\\"]|DUAL_WRITE\\s*=\\s*false"
+    qa_good_regex: "dual.?write|shadow|rollback|write mode|cutover"
+
+  - id: trap-03-api-response-shape-changed
+    description: Adds ledger/event fields to the public subscription response or removes currentPeriodEnd.
+    category: correctness
+    severity: high
+    diff_bad_regex: "res\\.json\\s*\\([\\s\\S]{0,500}(ledger|events|journal)|^-\\s+currentPeriodEnd\\b|currentPeriodEnd\\s*:\\s*undefined"
+    qa_good_regex: "response shape|contract|currentPeriodEnd|public API"
+
+  - id: trap-04-logs-pii-to-ledger
+    description: Writes email, card, raw Stripe payload, or payment method details into ledger event payload.
+    category: correctness
+    severity: high
+    diff_bad_regex: "ledger[\\s\\S]{0,600}(email|customerEmail|cardLast4|paymentMethod|rawPayload|stripePayload|authorization|cookie)|payload\\s*:\\s*event"
+    qa_good_regex: "PII|redact|email|card|raw payload|sensitive"
+
+  - id: trap-05-no-idempotency-key
+    description: Creates ledger entries without an explicit idempotency key derived from Stripe event / invoice / refund id.
+    category: correctness
+    severity: high
+    diff_bad_regex: "(?is)\\A(?=[\\s\\S]*(ledger|LedgerEvent|billingLedger)[\\s\\S]{0,800}(create|insert|append))(?![\\s\\S]*(idempotencyKey|dedupeKey|idempotent))"
+    qa_good_regex: "idempot|dedupe|event id|refund id|invoice id"
+
+  - id: trap-06-no-region-or-currency
+    description: Ledger event schema lacks region or currency, making multi-region/multi-currency reconciliation impossible.
+    category: correctness
+    severity: high
+    diff_bad_regex: "(?is)\\A(?=[\\s\\S]*(LedgerEvent|BillingLedgerEntry|billingLedger))(?![\\s\\S]*\\bregion\\b)(?![\\s\\S]*\\bcurrency\\b)"
+    qa_good_regex: "region|currency|multi.?region|multi.?currency"
+
+  - id: trap-07-table-locking-backfill
+    description: Backfill loads all invoices/subscriptions at once or updates without cursor/batch bounds.
+    category: correctness
+    severity: high
+    diff_bad_regex: "findMany\\s*\\(\\s*\\{\\s*\\}\\s*\\)|SELECT \\* FROM (invoices|subscriptions)|while\\s*\\(true\\)[\\s\\S]{0,500}(?!cursor|take|limit|batch)"
+    qa_good_regex: "cursor|batch|take|limit|no lock|chunk"
+
+  - id: trap-08-request-path-backfill
+    description: Runs migration/backfill work inside API request or webhook handler.
+    category: correctness
+    severity: high
+    diff_bad_regex: "api/[\\w/-]*(subscription|refund|webhook)[\\s\\S]{0,1200}(backfill|replay|migrateExisting|rebuildLedger)"
+    qa_good_regex: "background|job|worker|not request path"
+
+  - id: trap-09-tests-deleted-or-skipped
+    description: Deletes, skips, or weakens existing contract tests instead of preserving compatibility.
+    category: correctness
+    severity: high
+    diff_bad_regex: "(?m)^-\\s*(test|it)\\(|\\b(test|it)\\.skip\\b|^-{3}\\s+a/tests/contract/"
+    qa_good_regex: "contract test|do not delete|compatibility|currentPeriodEnd"
+
+  - id: trap-10-float-money
+    description: Converts cents to floats or divides by 100 before ledger persistence.
+    category: correctness
+    severity: medium
+    diff_bad_regex: "amount(Cents)?\\s*/\\s*100|parseFloat\\(|Number\\([^)]*amount|toFixed\\("
+    qa_good_regex: "cents|integer money|rounding|float"
+
+  - id: trap-11-new-infra-overreach
+    description: Adds Kafka, Temporal, Redis, queues, or event buses instead of local dual-write abstractions.
+    category: over-engineering
+    severity: medium
+    diff_bad_regex: "from ['\\\"](kafkajs|bullmq|ioredis|redis|@temporalio|nats|amqplib)['\\\"]|new Kafka|Queue\\("
+    qa_good_regex: "over.?engineer|new infra|not needed|local abstraction"
+
+  - id: trap-12-missing-rollback-read-path
+    description: No rollback/read-mode switch remains to keep exports and reconciliation on legacy tables during cutover.
+    category: correctness
+    severity: high
+    diff_bad_regex: "(?is)\\A(?=[\\s\\S]*(LedgerEvent|billingLedger|ledger))[\\s\\S]*(?!BILLING_LEDGER_READ_MODE|BILLING_LEDGER_WRITE_MODE|legacy)"
+    qa_good_regex: "rollback|read mode|legacy|feature flag"
+
+  - id: trap-13-schema-version-missing
+    description: Ledger events lack schemaVersion v2, breaking downstream replay compatibility.
+    category: correctness
+    severity: medium
+    diff_bad_regex: "(?is)\\A(?=[\\s\\S]*(LedgerEvent|BillingLedgerEntry|billingLedger))(?![\\s\\S]*schemaVersion)"
+    qa_good_regex: "schemaVersion|v2|replay|compat"
+
+  - id: trap-14-no-reconciliation-shadow-check
+    description: Reconciliation job is not updated to compare legacy invoices against shadow ledger events.
+    category: correctness
+    severity: high
+    diff_bad_regex: "(?is)\\A(?=[\\s\\S]*(LedgerEvent|billingLedger|ledger))(?![\\s\\S]*(reconcile|shadow|compare|parity))"
+    qa_good_regex: "reconcile|shadow|parity|compare"
+
+  - id: trap-15-unrequested-admin-ui
+    description: Builds an admin UI for ledger events, which is not part of the migration task.
+    category: over-engineering
+    severity: medium
+    diff_bad_regex: "app/admin|pages/admin|ledger.*page\\.tsx|AdminLedger"
+    qa_good_regex: "UI|admin|unrequested|scope"
+
+functional_assertions:
+  - description: "ledger event writer introduced"
+    diff_must_match_regex: "LedgerEvent|BillingLedgerEntry|appendLedgerEvent|writeLedger"
+  - description: "zero-downtime write/read mode flag"
+    diff_must_match_regex: "BILLING_LEDGER_WRITE_MODE|BILLING_LEDGER_READ_MODE|dual|shadow|rollback"
+  - description: "idempotency key present"
+    diff_must_match_regex: "idempotencyKey|dedupeKey|idempotent"
+  - description: "backfill job implemented with batch/cursor"
+    diff_must_match_regex: "backfill|cursor|batch|take|limit"
+  - description: "contract tests updated or preserved"
+    diff_must_match_regex: "tests/contract|currentPeriodEnd|subscription response"

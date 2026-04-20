@@ -93,27 +93,23 @@ sp-architect is skipped for light tasks. sp-docs runs when plan includes docs ta
 a **scorecard** comparing stackpilot to native Claude Code across five
 dimensions — correctness, over-engineering resistance, bug catch rate,
 token efficiency, and wall-clock speed — on 0-100 scales. The scorecard
-answers "is stackpilot worth using over native Claude Code?"; a secondary
-verdict (POSITIVE/MARGINAL/NEGATIVE) answers the narrower "did the last
-change regress?" for iterative tuning. Under the hood each run still
-dispatches three legs (`naive_zero` / `naive_savvy` / `stackpilot`) across
-the fixed workloads, appends rows to `.stackpilot/benchmarks/history.csv`,
-and writes both scorecard and verdict to `runs/<timestamp>/`.
+answers "is stackpilot worth using over native Claude Code / Codex?".
+Current benchmark runs dispatch two legs (`zero` / `stackpilot`) against a
+single high-discrimination workload, append rows to
+`.stackpilot/benchmarks/history.csv`, and write a scorecard to
+`runs/<timestamp>/`.
 
-**Installed workloads** (v3, 2026-04-20 post-mortem rebuild):
+**Installed workload** (v4, 2026-04-20 Codex discrimination rebuild):
 
 | ID | Complexity | Task | Why /stackpilot matters |
 |---|---|---|---|
-| `01-saas-subscription-feature` | complex (19 files) | Add subscription management to an existing SaaS with ~500 free-tier users and upcoming enterprise plan | ambiguous requirements — needs architect to surface assumptions and stage the rollout |
-| `02-search-migration-no-downtime` | complex (20 files) | Migrate full-text search from Postgres ILIKE to Meilisearch with no downtime | dual-write + backfill + rollback + response-shape preservation |
-| `03-multi-tenant-audit-logging` | complex (25 files) | Add audit logging across an existing multi-tenant admin panel | cross-system consistency: tenant isolation, retention, PII handling, central helper vs scattered calls |
+| `01-regional-billing-ledger-cutover` | ultimate (30+ files) | Move billing writes to a regional ledger while preserving subscription API, webhooks, refunds, exports, reconciliation, rollback, and backfill safety | hidden constraints across docs/tests/source; native zero can produce plausible code while missing idempotency, PII, response-shape, rollback, or migration invariants |
 
-The v1 workloads (deleted 27f1838) and v2 workloads (deleted
-2026-04-20) both scored the zero leg at ≥97, meaning the tasks were
-simple enough for Claude 4.7 zero-shot — `/stackpilot` had no headroom
-to earn its overhead. These v3 workloads are designed around the
-actual scenarios users invoke `/stackpilot` for: ambiguous scope,
-migration hazards, cross-system consistency. See
+The v1/v2/v3 workloads all let native zero-shot score near the ceiling
+on current Codex, so they were removed from the active benchmark. The v4
+workload intentionally removes the `savvy` leg and measures only the real
+decision: native zero-shot versus explicit `/stackpilot` orchestration.
+See
 `docs/bench-implementation.md § Workload selection error (2026-04-20
 post-mortem)` for the full lesson.
 
@@ -341,8 +337,9 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
-| 2026-04-20 | **Codex benchmark runner.** Added `run-codex-bench.sh` and `run-leg-codex.sh` so `/stackpilot-bench` can measure Codex-side native zero / native savvy / stackpilot legs through `codex exec --json --ephemeral`. The runner writes the same durable history and human-readable scorecard as the Claude protocol, normalizes Codex usage fields, and uses `git add -N` before diff capture so untracked new files are scored. |
-| 2026-04-20 | **v3 workloads + scorecard discrimination check.** First post-baseline bench run (2026-04-20-0419) produced a misleading "stackpilot 明显落后" verdict because the v2 workloads were too simple — native zero scored 97/100, leaving no headroom for /stackpilot to earn its overhead. Post-mortem in `docs/bench-implementation.md § Workload selection error`. Fixes: (a) `compute-scorecard.sh` now marks any workload where zero-leg composite >90 as `🚫 NON-DISCRIMINATIVE` and excludes it from the overall composite; if all workloads are non-discriminative, headline reads `INCONCLUSIVE`. (b) v3 workloads installed — `01-saas-subscription-feature` (ambiguous scope), `02-search-migration-no-downtime` (dual-write hazards), `03-multi-tenant-audit-logging` (cross-system consistency) — designed around real /stackpilot usage patterns, not isolated well-specified tasks. The 2026-04-20-0419 run artifacts are kept under `.stackpilot/benchmarks/runs/` as a referenced negative example. |
+| 2026-04-20 | **Single ultimate workload + two-leg Codex benchmark.** Removed the three v3 workloads after Codex zero-shot scored near ceiling on all of them. Active bench now uses one high-discrimination regional billing ledger cutover workload and compares only `zero` vs `stackpilot`; `savvy` is no longer part of default runs. History was reset so obsolete native-enough rows do not pollute future analysis. |
+| 2026-04-20 | **Codex benchmark runner.** Added `run-codex-bench.sh` and `run-leg-codex.sh` so `/stackpilot-bench` can measure Codex-side native zero / stackpilot legs through `codex exec --json --ephemeral`. The runner writes the same durable history and human-readable scorecard as the Claude protocol, normalizes Codex usage fields, and uses `git add -N` before diff capture so untracked new files are scored. |
+| 2026-04-20 | **v3 workloads + scorecard discrimination check.** First post-baseline bench run (2026-04-20-0419) produced a misleading "stackpilot 明显落后" verdict because the v2 workloads were too simple — native zero scored 97/100, leaving no headroom for /stackpilot to earn its overhead. Post-mortem in `docs/bench-implementation.md § Workload selection error`. Fixes: (a) `compute-scorecard.sh` now marks any workload where zero-leg composite >90 as `🚫 NON-DISCRIMINATIVE` and excludes it from the overall composite; if all workloads are non-discriminative, headline reads `INCONCLUSIVE`. (b) v3 workloads installed — `01-saas-subscription-feature` (ambiguous scope), `02-search-migration-no-downtime` (dual-write hazards), `03-multi-tenant-audit-logging` (cross-system consistency) — designed around real /stackpilot usage patterns, not isolated well-specified tasks. These v3 workloads were later removed after Codex zero-shot also saturated them. |
 | 2026-04-20 | **Bench transformation + agent prompt reshape.** (1) `/stackpilot-bench` headline output switched from regression verdict to product-comparison scorecard (5 dimensions × 0-100, per-workload breakdown). (2) Verdict quality gate now counts `traps_caught_in_qa` at 0.5 weight so sp-qa improvements are visible. (3) Three representative workloads installed — `01-stripe-invoice-api`, `02-rate-limit-middleware`, `03-moment-to-datefns-refactor` — replacing those deleted 2026-04-17. (4) Headless `claude --print` execution scaffolded (not yet default). (5) sp-dev adds 6 explicit "Don't add X" over-engineering boundaries at prompt top. (6) sp-architect swaps prescriptive Process 1-5 for general instructions per Anthropic Claude 4.x guidance. (7) sp-qa reshaped around adversarial KPI + required evidence schema; deterministic Consistency Audit preserved. All changes grounded in 2026-04-20 Anthropic-docs + academic research survey (see `research/260420-1130-prompt-length-claims/`). |
 | 2026-04-17 | **v1.10.0**: Opus 4.7 pipeline adaptations: per-phase effort advisory in `stackpilot.config.yml` (architect/dev/qa/docs); effort posture lines in all 4 agents; cross-sprint memory via `.stackpilot/sprint-metrics.md` (appended by sprint-finish) and `.stackpilot/decisions.md` (appended by sp-architect on HIGH-risk); Sprint Clean surfaces 3-sprint trend advisory; auto-verify loops reduced 3→2 rounds; SKILL.md 12-QA tables extracted to `references/12-qa-matrix.md`. |
 | 2026-04-16 | **v1.9.1**: Removed codex-plugin-cc cross-model review integration from sp-qa. Replaced with optional Claude Code `/ultrareview` for HIGH-risk tasks (requires Opus 4.7+). Cleaner single-source toolchain aligned with Claude Code native stance. |
