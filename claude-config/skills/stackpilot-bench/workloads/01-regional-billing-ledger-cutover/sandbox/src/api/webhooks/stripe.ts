@@ -1,7 +1,7 @@
-import { recordInvoicePaid } from "../../billing/invoiceService";
-import type { Invoice } from "../../db/types";
-import { markProcessedOnce } from "../../lib/idempotency";
-import { regionFromAccount } from "../../lib/region";
+import { recordInvoicePaid } from "../../billing/invoiceService.ts";
+import type { Invoice } from "../../db/types.ts";
+import { markProcessedOnce } from "../../lib/idempotency.ts";
+import { regionFromAccount } from "../../lib/region.ts";
 
 export type StripeInvoicePaidEvent = {
   id: string;

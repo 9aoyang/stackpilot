@@ -130,7 +130,10 @@ leg-start SHA for scoped diff capture.
 After a leg finishes and after the scoped diff is captured, the runner copies
 that evaluator into `bench-sandbox/.stackpilot-hidden-evaluator/` and executes
 `verification_commands` against the final code. This prevents the benchmark
-from becoming an open-book test while preserving durable raw artifacts.
+from becoming an open-book test while preserving durable raw artifacts. Hidden
+tests must still grade public behavior rather than private answer-key names:
+prefer existing public APIs and observable state, and keep any static assertions
+semantic/path-agnostic unless the prompt explicitly declares a public contract.
 
 **Headless execution** (scaffolded 2026-04-20, not yet default): each leg
 runs as an isolated `claude --print` subprocess via `run-leg-headless.sh`,
@@ -356,6 +359,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-04-20 | **Behavior-based closed-book evaluator.** Regional ledger hidden tests now exercise observable API behavior and generic ledger/reconciliation invariants instead of requiring private implementation names such as a fixed ledger file or helper function. The workload fixture also uses explicit `.ts` imports so hidden tests measure billing migration behavior rather than Node ESM resolution cleanup. |
 | 2026-04-20 | **Closed-book benchmark evaluator.** Moved regional ledger contract tests out of the visible sandbox into `workloads/<id>/evaluator/`. The Codex bench runner now injects them only after model execution as `.stackpilot-hidden-evaluator/` and runs verification commands against that hidden suite, preventing zero-shot and stackpilot legs from reading or editing the answer key. |
 | 2026-04-20 | **Codex Stackpilot execution contract.** Codex `/stackpilot` now requires auditable `architect.md`, `dev-report.md`, and `qa-report.md` phase artifacts for standard-or-higher tasks. `/stackpilot-bench` verifies those artifacts for the stackpilot leg, excludes `.stackpilot-bench/**` from implementation diff scoring, runs workload verification commands, and marks missing phase evidence as `orchestration_invalid` with zero quality score. |
 | 2026-04-20 | **Single ultimate workload + two-leg Codex benchmark.** Removed the three v3 workloads after Codex zero-shot scored near ceiling on all of them. Active bench now uses one high-discrimination regional billing ledger cutover workload and compares only `zero` vs `stackpilot`; `savvy` is no longer part of default runs. History was reset so obsolete native-enough rows do not pollute future analysis. |

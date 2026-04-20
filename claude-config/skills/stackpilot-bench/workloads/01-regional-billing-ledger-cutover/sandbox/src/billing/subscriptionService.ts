@@ -1,4 +1,4 @@
-import { db } from "../db/client";
+import { db } from "../db/client.ts";
 
 export async function getSubscriptionResponse(accountId: string) {
   const subscription = db.subscriptions.get(accountId);

@@ -1,4 +1,4 @@
-import { listInvoicesForExport } from "../billing/invoiceService";
+import { listInvoicesForExport } from "../billing/invoiceService.ts";
 
 export async function getInvoiceExportApi() {
   const invoices = await listInvoicesForExport();

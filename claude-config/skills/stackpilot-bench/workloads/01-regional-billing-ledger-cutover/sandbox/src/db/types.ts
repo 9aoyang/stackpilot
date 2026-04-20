@@ -1,5 +1,5 @@
-import type { Currency } from "../lib/money";
-import type { Region } from "../lib/region";
+import type { Currency } from "../lib/money.ts";
+import type { Region } from "../lib/region.ts";
 
 export type SubscriptionStatus = "trialing" | "active" | "past_due" | "canceled";
 

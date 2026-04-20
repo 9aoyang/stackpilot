@@ -1,6 +1,6 @@
-import { db } from "../db/client";
-import type { Refund } from "../db/types";
-import { assertCents } from "../lib/money";
+import { db } from "../db/client.ts";
+import type { Refund } from "../db/types.ts";
+import { assertCents } from "../lib/money.ts";
 
 export async function recordRefund(refund: Refund) {
   assertCents(refund.amountCents);

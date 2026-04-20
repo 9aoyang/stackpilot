@@ -1,4 +1,4 @@
-import type { Invoice, Refund, Subscription } from "./types";
+import type { Invoice, Refund, Subscription } from "./types.ts";
 
 const subscriptions = new Map<string, Subscription>();
 const invoices = new Map<string, Invoice>();

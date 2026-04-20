@@ -1,4 +1,4 @@
-import { readEnv } from "./env";
+import { readEnv } from "./env.ts";
 
 export type LedgerWriteMode = "legacy" | "dual" | "ledger";
 export type LedgerReadMode = "legacy" | "ledger";

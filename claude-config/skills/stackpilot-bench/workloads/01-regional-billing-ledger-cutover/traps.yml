@@ -86,7 +86,7 @@ traps:
     must_match_regex:
       - "getLedgerReadMode|BILLING_LEDGER_READ_MODE"
       - "legacy"
-      - "listInvoicesFromLedger"
+      - "ledger"
     qa_good_regex: "rollback|read mode|legacy|feature flag"
 
   - id: trap-13-schema-version-missing
@@ -104,9 +104,9 @@ traps:
     check_file: "src/jobs/reconcileStripe.ts"
     diff_bad_regex: "(?!)"
     must_match_regex:
-      - "listInvoicesFromLedger|billingLedgerEvents|ledger"
+      - "ledger|BILLING_LEDGER_READ_MODE|getLedgerReadMode"
       - "legacy|db\\.invoices|listInvoicesForExport"
-      - "parity|compare|matches|legacyTotal"
+      - "parity|compare|matches|legacyTotal|ledgerTotal"
     qa_good_regex: "reconcile|shadow|parity|compare"
 
   - id: trap-15-unrequested-admin-ui
