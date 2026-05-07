@@ -392,6 +392,16 @@ Agent(description="Dev: TASK-NNN",
 - `[ESCALATION]` → present to user, wait
 - `[SOFT-BLOCKED]` → retry up to 3 times, then ask user
 
+**4.5. Simplify** (standard complexity only — skip for light tasks and `type: docs`; low ROI on small/mechanical diffs):
+
+After dev result is clean, invoke the simplify skill to catch over-engineering (premature abstractions, dead error handling, unnecessary helpers, redundant comments) before QA spends cycles on it:
+
+```
+Skill(skill="simplify", args="Scope: TASK-NNN only. Restrict review and edits to this task's relevant_files: <files>. Preserve test pass status — re-run qa.test_command after any change.")
+```
+
+If simplify modifies files, commit the simplify diff separately (e.g. `refactor: simplify TASK-NNN`) so QA sees both dev and simplify diffs distinctly. If simplify breaks tests it cannot self-fix, revert simplify changes and proceed to QA on the un-simplified code (don't block the task on stylistic cleanup).
+
 **5. QA review** (standard complexity only — light tasks rely on sp-dev's TDD verify/fix loop; Claude 4.7 self-catches unit-level issues during dev):
 ```
 Agent(description="QA: TASK-NNN",

@@ -96,6 +96,14 @@ If these artifacts are missing, empty, or only contain generic prose unrelated
 to the diff, the run is `orchestration_invalid`; consumers must not score it as
 a normal Stackpilot result.
 
+## Simplify step (4.5)
+
+Standard tasks must run the simplify skill between dev and QA, scoped to the
+task's `relevant_files` only. In Codex, invoke via the `skill` tool with the
+same args described in `stackpilot/SKILL.md` Step 4.5. If the simplify diff
+breaks tests beyond the skill's own self-fix, revert it and proceed to QA on
+the un-simplified code. Skip for light tasks and `type: docs`.
+
 ## Result handling
 
 - `[ESCALATION]`: stop and present the decision.

@@ -72,18 +72,18 @@ stackpilot/                        ← framework installation
 ### Standard Task (multi-module, architectural decisions)
 
 ```
-sp-architect → sp-dev → sp-qa
+sp-architect → sp-dev → /simplify → sp-qa
 ```
 
 ### Light Task (single-file, clear requirements)
 
 ```
-sp-dev → sp-qa
+sp-dev
 ```
 
-sp-architect is skipped for light tasks. sp-docs runs when plan includes docs tasks.
+sp-architect, /simplify, and sp-qa are skipped for light tasks (low ROI on small/mechanical diffs; sp-dev's TDD verify/fix loop covers correctness). sp-docs runs when plan includes docs tasks.
 
-> **Note:** sp-qa dispatches immediately after each sp-dev task completes (inline review, not batch).
+> **Note:** sp-qa dispatches immediately after /simplify on each task (inline review, not batch). /simplify runs scoped to the task's `relevant_files`, must preserve test pass status, and commits its diff separately so QA sees dev and simplify changes distinctly.
 
 ---
 
@@ -359,6 +359,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-05-07 | **Step 4.5 simplify between dev and QA.** Standard tasks now invoke the `simplify` skill on the task diff after sp-dev finishes and before sp-qa starts. Scoped to the task's `relevant_files`, must preserve test pass status, commits separately so QA sees both diffs. Catches over-engineering (premature abstractions, dead error handling, single-use helpers) while sp-dev's tests are still green — cheaper than sp-qa fix loops on style issues. Skipped for light tasks and `type: docs` (low ROI on small/mechanical diffs). Codex dispatch updated for parity. |
 | 2026-04-20 | **Behavior-based closed-book evaluator.** Regional ledger hidden tests now exercise observable API behavior and generic ledger/reconciliation invariants instead of requiring private implementation names such as a fixed ledger file or helper function. The workload fixture also uses explicit `.ts` imports so hidden tests measure billing migration behavior rather than Node ESM resolution cleanup. |
 | 2026-04-20 | **Closed-book benchmark evaluator.** Moved regional ledger contract tests out of the visible sandbox into `workloads/<id>/evaluator/`. The Codex bench runner now injects them only after model execution as `.stackpilot-hidden-evaluator/` and runs verification commands against that hidden suite, preventing zero-shot and stackpilot legs from reading or editing the answer key. |
 | 2026-04-20 | **Codex Stackpilot execution contract.** Codex `/stackpilot` now requires auditable `architect.md`, `dev-report.md`, and `qa-report.md` phase artifacts for standard-or-higher tasks. `/stackpilot-bench` verifies those artifacts for the stackpilot leg, excludes `.stackpilot-bench/**` from implementation diff scoring, runs workload verification commands, and marks missing phase evidence as `orchestration_invalid` with zero quality score. |
