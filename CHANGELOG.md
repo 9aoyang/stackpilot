@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-05-18
+
+### Changed (2026-05-18 — parallel Run Sprint + criteria-gated Sprint Finish + brainstorm re-sync)
+
+- **Run Sprint now executes in parallel waves** instead of strict serial.
+  Pre-Sprint computes dependency waves via topological sort over `depends_on`;
+  wave-internal tasks dispatch in parallel (cap by `qa.max_parallel`, default
+  3). Each task already has worktree isolation, so concurrent dev is safe.
+  Expected to be the largest wall-time improvement to the sprint pipeline.
+  Detailed protocol in `claude-config/skills/stackpilot/references/run-sprint.md`.
+- **Per-task `state.json` persistence** under
+  `.stackpilot/runs/<sprint-slug>/TASK-NNN/` (gitignored, atomic `.tmp` +
+  `mv` writes). Replaces in-memory-only TaskCreate state. Sprint Interrupted
+  recovery now reads `state.json` first; falls back to git log heuristic only
+  when missing.
+- **Acceptance-criteria-driven Sprint Finish gate**
+  (`references/sprint-finish.md` Step 0.5). Phase 3.6 derives mechanically
+  verifiable criteria (`.stackpilot/specs/<feature>-criteria.md`); sp-qa
+  updates Status during Run Sprint; Sprint Finish enforces 3 gates (criteria
+  all green / CHANGELOG covers sprint scopes / Pattern Candidates surfaced)
+  before allowing merge. Replaces the "agent self-declares done" pattern
+  (Anthropic premature-completion antipattern).
+- **Run Sprint section in `SKILL.md` downsized** (~100 lines → ~28 lines).
+  Detailed bash + agent dispatch templates + state transitions moved to
+  `references/run-sprint.md`.
+- **Light Feature path now runs mandatory mini-brainstorm** (≤2 minutes:
+  scout + ≤1 clarifying question + 1 approach + user confirm). Recovers the
+  "Too Simple to Need a Design" anti-pattern diluted by the 2026-04-17
+  "Light skips Phase 1/2" decision.
+- **Standard Feature path adds Phase 3.7 User Reviews Spec Gate.** Spec is
+  presented to the user for review after Phase 3.5 12-QA but before plan
+  writing. Sourced from superpowers:brainstorming step 8 re-sync.
+- **`docs/sync.md` brainstorming row updated** (Last Checked 2026-04-08 →
+  2026-05-18) — "Too Simple" anti-pattern and User Reviews Spec gate added
+  to Core Contribution.
+- **`.stackpilot/ARCHITECTURE.md`** Key Design Decisions section adds 3 new
+  rules covering the above (parallel waves, artifact-driven termination,
+  Light mini-brainstorm + Phase 3.7).
+
 ### Changed (2026-04-20 post-mortem — v3 workloads)
 - **`/stackpilot-bench` workloads rebuilt** after first baseline run
   (2026-04-20-0419) produced a misleading "stackpilot 明显落后"

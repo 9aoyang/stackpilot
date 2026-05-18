@@ -6,7 +6,7 @@ Skills that have been evaluated and/or inlined into stackpilot agents and portab
 
 | Skill | Inline Target (v2) | Core Contribution | Status | Last Checked |
 |-------|-------------------|-------------------|--------|--------------|
-| brainstorming | SKILL.md | HARD-GATE before any code; explore→clarify one-at-a-time→2-3 approaches→spec→self-review→user gate before proceeding; Visual Companion (browser mockups); design-for-isolation principle; spec self-review with 4 checks | inlined | 2026-04-08 |
+| brainstorming | SKILL.md | HARD-GATE before any code; explore→clarify one-at-a-time→2-3 approaches→spec→self-review→user gate before proceeding; Visual Companion (browser mockups); design-for-isolation principle; spec self-review with 4 checks; "Too Simple to Need a Design" anti-pattern (every project deserves a 30-second design pause, including Light tasks → mini-brainstorm in SKILL.md Light Feature path); explicit User Reviews Spec gate after self-review (Phase 3.7) | inlined | 2026-05-18 |
 | writing-plans | SKILL.md | Bite-sized tasks (2-5 min), file structure map first, zero placeholders allowed, plan self-review, type consistency check | inlined | 2026-04-08 |
 | finishing-a-development-branch | SKILL.md (references/sprint-finish.md) | Verify tests → present 4 options (merge/PR/keep/discard) → execute → cleanup | inlined | 2026-04-08 |
 | feature-dev:code-architect | architecture-review (portable skill) | Analyze existing patterns first; one decisive architecture choice; full implementation blueprint; multi-persona adversarial review for HIGH-risk tasks | extracted | 2026-04-08 |

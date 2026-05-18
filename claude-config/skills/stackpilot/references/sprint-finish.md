@@ -33,6 +33,102 @@ Auto-detect which checks exist (don't fail on missing tools). Report results:
 
 Do NOT silently skip verification.
 
+## Step 0.5 — Sprint Closure Gate
+
+After Step 0 tech checks pass, verify sprint **business completeness** before allowing merge. 3 sub-gates.
+
+### Gate 1: Acceptance criteria all green
+
+```bash
+CRITERIA=$(ls -t .stackpilot/specs/*-criteria.md 2>/dev/null | head -1)
+if [ -z "${CRITERIA}" ]; then
+  echo "⚠ Gate 1: no acceptance-criteria.md found — Phase 3.6 may have been skipped (legacy sprint?)"
+  # Don't block merge for legacy sprints that pre-date Phase 3.6
+else
+  NOT_GREEN=$(grep -E '^\| C[0-9]+ \|' "${CRITERIA}" \
+    | awk -F'|' '{print $5}' | tr -d ' ' \
+    | grep -cE 'untested|fail')
+  if [ "${NOT_GREEN}" -gt 0 ]; then
+    echo "❌ Gate 1: ${NOT_GREEN} criterion(s) not green in ${CRITERIA}"
+    grep -E '\| (untested|fail) \|' "${CRITERIA}"
+    GATE_FAILED=1
+  else
+    echo "✅ Gate 1: all acceptance criteria green"
+  fi
+fi
+```
+
+Allowed Status values: `pass`, `n-a-this-task`. Both count as green. `untested` and `fail` block merge.
+
+### Gate 2: CHANGELOG updated
+
+```bash
+BASE=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo main)
+SPRINT_COMMITS=$(git log "${BASE}..HEAD" --format='%s')
+UNRELEASED=$(awk '/^## \[Unreleased\]/,/^## \[[0-9]/' CHANGELOG.md 2>/dev/null | head -200)
+
+MISSING_SCOPES=()
+while IFS= read -r commit_msg; do
+  [ -z "${commit_msg}" ] && continue
+  # Extract scope from conventional commit (e.g. "feat(auth): ..." → "auth")
+  SCOPE=$(echo "${commit_msg}" | grep -oP '^\w+\(\K[^)]+' || echo "")
+  if [ -n "${SCOPE}" ] && ! echo "${UNRELEASED}" | grep -qi "${SCOPE}"; then
+    MISSING_SCOPES+=("${SCOPE}")
+  fi
+done <<< "${SPRINT_COMMITS}"
+
+# Dedupe
+UNIQUE_MISSING=$(printf '%s\n' "${MISSING_SCOPES[@]}" | sort -u | grep -v '^$' | wc -l | tr -d ' ')
+if [ "${UNIQUE_MISSING}" -gt 0 ]; then
+  echo "❌ Gate 2: ${UNIQUE_MISSING} sprint scope(s) missing from CHANGELOG Unreleased:"
+  printf '%s\n' "${MISSING_SCOPES[@]}" | sort -u | grep -v '^$' | sed 's/^/  · /'
+  GATE_FAILED=1
+else
+  echo "✅ Gate 2: CHANGELOG Unreleased covers sprint scopes"
+fi
+```
+
+Skip Gate 2 if `CHANGELOG.md` does not exist (project doesn't keep a changelog).
+
+### Gate 3: Review Patterns candidates surfaced
+
+```bash
+# sp-qa reports may contain "## Pattern Candidates" blocks during the sprint
+# Look for unprocessed candidates (warning only, Step 4a handles the merge prompt)
+CANDIDATES=$(find .stackpilot/runs -name "qa-report*.md" -newer .stackpilot/ARCHITECTURE.md 2>/dev/null \
+  | xargs awk '/^## Pattern Candidates/,/^## [^P]/' 2>/dev/null \
+  | grep -cE '^- \[' || echo 0)
+
+if [ "${CANDIDATES}" -gt 0 ]; then
+  echo "⚠ Gate 3: ${CANDIDATES} Pattern Candidate(s) from sp-qa pending → Step 4a will prompt for merge"
+else
+  echo "✅ Gate 3: no pending Pattern Candidates"
+fi
+```
+
+Gate 3 is informational only — does not block merge. Step 4a handles the merge prompt.
+
+### Result
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━
+  Sprint Closure Gate
+━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Gate 1 (criteria)      all 5 green
+✅ Gate 2 (CHANGELOG)     3 scopes covered
+⚠️  Gate 3 (patterns)      2 candidates pending (handled in Step 4a)
+━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+- All `✅` (or only `⚠️` warnings) → proceed to Step 1
+- Any `❌` (`GATE_FAILED=1`) → present to user:
+  > "Closure gate failed: <reasons>. Fix before merge, or proceed anyway (override gate)?"
+  
+  If user fixes → return control, do not proceed until re-run shows green.
+  If user overrides → log override reason and proceed to Step 1.
+
+**Skip Step 0.5 only in:** auto mode B AND no criteria file exists (legacy sprint). Otherwise gates always run.
+
 ## Step 1 — Detect dev server command
 
 Auto-detect from project files. Only detect when there is a clear web server signal.
