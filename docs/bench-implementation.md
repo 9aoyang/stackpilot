@@ -1,5 +1,82 @@
 # /stackpilot-bench Implementation Notes
 
+> **Updated 2026-05-19 for stackpilot-bench v2.** The bench is now three-legged (`zero` / `stackpilot-serial` / `stackpilot`) with 26-column CSV schema, multi-task workload `plan.yml`, scripted `user-responses.yml`, and `gate_traps[]` for testing Sprint Finish Step 0.5 gate triggering. v1 history is preserved at `.stackpilot/benchmarks/history.csv.bak-v1-2026-05-18` but not used by v2 verdict. The sections below describe both v2 (current) and v1 (historical reference).
+
+## v2 — what's new (2026-05-18)
+
+### Three legs, not two
+
+- `zero` — native Claude one-shot; unchanged from v1.
+- `stackpilot-serial` — main agent drives the full `/stackpilot` pipeline, but with `qa.max_parallel=1` + `qa.disable_criteria_gate=true` + `qa.disable_state_json=true` injected into the bench worktree's `stackpilot.config.yml`. Semantically equivalent to v1.10.0 (no parallel waves, no criteria gate, no state.json).
+- `stackpilot` — main agent drives the full `/stackpilot` pipeline with v1.11.0 defaults (parallel waves + criteria gate + state.json all active).
+
+The dropped v1 `savvy` leg is gone. `stackpilot-serial` semantically replaces it as "the prior version of the same pipeline."
+
+### 26-column CSV schema
+
+v1 had 20 columns. v2 adds 6:
+
+- `leg_config` — literal `zero` / `serial` / `parallel`
+- `sprint_total_tasks` — count of tasks in workload's `plan.yml`
+- `sprint_waves` — count of dependency waves (1 means no parallelism possible)
+- `gate_correctness` — fraction of expected gate_traps that fired (stackpilot leg only)
+- `parallel_speedup_pct` — (serial_duration - parallel_duration) / serial_duration × 100
+- `criteria_coverage_pct` — % of acceptance criteria marked green by sp-qa
+
+The spec said 27 columns; the actual header is 26 (v1 had 20, not 21 as v1 docs claimed — a long-standing doc discrepancy now corrected).
+
+### Multi-task workload schema
+
+Each workload now contains:
+
+- `plan.yml` — sprint plan with one or more tasks, each having `id` / `title` / `description` / `type` / `complexity` / `depends_on` / `relevant_files`. Wave analysis (topological sort over `depends_on`) determines parallel dispatch order.
+- `traps.yml` — existing diff-trap schema, plus a new `gate_traps:` top-level key (for workloads testing Sprint Finish gates).
+- `user-responses.yml` — list of `{prompt_contains, answer}` entries. Stackpilot legs use first-match-wins substring matching to auto-answer CONFIRM-GATE prompts. 60-second no-match timeout → `status=gate_timeout`.
+
+### New scoring dimensions (4 added, 9 total)
+
+Inherited from v1: Correctness, Over-engineering resistance, Bug catch rate, Token efficiency, Wall-clock speed.
+
+New in v2:
+
+- **Parallel speedup** (weight 0.10) — `stackpilot-serial.duration / stackpilot.duration` per workload, only when `sprint_waves >= 2`.
+- **Gate correctness** (weight 0.10) — `triggered_gates / expected_gates` from `gate_traps[]`, stackpilot leg only.
+- **Recovery success** (weight 0.05) — opt-in mid-sprint SIGKILL + restart test, measures state.json resume accuracy.
+- **Criteria coverage** (weight 0.10) — `criteria_marked_green / criteria_total` from `<feature>-criteria.md`, stackpilot leg only.
+
+Weights sum to exactly 1.000. See `claude-config/skills/stackpilot-bench/references/scoring.md` for the authoritative table.
+
+### Workloads installed
+
+- `01-regional-billing-ledger-cutover` — single-task baseline, upgraded with `plan.yml` + `user-responses.yml` (existing sandbox + traps.yml + evaluator/ unchanged).
+- `02-sprint-parallel-features` — 4 tasks, 2 waves (3 independent in wave 1 + 1 integration test in wave 2). Tests parallel speedup with 3 disjoint subsystem files.
+- `03-adversarial-gates` — 3 tasks, no diff-traps; verdict driven by `gate_traps` targeting all three Sprint Finish Step 0.5 gates (Gate 1 criteria-not-green, Gate 2 CHANGELOG-missing-scope, Gate 3 Pattern-Candidates-pending).
+
+### v1 limitations — status
+
+Marked **resolved** by v2:
+- ✅ "No workloads installed" — 3 workloads in v2.
+- ✅ "Cannot measure parallel orchestration" — `stackpilot-serial` vs `stackpilot` legs make parallel speedup mechanically observable.
+- ✅ "Cannot measure lifecycle gates" — `gate_traps` evaluation triggered against Sprint Finish output.
+- ✅ "No cross-version comparison" — config-comparison achieves the same goal without git checkout.
+
+Still present:
+- Cache contamination across legs (worse with 3 legs than 2).
+- `<usage>` parsing fragility.
+- n=1 default with adaptive sampling (no true statistical CIs).
+- Trap regex brittleness.
+
+### v2.1 backlog
+
+- Statistical confidence intervals on verdict.
+- Per-project workloads under `.stackpilot/bench-workloads/`.
+- Trap regex testing harness.
+- Headless mode default-on (currently scaffolded but optional).
+
+---
+
+## v1 (historical reference)
+
 How v1 works, where it's honest about its limits, and what v2 should fix.
 
 This is the **explanation** doc — read this to understand the design.

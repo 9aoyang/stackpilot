@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# stackpilot-bench v2 — supports three legs: zero / stackpilot-serial / stackpilot
+# 26-column CSV schema (20 v1 + 6 v2 new). See references/runner.md.
+# TODO(v2.1): full three-leg dispatch + 26-col emission. v2.0 marker stub.
 set -euo pipefail
 
 # compute-verdict.sh

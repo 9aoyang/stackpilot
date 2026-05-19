@@ -22,3 +22,4 @@ Thumbs.db
 
 # Local design/spec drafts
 docs/superpowers/
+.stackpilot/runs/

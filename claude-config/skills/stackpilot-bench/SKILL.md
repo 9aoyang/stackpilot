@@ -7,7 +7,17 @@ description: Continuous quantitative benchmark for stackpilot. Runs two-legged c
 
 ## Overview
 
-`/stackpilot-bench` runs a repeatable, two-legged benchmark comparing native zero-shot usage against the full stackpilot pipeline. Each run dispatches `zero` and `stackpilot` against one high-discrimination workload, collects token cost, wall-clock duration, trap-catch rate, and functional correctness signals, then appends one row per leg to `.stackpilot/benchmarks/history.csv` and writes a markdown scorecard. The question is: **does stackpilot create quality lift over native zero-shot on a task that actually warrants orchestration?**
+`/stackpilot-bench` runs a repeatable, **three-legged** benchmark comparing native zero-shot usage against two stackpilot configurations. Each run dispatches `zero`, `stackpilot-serial` (equivalent to v1.10.0 — `qa.max_parallel=1`, criteria gate disabled, state.json disabled), and `stackpilot` (v1.11.0 defaults) against one or more workloads, collects token cost, wall-clock duration, trap-catch rate, gate correctness, criteria coverage, parallel speedup, and functional correctness signals, then appends one row per leg to `.stackpilot/benchmarks/history.csv` (26-column v2 schema) and writes a markdown scorecard. The question is: **does stackpilot v1.11.0 (parallel waves + lifecycle gates) create quality lift over native zero-shot AND over its own prior-version (`stackpilot-serial`) on tasks that actually warrant orchestration?**
+
+**v2 protocol summary** — for full details see `references/runner.md`:
+
+| Leg | Config override | Equivalent |
+|-----|-----------------|------------|
+| `zero` | none | native one-shot |
+| `stackpilot-serial` | `qa.max_parallel: 1` + `qa.disable_criteria_gate: true` + `qa.disable_state_json: true` | v1.10.0 behavior |
+| `stackpilot` | defaults | v1.11.0 (parallel waves + criteria gate + state.json) |
+
+Workloads now include multi-task `plan.yml` (with `depends_on` dependency graph for parallel wave testing) and `user-responses.yml` (scripted CONFIRM-GATE answers for stackpilot legs). Some workloads also include `gate_traps[]` for testing Sprint Finish Step 0.5 gate triggering.
 
 ## Codex Runtime
 
@@ -234,7 +244,7 @@ For each workload `<id>`:
 
 **b. Compute leg order**
 
-Shuffle `["zero", "stackpilot"]` deterministically using `RUN_TS` as seed. See runner.md §Deterministic Leg-Order Shuffling for the full algorithm (seed = md5 of `RUN_TS`, each leg sorted by md5(seed + leg_name)). Record the shuffled order for the report.
+Shuffle `["zero", "stackpilot-serial", "stackpilot"]` deterministically using `RUN_TS` as seed. See runner.md §Three legs for the full algorithm (3! = 6 possible permutations). Record the shuffled order for the report. The `stackpilot-serial` leg requires writing the 3 `qa.disable_*` flags to `<worktree>/stackpilot.config.yml` before dispatch and restoring the original config after; see runner.md §Config-file cleanup discipline.
 
 **c. Per-leg loop**
 

@@ -399,6 +399,19 @@ B. Add a new feature to the current sprint
 
 ---
 
+## Config flags (stackpilot.config.yml qa.*)
+
+| Flag | Default | Effect when set |
+|------|---------|-----------------|
+| `qa.max_parallel` | `3` | Cap on simultaneous sub-agent dispatches per wave. Set to `1` for fully serial sprint. |
+| `qa.disable_criteria_gate` | `false` | Skip Sprint Finish Step 0.5 Gate 1 (criteria all-green check). Used by `/stackpilot-bench` for the `stackpilot-serial` leg. |
+| `qa.disable_state_json` | `false` | Skip Pre-Sprint `state.json` writes and use git log for Sprint Interrupted recovery. Used by `/stackpilot-bench` for the `stackpilot-serial` leg. |
+| `qa.test_command` | auto-detect | Test runner command for Sprint Finish Step 0. May be `N/A` for meta-projects. |
+| `qa.deep_review` | `true` | HIGH-risk Deep Review at Step 5.5. |
+| `qa.coverage_threshold` | `80` | Coverage gate threshold. |
+
+Absent keys default as shown. See `references/run-sprint.md` for read protocol.
+
 ## Run Sprint
 
 Core coding phase. Reads plan, dispatches specialist agents in parallel waves, tracks per-task state in `.stackpilot/runs/`.

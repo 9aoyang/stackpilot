@@ -1,68 +1,61 @@
-# Stackpilot Bench Scorecard Template
+# Stackpilot Bench Scorecard
 
-The primary scorecard is designed for a human who will ask AI for the
-interpretation later. It should read like a short decision memo, not like a
-CSV export.
-
-## Required Shape
-
-```md
-# Stackpilot Bench
-
-Run: `<RUN_TS>` | n=<N> per leg | workloads: <target>/<total>
+**Date:** {{RUN_TS}}  
+**Stackpilot version:** {{STACKPILOT_VERSION}}  
+**Verdict:** {{VERDICT}}
 
 ## Headline
 
-复杂任务建议使用 Stackpilot：质量 +14 分，额外耗时 +45m00s（+54%）。
-换算下来，每提升 1 分大约多花 3.2 分钟。
+{{HEADLINE_LINE}}
 
-## Overall
+> Three-way comparison: `zero` (native one-shot) vs `stackpilot-serial` (v1.10.0 equivalent) vs `stackpilot` (v1.11.0 with parallel waves + criteria gate + state.json).
 
-Native Zero
-质量：★★★☆☆ 51/100
-耗时：37m15s（速度 ★★★★★）
+## Per-Workload Decision Guide
 
-Native Savvy
-质量：★★★★☆ 77/100
-耗时：84m00s（速度 ★★★★☆）
+### Workload 01 — regional-billing-ledger-cutover
 
-Stackpilot
-质量：★★★★★ 91/100
-耗时：129m00s（速度 ★★★☆☆）
+| Leg | Composite | Quality | Tokens | Duration |
+|-----|-----------|---------|--------|----------|
+| Native zero | {{wl01_zero_composite}} | {{wl01_zero_quality}} | {{wl01_zero_tokens}} | {{wl01_zero_duration}} |
+| Stackpilot serial | {{wl01_sps_composite}} | {{wl01_sps_quality}} | {{wl01_sps_tokens}} | {{wl01_sps_duration}} |
+| Stackpilot parallel | {{wl01_sp_composite}} | {{wl01_sp_quality}} | {{wl01_sp_tokens}} | {{wl01_sp_duration}} |
 
-质量图
-Native Savvy  ████████░░ 77/100
-Stackpilot    █████████░ 91/100
+- Parallel speedup: {{wl01_parallel_speedup_pct}} ({{wl01_parallel_verdict}})
+- Verdict: {{wl01_verdict}}
 
-## Per Workload
+### Workload 02 — sprint-parallel-features
 
-W01-subscription-ambiguity (target)
-Native Savvy：★★★★☆ 76/100 / 24m20s
-Stackpilot： ★★★★★ 91/100 / 39m05s
-差异：+15 分，耗时 +14m45s（+61%）
-建议：用 Stackpilot
+| Leg | Composite | Quality | Tokens | Duration |
+|-----|-----------|---------|--------|----------|
+| Native zero | {{wl02_zero_composite}} | {{wl02_zero_quality}} | {{wl02_zero_tokens}} | {{wl02_zero_duration}} |
+| Stackpilot serial | {{wl02_sps_composite}} | {{wl02_sps_quality}} | {{wl02_sps_tokens}} | {{wl02_sps_duration}} |
+| Stackpilot parallel | {{wl02_sp_composite}} | {{wl02_sp_quality}} | {{wl02_sp_tokens}} | {{wl02_sp_duration}} |
 
-## Diagnostics
+- Parallel speedup: {{wl02_parallel_speedup_pct}} ({{wl02_parallel_verdict}})
+- Verdict: {{wl02_verdict}}
 
-- Target workloads: 3
-- Native-enough workloads: 1
-- Raw rows: `.stackpilot/benchmarks/runs/<RUN_TS>/rows.csv`
-- Full history source: `.stackpilot/benchmarks/history.csv`
-```
+### Workload 03 — adversarial-gates
 
-## Formatting Rules
+| Leg | Composite | Quality | Tokens | Duration |
+|-----|-----------|---------|--------|----------|
+| Native zero | {{wl03_zero_composite}} | {{wl03_zero_quality}} | {{wl03_zero_tokens}} | {{wl03_zero_duration}} |
+| Stackpilot serial | {{wl03_sps_composite}} | {{wl03_sps_quality}} | {{wl03_sps_tokens}} | {{wl03_sps_duration}} |
+| Stackpilot parallel | {{wl03_sp_composite}} | {{wl03_sp_quality}} | {{wl03_sp_tokens}} | {{wl03_sp_duration}} |
 
-- Start with the decision, not the data table.
-- Score means quality only: correctness, trap avoidance, and QA catch signal.
-- Always show both score and elapsed time; do not blend time/token cost into
-  the displayed score.
-- Use five-star quality/velocity summaries for quick reading.
-- Use dense tables only in detailed reports, not the first screen.
-- Mark native-enough workloads explicitly so Stackpilot is not rewarded on
-  simple tasks.
+- Gate correctness: {{wl03_sp_gate_correctness}} (expected: 3/3 for stackpilot, 0/3 for stackpilot-serial)
+- Verdict: {{wl03_verdict}}
 
-## Data Source
+## Lifecycle Gates (workloads with gate_traps)
 
-`compute-scorecard.sh` renders the current concrete format directly from
-`history.csv`. This template documents the intended report shape and should be
-kept aligned with that script.
+| Workload | Gate 1 (criteria) | Gate 2 (CHANGELOG) | Gate 3 (Pattern Candidates) |
+|----------|-------------------|--------------------|-----------------------------|
+| 03 | {{wl03_gate1}} | {{wl03_gate2}} | {{wl03_gate3}} |
+
+## Final Composite
+
+Overall stackpilot composite: **{{OVERALL_SP_COMPOSITE}}**  
+Overall stackpilot-serial composite: **{{OVERALL_SPS_COMPOSITE}}**  
+Overall zero composite: **{{OVERALL_ZERO_COMPOSITE}}**
+
+Lift of stackpilot vs zero: **{{LIFT_VS_ZERO}}**  
+Lift of stackpilot vs stackpilot-serial: **{{LIFT_VS_SERIAL}}**

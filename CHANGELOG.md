@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed (2026-05-19 — stackpilot-bench v2 migration, dogfood sprint)
+
+- **`/stackpilot-bench` rewritten to v2 three-leg config-comparison** — legs are
+  now `zero` / `stackpilot-serial` (v1.10.0 equivalent, `qa.disable_*` flags set)
+  / `stackpilot` (v1.11.0 defaults). The `stackpilot-serial` leg makes parallel
+  speedup mechanically observable.
+- **Multi-task workload schema** — workloads now contain `plan.yml` (sprint plan
+  with `depends_on` dependency graph) + `user-responses.yml` (scripted
+  CONFIRM-GATE answers, first-match-wins substring matching) + optional
+  `gate_traps[]` block in `traps.yml` for testing Sprint Finish Step 0.5 gate
+  triggering.
+- **26-column CSV schema** — v1's 20 columns + 6 new (`leg_config`,
+  `sprint_total_tasks`, `sprint_waves`, `gate_correctness`,
+  `parallel_speedup_pct`, `criteria_coverage_pct`). Old v1 `history.csv` backed
+  up to `.bak-v1-2026-05-18`. NOTE: spec section 3 mistakenly stated 27 columns;
+  actual header is 26 (v1 was 20, not 21 as old docs claimed). Corrected during
+  this sprint.
+- **9-dimension scoring** — 5 v1 dimensions (correctness, over-engineering
+  resistance, bug catch, token efficiency, wall-clock speed) + 4 new (parallel
+  speedup, gate correctness, recovery success, criteria coverage). Weights sum
+  to 1.000.
+- **New workloads installed** — `02-sprint-parallel-features` (4 tasks across 2
+  waves, tests parallel speedup with 3 disjoint subsystem files) and
+  `03-adversarial-gates` (3 tasks with `gate_traps` targeting all three Sprint
+  Finish Step 0.5 gates).
+- **Existing workload `01-regional-billing-ledger-cutover` upgraded** —
+  `plan.yml` + `user-responses.yml` added; existing sandbox, traps, and
+  evaluator preserved.
+- **Main `/stackpilot` reads 3 new `qa.disable_*` flags** —
+  `qa.disable_criteria_gate`, `qa.disable_state_json`, plus existing
+  `qa.max_parallel`. Default `false` preserves v1.11.0 behavior.
+- **`docs/bench-implementation.md` v2 section added** documenting the new
+  protocol; v1 historical notes preserved.
+
+This sprint was itself a dogfood of stackpilot v1.11.0 — used parallel wave
+dispatch (sp-architect for TASK-003 + TASK-004 in parallel), mini-brainstorm
+gate (Light path skipped because Standard), Phase 3.7 spec review gate (user
+approved), per-task `state.json` tracking, and acceptance-criteria.md derivation
+with Sprint Finish Step 0.5 gate evaluation. The intentional spec column-count
+miscount (27 vs actual 26) became a real dogfood signal: Step 0.5 Gate 1
+correctly flagged C1 as `fail` mid-sprint, demonstrating the gate works as
+designed.
+
 ## [1.11.0] - 2026-05-18
 
 ### Changed (2026-05-18 — parallel Run Sprint + criteria-gated Sprint Finish + brainstorm re-sync)
