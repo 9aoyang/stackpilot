@@ -1,8 +1,8 @@
 ---
 name: stackpilot
-description: Sprint orchestration for Claude Code and Codex. Turns feature requests into working code through a design→spec→plan→code→QA pipeline. Use when starting, resuming, tidying, or checking on development work. Claude uses native Agent/TaskCreate; Codex uses update_plan plus explorer/worker fallback.
+description: Sprint orchestration for Claude Code. Turns feature requests into working code through a design→spec→plan→code→QA pipeline. Use when starting, resuming, tidying, or checking on development work.
 license: Apache-2.0
-compatibility: Claude Code native; Codex via references/codex-dispatch.md. Sync skills through skillshare as the single target sync source.
+compatibility: Claude Code native.
 metadata:
   author: stackpilot
   version: "1.11.0"
@@ -10,29 +10,12 @@ metadata:
 
 # Stackpilot
 
-## Runtime
-
-This skill is synchronized to all targets by skillshare. Do not install a
-separate Codex-only `stackpilot` skill.
-
-- Claude Code: use the Agent / TaskCreate examples in this file directly.
-- Codex: translate task tracking and subagent dispatch using
-  [references/codex-dispatch.md](references/codex-dispatch.md).
-
-Codex runs must obey the hard execution contract in
-`references/codex-dispatch.md`: standard-or-higher tasks require auditable
-`architect.md`, `dev-report.md`, and `qa-report.md` phase evidence, and QA
-blockers require one scoped fix loop before completion. Treat a Codex run that
-does not leave those artifacts as invalid orchestration rather than a successful
-Stackpilot execution.
-
 ## Step 0+1: Initialize (single bash call — do NOT split into separate Bash calls)
 
 ```bash
 # --- Version check (cache-gated, runs at most once/24h) ---
 SP_DIR="${STACKPILOT_DIR:-$HOME/.stackpilot}"
 [ -L ~/.claude/skills/stackpilot ] && SP_DIR="$(readlink ~/.claude/skills/stackpilot | sed 's|/claude-config/skills/stackpilot.*||')"
-[ -L ~/.codex/skills/stackpilot ] && SP_DIR="$(readlink ~/.codex/skills/stackpilot | sed 's|/claude-config/skills/stackpilot.*||')"
 [ -x "$SP_DIR/scripts/sync-skills.sh" ] && "$SP_DIR/scripts/sync-skills.sh" --auto-update --quick 2>&1 || true
 
 # --- State scan ---
@@ -404,8 +387,6 @@ B. Add a new feature to the current sprint
 | Flag | Default | Effect when set |
 |------|---------|-----------------|
 | `qa.max_parallel` | `3` | Cap on simultaneous sub-agent dispatches per wave. Set to `1` for fully serial sprint. |
-| `qa.disable_criteria_gate` | `false` | Skip Sprint Finish Step 0.5 Gate 1 (criteria all-green check). Used by `/stackpilot-bench` for the `stackpilot-serial` leg. |
-| `qa.disable_state_json` | `false` | Skip Pre-Sprint `state.json` writes and use git log for Sprint Interrupted recovery. Used by `/stackpilot-bench` for the `stackpilot-serial` leg. |
 | `qa.test_command` | auto-detect | Test runner command for Sprint Finish Step 0. May be `N/A` for meta-projects. |
 | `qa.deep_review` | `true` | HIGH-risk Deep Review at Step 5.5. |
 | `qa.coverage_threshold` | `80` | Coverage gate threshold. |
@@ -417,8 +398,6 @@ Absent keys default as shown. See `references/run-sprint.md` for read protocol.
 Core coding phase. Reads plan, dispatches specialist agents in parallel waves, tracks per-task state in `.stackpilot/runs/`.
 
 **Full protocol:** [references/run-sprint.md](references/run-sprint.md) — wave analysis (topological sort over `depends_on`), state.json schema, per-step agent dispatch templates, Sprint Interrupted recovery via state.json.
-
-If running inside Codex, also read [references/codex-dispatch.md](references/codex-dispatch.md). In Codex, `TaskCreate` / `TaskUpdate` means `update_plan`, and each `Agent(...)` block is delegated through the Codex dispatch mapping.
 
 ### High-level execution
 

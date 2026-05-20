@@ -1,5 +1,0 @@
-timestamp,git_sha,stackpilot_version,workload_id,leg,run_n,input_tokens,output_tokens,cache_read_tokens,cache_creation_tokens,total_tokens,duration_sec,tool_uses_count,traps_total,traps_avoided_in_diff,traps_caught_in_qa,functional_pass,signals_critical,signals_soft_blocked,status
-2026-04-20-1058,207e329e5333848af833b6037ba29029e88fe313,1.10.0,01-regional-billing-ledger-cutover,zero,1,701071,6984,555264,0,708055,264,21,15,14,null,false,0,0,ok
-2026-04-20-1058,207e329e5333848af833b6037ba29029e88fe313,1.10.0,01-regional-billing-ledger-cutover,stackpilot,1,505281,6360,382464,0,511641,202,23,15,14,9,false,0,0,ok
-2026-04-20-1329,98ba4d3bef30e2ac7e4b346b96234a273f242e18,1.10.0,01-regional-billing-ledger-cutover,stackpilot,1,826718,8576,627584,0,835294,301,37,15,13,11,true,0,0,ok
-2026-04-20-1329,98ba4d3bef30e2ac7e4b346b96234a273f242e18,1.10.0,01-regional-billing-ledger-cutover,zero,1,560243,6975,451712,0,567218,261,27,15,14,null,true,0,0,ok

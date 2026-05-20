@@ -1,8 +1,8 @@
 # Stackpilot 架构文档
 
-> 最后更新：2026-04-20
+> 最后更新：2026-05-20
 
-Stackpilot 是一个面向 Claude Code 和 Codex 的方法论驱动 Sprint 编排层。它将设计文档转化为可运行代码，通过驱动宿主 agent 原生的计划和委派能力完成，无需自建服务基础设施。
+Stackpilot 是一个面向 Claude Code 的方法论驱动 Sprint 编排层。它将设计文档转化为可运行代码，通过驱动宿主 agent 原生的计划和委派能力完成，无需自建服务基础设施。
 
 ---
 
@@ -37,8 +37,6 @@ stackpilot/                        ← 框架安装目录
 │       │   └── SKILL.md           ← /stackpilot-sync 外部 skill 同步
 │       └── systematic-debugging/
 │           └── SKILL.md           ← /systematic-debugging（便携式）
-├── codex-config/
-│   └── agents/                    ← Codex 原生 sp-* prompts
 ├── scripts/
 │   ├── init.sh                    ← 项目初始化（精简：目录 + 测试命令检测）
 │   ├── lib/
@@ -118,35 +116,6 @@ Agent(
 
 **任务跟踪** 使用 Claude Code 原生 `TaskCreate`/`TaskUpdate`，替代 YAML 文件。
 
-### Codex
-
-Codex 版 `/stackpilot` 使用 skillshare 同步的同一个共享 skill。它通过
-`references/codex-dispatch.md` 做可见任务跟踪，并通过 Codex subagents
-调度同一套方法论：
-
-| Stackpilot role | Codex dispatch |
-|---|---|
-| `sp-architect` | 如有命名 role 就用命名 role，否则用 `explorer` + `codex-config/agents/sp-architect.md` |
-| `sp-dev` | 如有命名 role 就用命名 role，否则用 `worker` + 明确文件 ownership |
-| `sp-qa` | 如有命名 role 就用命名 role，否则用 `worker` + QA-only ownership |
-| `sp-docs` | 如有命名 role 就用命名 role，否则用 `worker` + docs-only ownership |
-
-这样 skillshare 是共享 skills 的唯一同步源，同时不把 Codex 伪装成
-Claude Code 的 `subagent_type` 注册表。
-
-Codex 运行必须留下可审计的阶段证据：`architect.md`、`dev-report.md`
-和 `qa-report.md`，并且 QA 必须检查最终 diff。这样 `/stackpilot` 在
-Codex 中不会退化成“风格提示”；如果调用方无法验证这些证据，则该次运行
-标记为 `orchestration_invalid`。
-
-`/stackpilot-bench` 的合同测试是闭卷的：测试文件不再放进
-`sandbox/`，而是放在 workload 的 `evaluator/` 目录。runner 在模型执行
-完成并捕获实现 diff 之后，才把它复制为
-`bench-sandbox/.stackpilot-hidden-evaluator/` 并运行 verification command。
-这样 zero 和 stackpilot 都不能提前读取或修改答案。闭卷不等于答案钥匙：
-隐藏测试应优先通过公开 API 和可观察状态评分；必要的静态断言也必须是语义级、
-路径无关的，除非 prompt 明确声明了某个公开契约名称。
-
 ---
 
 ## 事件流
@@ -215,7 +184,7 @@ qa:
 
 | Slash Command | 用途 |
 |--------------|------|
-| `/stackpilot` | 主入口：tidy + resume + 状态 + 自动/交互模式 + Sprint 执行。Claude 和 Codex 共享同一个 skill；Codex 调度见 `references/codex-dispatch.md`。 |
+| `/stackpilot` | 主入口：tidy + resume + 状态 + 自动/交互模式 + Sprint 执行。 |
 | `/stackpilot-compete` | 以竞品重度用户视角做差距分析 |
 | `/stackpilot-research` | 横纵分析法深度研报（纵向发展史 + 横向竞品切面） |
 | `/stackpilot-sync` | 外部 skill 追踪和同步（开发者维护） |
@@ -283,13 +252,8 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | 日期 | 变更 |
 |------|------|
-| 2026-05-19 | **stackpilot-bench v2（dogfood sprint，feature/bench-v2）**：替换 v1 单任务 / 两腿 bench 为三腿配置对照（`zero` / `stackpilot-serial` / `stackpilot`）。新 26 列 CSV schema（v1 实际是 20 列而非旧 docs 说的 21；v2 新增 6 列——leg_config、sprint_total_tasks、sprint_waves、gate_correctness、parallel_speedup_pct、criteria_coverage_pct）。多任务 workload schema（`plan.yml` + `user-responses.yml` + 可选 `gate_traps[]`）。9 维评分（v1 5 维 + 4 新——parallel speedup、gate correctness、recovery success、criteria coverage；权重总和 1.000）。两个新 workload（02-sprint-parallel-features + 03-adversarial-gates）+ workload 01 schema 升级。主 `/stackpilot` 读取 3 个新 `qa.disable_*` 配置 flag（默认保留 v1.11.0 行为）。本 sprint 本身就是 v1.11.0 机制的 dogfood：并行 wave sp-architect dispatch（TASK-003 + TASK-004 同时跑）、Phase 3.7 spec review gate、per-task state.json、Sprint Finish Step 0.5 Gate 1 在 intentional spec 列数 miscount 触发时正确拦截 merge——完整的 detect → block → fix → re-verify 闭环已演示。4 条新 Decision/Pattern Candidates 合并到 .stackpilot/ARCHITECTURE.md。 |
-| 2026-05-18 | **v1.11.0**：Run Sprint 改为并行波次执行（qa.max_parallel 默认 3），通过 `depends_on` 拓扑排序计算波次；每个任务在 `.stackpilot/runs/<sprint>/TASK-NNN/state.json` 持久化（替代仅 in-memory 的 TaskCreate，Sprint Interrupted 恢复不再依赖 git log 启发式）；Phase 3.6 派生可机械验证的 `acceptance-criteria.md`，sp-qa 在审查时更新 Status，sprint-finish Step 0.5 三道门禁（criteria 全绿 / CHANGELOG 覆盖 sprint scope / Pattern Candidates 已浮现）拦截 merge；Light Feature 加 mandatory mini-brainstorm + Standard 加 Phase 3.7 User Reviews Spec Gate（superpowers:brainstorming 5.1.0 重新同步，docs/sync.md 已更新）；SKILL.md Run Sprint 段瘦身 ~100→28 行（详细协议下沉到 `references/run-sprint.md`）。同时包含 v1.10.0 之后累积的改动：dev 与 QA 之间的 Step 4.5 simplify、Codex bench runner + 闭卷行为导向 evaluator、单一究极 workload + 双腿 bench、按 2026-04-20 研究重塑 sp-* prompts、v3 workloads + scorecard 区分度校验、Phase 1 的 scout-before-ask + canonical-refs。 |
-| 2026-04-20 | **行为导向的闭卷 evaluator**：regional ledger 隐藏测试改为验证公开 API 行为和通用 ledger/reconciliation 语义，不再要求固定私有文件名或 helper 函数名。workload fixture 同时改用显式 `.ts` imports，避免 benchmark 测到 Node ESM 解析清理，而不是 billing migration 能力。 |
-| 2026-04-20 | **闭卷 benchmark evaluator**：将 regional ledger 合同测试从可见 sandbox 移到 `workloads/<id>/evaluator/`。Codex bench runner 只在模型执行结束后注入 `.stackpilot-hidden-evaluator/` 并执行 verification command，避免 zero-shot 和 stackpilot 腿提前读取或修改答案。 |
-| 2026-04-20 | **Codex Stackpilot 执行契约**：Codex `/stackpilot` 对 standard 及以上任务要求产出可审计的 `architect.md`、`dev-report.md`、`qa-report.md` 阶段产物。`/stackpilot-bench` 会验证 stackpilot 腿的这些产物，将 `.stackpilot-bench/**` 排除出实现 diff 评分，执行 workload verification command，缺少阶段证据时标记 `orchestration_invalid` 并给质量分 0。 |
-| 2026-04-20 | **单一究极 workload + 双腿 bench**：移除当前 3 个 native-enough workload，改为单个 `01-regional-billing-ledger-cutover` 高区分度场景，只比较 `zero` 与 `stackpilot`，不再跑 `savvy`。历史 bench 数据重置，避免旧 workload 污染后续判断。 |
-| 2026-04-20 | **Codex bench runner**：新增 `run-codex-bench.sh` 与 `run-leg-codex.sh`，让 `/stackpilot-bench` 可以通过 `codex exec --json --ephemeral` 测 Codex 侧的 native zero / stackpilot 两条腿。输出沿用同一份 `history.csv` 与人可读 `scorecard.md`；runner 解析 Codex usage 字段，并在 diff 前执行 `git add -N`，确保新建未跟踪文件也进入评分。 |
+| 2026-05-20 | **移除 `/stackpilot-bench` skill 与 `codex-config/` Codex 支持**。bench harness（3 个 workload、history.csv、scoring/verdict 脚本、run-codex-bench.sh、references/headless-mode.md）、`codex-config/agents/` 的 Codex 原生 sp-* prompts、`claude-config/skills/stackpilot/references/codex-dispatch.md`、`docs/bench-implementation.md` 全部删除；只为 `stackpilot-serial` bench leg 存在的 `qa.disable_criteria_gate` 与 `qa.disable_state_json` 两个 config flag 从 SKILL.md / run-sprint.md 一并移除。原因：bench v2 的 schema/runner/workload 三方不一致跑不起来；Codex 编排不再维护。 |
+| 2026-05-18 | **v1.11.0**：Run Sprint 改为并行波次执行（qa.max_parallel 默认 3），通过 `depends_on` 拓扑排序计算波次；每个任务在 `.stackpilot/runs/<sprint>/TASK-NNN/state.json` 持久化（替代仅 in-memory 的 TaskCreate，Sprint Interrupted 恢复不再依赖 git log 启发式）；Phase 3.6 派生可机械验证的 `acceptance-criteria.md`，sp-qa 在审查时更新 Status，sprint-finish Step 0.5 三道门禁（criteria 全绿 / CHANGELOG 覆盖 sprint scope / Pattern Candidates 已浮现）拦截 merge；Light Feature 加 mandatory mini-brainstorm + Standard 加 Phase 3.7 User Reviews Spec Gate（superpowers:brainstorming 5.1.0 重新同步，docs/sync.md 已更新）；SKILL.md Run Sprint 段瘦身 ~100→28 行（详细协议下沉到 `references/run-sprint.md`）。 |
 | 2026-04-17 | **v1.10.0**：Opus 4.7 管线适配：`stackpilot.config.yml` 新增 per-phase effort advisory（architect/dev/qa/docs）；4 个 agent 加 effort posture 一行；跨 sprint 记忆——`.stackpilot/sprint-metrics.md`（sprint-finish 追加）和 `.stackpilot/decisions.md`（sp-architect 在 HIGH 风险时追加）；Sprint Clean 读取最近 3 次 sprint 趋势并提示；auto-verify 循环从 3 轮降到 2 轮；SKILL.md 12-QA 表格抽到 `references/12-qa-matrix.md`。 |
 | 2026-04-16 | **v1.9.1**：移除 sp-qa 的 codex-plugin-cc 跨模型审查集成。HIGH 风险任务改为可选调用 Claude Code `/ultrareview`（需 Opus 4.7+）。工具链单一来源，对齐 Claude Code 原生定位。 |
 | 2026-04-16 | **v1.9.0**：借鉴 gstack 强化 sprint 管线：sp-qa WTF 自监控启发式（revert/fix 比率、硬上限 15 次修复），Phase 1 探索阶段反谄媚与强迫性追问，sprint-finish 新增 Step 0 合并前门禁（type check + lint + tests），systematic-debugging 3-strike 上报规则，sync-skills `--quick` 标志。 |

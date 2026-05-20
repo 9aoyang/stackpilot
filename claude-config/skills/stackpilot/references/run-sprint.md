@@ -14,17 +14,9 @@ RUN_DIR=".stackpilot/runs/${SPRINT_SLUG}"
 MAX_PARALLEL=$(yq '.qa.max_parallel // 3' stackpilot.config.yml 2>/dev/null || echo 3)
 TEST_CMD=$(yq '.qa.test_command' stackpilot.config.yml)
 DEEP_REVIEW=$(yq '.qa.deep_review // true' stackpilot.config.yml)
-DISABLE_CRITERIA_GATE=$(yq '.qa.disable_criteria_gate // false' stackpilot.config.yml 2>/dev/null || echo false)
-DISABLE_STATE_JSON=$(yq '.qa.disable_state_json // false' stackpilot.config.yml 2>/dev/null || echo false)
 ```
 
 `qa.max_parallel` defaults to 3. Override per project in `stackpilot.config.yml`. Set to 1 to disable parallel dispatch entirely.
-
-`qa.disable_criteria_gate` (default `false`): when `true`, Phase 3.6 still derives criteria but Sprint Finish Step 0.5 Gate 1 skips the all-green check. Used by `/stackpilot-bench` to make the `stackpilot-serial` leg equivalent to v1.10.0 behavior.
-
-`qa.disable_state_json` (default `false`): when `true`, Pre-Sprint skips writing `state.json` files and Sprint Interrupted recovery falls back to git log heuristic. Also used by `/stackpilot-bench` for the `stackpilot-serial` leg.
-
-These flags are missing-key safe — absent keys default to `false`, preserving v1.11.0 behavior.
 
 ### 2. Dependency wave analysis
 

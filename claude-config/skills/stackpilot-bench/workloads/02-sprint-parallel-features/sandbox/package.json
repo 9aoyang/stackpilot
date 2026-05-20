@@ -1,9 +1,0 @@
-{
-  "name": "workload-02-sprint-parallel-features",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "node test/integration/checkout-flow.test.mjs"
-  }
-}

@@ -19,6 +19,18 @@ check() {
   fi
 }
 
+check_absent() {
+  local description="$1"
+  local path="$2"
+  if [ ! -e "$path" ]; then
+    echo "  PASS: $description"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: $description -- should not exist: $path"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 echo "=== Stackpilot structural verification ==="
 echo ""
 
@@ -31,15 +43,6 @@ check "sp-architect.md"   "$WORKTREE_DIR/claude-config/agents/sp-architect.md"
 check "sp-dev.md"         "$WORKTREE_DIR/claude-config/agents/sp-dev.md"
 check "sp-qa.md"          "$WORKTREE_DIR/claude-config/agents/sp-qa.md"
 check "sp-docs.md"        "$WORKTREE_DIR/claude-config/agents/sp-docs.md"
-echo ""
-
-# 1b. Codex-native agent source files in repo
-echo "--- Codex agent files (codex-config/agents/) ---"
-check "codex sp-architect.md" "$WORKTREE_DIR/codex-config/agents/sp-architect.md"
-check "codex sp-dev.md"       "$WORKTREE_DIR/codex-config/agents/sp-dev.md"
-check "codex sp-qa.md"        "$WORKTREE_DIR/codex-config/agents/sp-qa.md"
-check "codex sp-docs.md"      "$WORKTREE_DIR/codex-config/agents/sp-docs.md"
-check "shared codex dispatch reference" "$WORKTREE_DIR/claude-config/skills/stackpilot/references/codex-dispatch.md"
 echo ""
 
 # 2. Skill source files in repo
@@ -182,10 +185,10 @@ grep_in "1 self-fix round\|up to 1 self-fix" "claude-config/skills/stackpilot/SK
   && { echo "  PASS: SKILL.md auto-verify is 1 round"; PASS=$((PASS + 1)); } \
   || { echo "  FAIL: SKILL.md auto-verify not declared as 1 round"; FAIL=$((FAIL + 1)); }
 
-# SKILL.md skips sp-qa for light tasks
-grep_in "standard complexity only" "claude-config/skills/stackpilot/SKILL.md" \
-  && { echo "  PASS: SKILL.md skips sp-qa for light tasks"; PASS=$((PASS + 1)); } \
-  || { echo "  FAIL: SKILL.md missing light-task skip"; FAIL=$((FAIL + 1)); }
+# run-sprint.md skips sp-qa for light tasks (dispatch protocol lives here, not in SKILL.md since v1.11.0)
+grep_in "standard complexity only" "claude-config/skills/stackpilot/references/run-sprint.md" \
+  && { echo "  PASS: run-sprint.md skips sp-qa for light tasks"; PASS=$((PASS + 1)); } \
+  || { echo "  FAIL: run-sprint.md missing light-task skip"; FAIL=$((FAIL + 1)); }
 
 # 12-qa-matrix Plan section is traceability (not re-run of 12 dimensions)
 grep_in "traceability check" "claude-config/skills/stackpilot/references/12-qa-matrix.md" \
@@ -210,53 +213,28 @@ for agent in sp-architect sp-dev sp-docs sp-qa; do
   fi
 done
 
-# SKILL.md Agent() dispatches pass subagent_type so they route to sp-* (not general-purpose)
+# run-sprint.md Agent() dispatches pass subagent_type so they route to sp-* (not general-purpose).
+# Dispatch protocol was moved here from SKILL.md in v1.11.0 (Run Sprint section downsized).
 for agent_name in sp-architect sp-dev sp-qa; do
-  if grep -qE "subagent_type=\"${agent_name}\"" "$WORKTREE_DIR/claude-config/skills/stackpilot/SKILL.md"; then
-    echo "  PASS: SKILL.md dispatches subagent_type=${agent_name}"
+  if grep -qE "subagent_type=\"${agent_name}\"" "$WORKTREE_DIR/claude-config/skills/stackpilot/references/run-sprint.md"; then
+    echo "  PASS: run-sprint.md dispatches subagent_type=${agent_name}"
     PASS=$((PASS + 1))
   else
-    echo "  FAIL: SKILL.md missing subagent_type=${agent_name} — dispatch falls back to general-purpose"
+    echo "  FAIL: run-sprint.md missing subagent_type=${agent_name} — dispatch falls back to general-purpose"
     FAIL=$((FAIL + 1))
   fi
 done
 
-# SKILL.md routes docs tasks to sp-docs (haiku cost savings only materialize here)
-grep_in "subagent_type=\"sp-docs\"" "claude-config/skills/stackpilot/SKILL.md" \
-  && { echo "  PASS: SKILL.md routes docs tasks to sp-docs"; PASS=$((PASS + 1)); } \
-  || { echo "  FAIL: SKILL.md missing sp-docs routing — haiku cost savings will not apply"; FAIL=$((FAIL + 1)); }
+# run-sprint.md routes docs tasks to sp-docs (haiku cost savings only materialize here)
+grep_in "subagent_type=\"sp-docs\"" "claude-config/skills/stackpilot/references/run-sprint.md" \
+  && { echo "  PASS: run-sprint.md routes docs tasks to sp-docs"; PASS=$((PASS + 1)); } \
+  || { echo "  FAIL: run-sprint.md missing sp-docs routing — haiku cost savings will not apply"; FAIL=$((FAIL + 1)); }
 
-# Shared skill must support Codex without installing a second stackpilot skill.
-if ! grep -q "Requires Claude Code" "$WORKTREE_DIR/claude-config/skills/stackpilot/SKILL.md" \
-   && grep -q "references/codex-dispatch.md" "$WORKTREE_DIR/claude-config/skills/stackpilot/SKILL.md" \
-   && grep -q "update_plan" "$WORKTREE_DIR/claude-config/skills/stackpilot/references/codex-dispatch.md" \
-   && grep -q "explorer" "$WORKTREE_DIR/claude-config/skills/stackpilot/references/codex-dispatch.md" \
-   && grep -q "worker" "$WORKTREE_DIR/claude-config/skills/stackpilot/references/codex-dispatch.md"; then
-  echo "  PASS: shared stackpilot skill declares Codex-native dispatch"
-  PASS=$((PASS + 1))
-else
-  echo "  FAIL: shared stackpilot skill missing Codex-native dispatch contract"
-  FAIL=$((FAIL + 1))
-fi
-
-for agent in sp-architect sp-dev sp-docs sp-qa; do
-  if grep -qE "^model: inherit" "$WORKTREE_DIR/codex-config/agents/${agent}.md"; then
-    echo "  PASS: Codex ${agent} inherits runtime model"
-    PASS=$((PASS + 1))
-  else
-    echo "  FAIL: Codex ${agent} should use model: inherit"
-    FAIL=$((FAIL + 1))
-  fi
-done
-
-if [ ! -e "$WORKTREE_DIR/codex-config/skills/stackpilot/SKILL.md" ] \
-   && [ ! -e "$WORKTREE_DIR/scripts/sync-codex-config.sh" ]; then
-  echo "  PASS: no direct Codex skill sync path"
-  PASS=$((PASS + 1))
-else
-  echo "  FAIL: direct Codex skill sync path should not exist when skillshare owns sync"
-  FAIL=$((FAIL + 1))
-fi
+# Codex / bench artifacts must not regrow under any path.
+check_absent "codex-config/ removed"           "$WORKTREE_DIR/codex-config"
+check_absent "codex-dispatch.md removed"       "$WORKTREE_DIR/claude-config/skills/stackpilot/references/codex-dispatch.md"
+check_absent "stackpilot-bench/ skill removed" "$WORKTREE_DIR/claude-config/skills/stackpilot-bench"
+check_absent "bench-implementation.md removed" "$WORKTREE_DIR/docs/bench-implementation.md"
 
 echo ""
 

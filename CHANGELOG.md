@@ -7,48 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed (2026-05-19 — stackpilot-bench v2 migration, dogfood sprint)
+### Removed (2026-05-20 — full cleanup of stackpilot-bench skill and Codex support)
 
-- **`/stackpilot-bench` rewritten to v2 three-leg config-comparison** — legs are
-  now `zero` / `stackpilot-serial` (v1.10.0 equivalent, `qa.disable_*` flags set)
-  / `stackpilot` (v1.11.0 defaults). The `stackpilot-serial` leg makes parallel
-  speedup mechanically observable.
-- **Multi-task workload schema** — workloads now contain `plan.yml` (sprint plan
-  with `depends_on` dependency graph) + `user-responses.yml` (scripted
-  CONFIRM-GATE answers, first-match-wins substring matching) + optional
-  `gate_traps[]` block in `traps.yml` for testing Sprint Finish Step 0.5 gate
-  triggering.
-- **26-column CSV schema** — v1's 20 columns + 6 new (`leg_config`,
-  `sprint_total_tasks`, `sprint_waves`, `gate_correctness`,
-  `parallel_speedup_pct`, `criteria_coverage_pct`). Old v1 `history.csv` backed
-  up to `.bak-v1-2026-05-18`. NOTE: spec section 3 mistakenly stated 27 columns;
-  actual header is 26 (v1 was 20, not 21 as old docs claimed). Corrected during
-  this sprint.
-- **9-dimension scoring** — 5 v1 dimensions (correctness, over-engineering
-  resistance, bug catch, token efficiency, wall-clock speed) + 4 new (parallel
-  speedup, gate correctness, recovery success, criteria coverage). Weights sum
-  to 1.000.
-- **New workloads installed** — `02-sprint-parallel-features` (4 tasks across 2
-  waves, tests parallel speedup with 3 disjoint subsystem files) and
-  `03-adversarial-gates` (3 tasks with `gate_traps` targeting all three Sprint
-  Finish Step 0.5 gates).
-- **Existing workload `01-regional-billing-ledger-cutover` upgraded** —
-  `plan.yml` + `user-responses.yml` added; existing sandbox, traps, and
-  evaluator preserved.
-- **Main `/stackpilot` reads 3 new `qa.disable_*` flags** —
-  `qa.disable_criteria_gate`, `qa.disable_state_json`, plus existing
-  `qa.max_parallel`. Default `false` preserves v1.11.0 behavior.
-- **`docs/bench-implementation.md` v2 section added** documenting the new
-  protocol; v1 historical notes preserved.
-
-This sprint was itself a dogfood of stackpilot v1.11.0 — used parallel wave
-dispatch (sp-architect for TASK-003 + TASK-004 in parallel), mini-brainstorm
-gate (Light path skipped because Standard), Phase 3.7 spec review gate (user
-approved), per-task `state.json` tracking, and acceptance-criteria.md derivation
-with Sprint Finish Step 0.5 gate evaluation. The intentional spec column-count
-miscount (27 vs actual 26) became a real dogfood signal: Step 0.5 Gate 1
-correctly flagged C1 as `fail` mid-sprint, demonstrating the gate works as
-designed.
+- **`/stackpilot-bench` skill deleted** — `claude-config/skills/stackpilot-bench/`
+  (SKILL.md, all 3 workloads, scripts, references, run-codex-bench.sh,
+  headless-mode.md) removed; `.stackpilot/benchmarks/` data (history.csv +
+  per-run scorecards) removed; `tests/test-bench.sh` removed;
+  `docs/bench-implementation.md` removed. The 2026-05-19 v2 rewrite was
+  inconsistent across three layers (SKILL.md docs vs runner script vs workload
+  files all disagreed on schema and prompt format), so it never actually ran.
+- **`codex-config/` deleted** — Codex-native sp-* agent prompts no longer
+  shipped. `claude-config/skills/stackpilot/references/codex-dispatch.md` also
+  deleted along with the SKILL.md / docs / tests references that pointed at it.
+- **`qa.disable_criteria_gate` and `qa.disable_state_json` config flags removed**
+  from SKILL.md and `references/run-sprint.md`. These only existed to make the
+  bench `stackpilot-serial` leg behave like v1.10.0; with bench gone they have
+  no consumer. Default behavior of the gates is unchanged.
+- **`.stackpilot/ARCHITECTURE.md`** trimmed of all bench-related Decision /
+  Pattern entries.
 
 ## [1.11.0] - 2026-05-18
 
@@ -89,41 +65,7 @@ designed.
   rules covering the above (parallel waves, artifact-driven termination,
   Light mini-brainstorm + Phase 3.7).
 
-### Changed (2026-04-20 post-mortem — v3 workloads)
-- **`/stackpilot-bench` workloads rebuilt** after first baseline run
-  (2026-04-20-0419) produced a misleading "stackpilot 明显落后"
-  verdict. Root cause: v2 workloads were too simple — native zero
-  scored 97/100 on all three, so `/stackpilot` had no headroom to
-  earn its overhead. Post-mortem: `docs/bench-implementation.md §
-  Workload selection error (2026-04-20 post-mortem)`.
-- **v3 workloads** target real `/stackpilot` scenarios:
-  `01-saas-subscription-feature` (ambiguous scope with existing user
-  base + enterprise pressure), `02-search-migration-no-downtime`
-  (dual-write + backfill + rollback), `03-multi-tenant-audit-logging`
-  (cross-system consistency in existing codebase). Each fixture is
-  15-25 files of realistic code.
-- **Scorecard discrimination check** (`compute-scorecard.sh`): any
-  workload where zero-leg composite >90 is flagged
-  `🚫 NON-DISCRIMINATIVE` and excluded from the overall composite. If
-  all workloads trip the check, headline reads `INCONCLUSIVE`, not a
-  false-negative verdict. Guards against repeating the 2026-04-20
-  workload-selection error.
-- **Kept 2026-04-20-0419 run artifacts** under
-  `.stackpilot/benchmarks/runs/2026-04-20-0419/` as the negative
-  example referenced by the post-mortem.
-
-### Changed
-- **`/stackpilot-bench` headline output is now a scorecard, not a verdict.**
-  Scorecard answers "is stackpilot worth using over native Claude Code?"
-  with 0-100 per-dimension scores (correctness / over-engineering
-  resistance / bug catch rate / token efficiency / wall-clock speed),
-  plus a per-workload decision guide. The POSITIVE / MARGINAL / NEGATIVE
-  verdict is still rendered as a secondary regression-tracking view. See
-  `claude-config/skills/stackpilot-bench/references/scoring.md`.
-- **Verdict quality gate now counts sp-qa catches.** Pairwise quality
-  condition is `stackpilot.traps_avoided_in_diff + 0.5 * traps_caught_in_qa
-  >= baseline.traps_avoided_in_diff`. Without this, any sp-qa improvement
-  was invisible to the bench.
+### Changed (2026-04-20 — agent prompt reshape)
 - **sp-dev agent prompt reshaped.** Six explicit "Don't add X"
   boundaries at the top (primacy position) mirror Anthropic's official
   "Avoid over-engineering" template for Claude Opus 4.5/4.6/4.7. Filler
@@ -141,22 +83,6 @@ designed.
   field so "no finding" has to be earned. The deterministic Consistency
   Audit (stackpilot's unique value) is preserved verbatim.
 
-### Added
-- **Three representative workloads installed** under
-  `claude-config/skills/stackpilot-bench/workloads/`:
-  `01-stripe-invoice-api` (simple, 11 traps),
-  `02-rate-limit-middleware` (medium, 13 traps),
-  `03-moment-to-datefns-refactor` (complex, 15 traps). Every trap has a
-  `category: over-engineering | correctness` field for future scorecard
-  splits. Replaces workloads deleted in 27f1838.
-- **Headless execution scaffolded**
-  (`scripts/run-leg-headless.sh` + `references/headless-mode.md`). Each
-  leg runs as an isolated `claude --print` subprocess, eliminating
-  parent-session prompt-cache leak that biased v1 token counts. Not
-  wired as SKILL.md default yet — requires live CLI contract verify +
-  permissions guard + re-baseline. See `headless-mode.md § Flipping the
-  default`.
-
 ### Fixed
 - **sp-* agents now actually dispatch** — forensics on 171 real user stackpilot sessions showed `sp-architect` / `sp-dev` / `sp-qa` / `sp-docs` had NEVER been invoked. Three compounding bugs:
   1. Frontmatter used non-standard `allowed-tools:` YAML list; Claude Code spec requires `tools:` comma-separated string. Silent non-registration.
@@ -166,7 +92,6 @@ designed.
   All three fixed: frontmatter corrected, `install.sh` now prints a RESTART reminder, all dispatch sites include `subagent_type="sp-*"`. Activation requires Claude Code restart after install.
 
 ### Added
-- **`/stackpilot-bench` skill** — continuous quantitative benchmark for stackpilot. Runs naive_zero / naive_savvy / stackpilot legs across a set of fixed workloads, writes CSV time series + verdict report. Use after editing `sp-*` prompts or `/stackpilot` orchestration to confirm the change is a positive optimization. See `claude-config/skills/stackpilot-bench/SKILL.md` for the full protocol and `docs/architecture.md` for high-level description. **Note (2026-04-17)**: first-cut workloads (rename / flag-add / doc-edit) deleted as too small to be representative — see ARCHITECTURE.md "workloads must match real /stackpilot usage scope". New workloads pending design.
 - **Task-type routing for sp-docs** — `type: docs` tasks now route to `sp-docs` (haiku model). Previously all types went to `sp-dev` (sonnet), making the haiku cost optimization dead code.
 - **`tests/test-e2e.sh` +8 structural assertions** — guards against the registration regression returning: frontmatter `tools:` format on all 4 agents, `subagent_type="sp-*"` on all SKILL.md dispatches, sp-docs routing.
 
