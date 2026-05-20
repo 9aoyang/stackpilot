@@ -26,6 +26,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **`.stackpilot/ARCHITECTURE.md`** trimmed of all bench-related Decision /
   Pattern entries.
 
+### Fixed (2026-05-20 — post-cleanup test + docs alignment)
+
+- **`tests/test-e2e.sh`** — added `check_absent` helper symmetric to `check`;
+  added 4 negative assertions guarding against codex-config / bench skill /
+  bench docs regrowth; redirected 5 stale `subagent_type` + light-skip grep
+  targets from `SKILL.md` to `references/run-sprint.md` (where the dispatch
+  protocol actually lives since v1.11.0's SKILL.md downsize). 5 pre-existing
+  FAILs → 5 PASSes; full suite now 102/102.
+- **`claude-config/agents/sp-architect.md`** — removed parenthetical
+  reference `(bench 2026-04-17)` pointing at the deleted bench micro-benchmark;
+  retained the underlying rule (extended thinking on every review).
+- **`README.md`** — removed 4 stale references to Codex `update_plan` /
+  `explorer` / `worker` dispatch fallback and "Codex-only `/stackpilot` skill"
+  installation note (both English and 中文 sections). Codex orchestration was
+  removed with the rest of `codex-config/`; these prose lines were missed.
+- **`docs/architecture.md` + `docs/architecture.zh.md`** — bumped `Last updated`
+  / `最后更新` from `2026-04-20` to `2026-05-20`.
+- **`CHANGELOG.md`** — disambiguated two adjacent `### Changed` headers inside
+  `[1.11.0]` that abutted after the cleanup deleted the block between them.
+
 ## [1.11.0] - 2026-05-18
 
 ### Changed (2026-05-18 — parallel Run Sprint + criteria-gated Sprint Finish + brainstorm re-sync)
