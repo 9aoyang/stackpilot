@@ -28,10 +28,16 @@ for legacy in review-patterns.md sprint-metrics.md decisions.md; do
   fi
 done
 
-# 3. Create .stackpilot/.gitignore
+# 3. Create or update .stackpilot/.gitignore
 if [ ! -f "$PROJECT_ROOT/.stackpilot/.gitignore" ]; then
   cp "$STACKPILOT_DIR/templates/stackpilot-inner-gitignore" "$PROJECT_ROOT/.stackpilot/.gitignore"
   echo "[stackpilot] Created .stackpilot/.gitignore"
+fi
+
+# 3a. Ensure v2.0 HTML view layer (views/) is gitignored — idempotent for upgrades
+if [ -f "$PROJECT_ROOT/.stackpilot/.gitignore" ] && ! grep -qE '^views/?$' "$PROJECT_ROOT/.stackpilot/.gitignore" 2>/dev/null; then
+  printf '\n# v2.0 HTML view layer (generated, regenerable)\nviews/\n' >> "$PROJECT_ROOT/.stackpilot/.gitignore"
+  echo "[stackpilot] Added views/ to .stackpilot/.gitignore (v2.0 HTML views)"
 fi
 
 # 4. Create stackpilot.config.yml if missing — auto-detect test command

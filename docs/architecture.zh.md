@@ -28,7 +28,17 @@ stackpilot/                        ← 框架安装目录
 │   │   └── sp-docs.md             ← 文档更新
 │   └── skills/
 │       ├── stackpilot/
-│       │   └── SKILL.md           ← /stackpilot 主入口
+│       │   ├── SKILL.md           ← /stackpilot 主入口
+│       │   └── references/
+│       │       ├── run-sprint.md
+│       │       ├── sprint-finish.md
+│       │       ├── 12-qa-matrix.md
+│       │       └── views/         ← v2.0 HTML 视图模板（5 个决策节点）
+│       │           ├── design-options.html
+│       │           ├── dashboard.html
+│       │           ├── spec-review.html
+│       │           ├── finish-report.html
+│       │           └── architecture.html
 │       ├── stackpilot-compete/
 │       │   └── SKILL.md           ← /stackpilot-compete 竞品差距分析
 │       ├── stackpilot-research/
@@ -47,17 +57,23 @@ stackpilot/                        ← 框架安装目录
 │   │   ├── pre-merge-commit       ← 阻止非 squash merge 到 main/master
 │   │   └── README.md
 │   └── preview/
-│       ├── start-server.sh        ← 可视化设计伴侣服务器
-│       └── stop-server.sh
+│       ├── start-server.sh        ← sprint/可视化服务器（v2: HTML 视图宿主 + WS 状态推送）
+│       ├── stop-server.sh
+│       ├── server.cjs             ← 扩展了 /sprints/<slug>、/api/action、/api/state
+│       └── helper.js              ← WS 客户端 + window.sp.{action,state} sprint API
 └── templates/
     ├── stackpilot.config.yml      ← 配置模板（仅 qa 部分）
     └── stackpilot-inner-gitignore
 
 <项目根目录>/                      ← 用户的项目
 ├── stackpilot.config.yml          ← qa 配置（test_command, coverage_threshold）
-└── .stackpilot/                   ← specs 和 plans 受 git 跟踪
-    ├── specs/                     ← 设计文档（当前 sprint）
-    └── plans/                     ← 实现计划（当前 sprint）
+└── .stackpilot/
+    ├── ARCHITECTURE.md            ← 项目记忆（数据层）
+    ├── specs/                     ← 设计文档 + 验收标准（数据层）
+    ├── plans/                     ← 实现计划（数据层）
+    ├── runs/<sprint>/TASK-*/state.json   ← 每任务 phase 状态（数据层）
+    └── views/                     ← v2.0 生成的 HTML 视图（视图层，gitignore）
+        └── <sprint>/{design-options,dashboard,spec-review,finish-report}.html
 ```
 
 ---
@@ -133,21 +149,20 @@ Agent(
             进行中           → 继续 sprint
 ```
 
-**Standard Feature — 人工介入点：**
+**Standard Feature — 5 个 Node（v2.0 HTML-first）：**
 
 ```
-Phase 1: 逐个澄清问题（深度理解后再问下一个）
-Phase 1.5: 可视化伴侣（浏览器端 mockup，仅在视觉表达更优时使用）
-Phase 2: 设计方案（分段展示，用户逐段确认）
-Phase 3: spec 自动验证循环（自修复，仅 3 次失败才升级）
-Phase 3.5: spec 12-QA（12 维度场景覆盖审查）
-Phase 4: plan 自动验证循环（自修复，仅 3 次失败才升级）
-Phase 4.5: plan 追溯检查（spec→task 正向追溯 + task→spec 反向追溯；不再重跑 12 维度）
-Pre-coding: 确认开始
-Coding: 自动执行 + 每 task 进度简报
-Sprint finish: squash merge（main 上仅一个 commit）/ PR / 保留 / 丢弃
+Node 1 — Exploration: 先 scout 代码（grep + 读 2-5 个文件）→ 逐个澄清问题 → spec 中记录 canonical refs
+Node 2 — Design: 2-3 个方案以 design-options.html 呈现（3 列网格 + Pick A/B/C 按钮）+ 终端 fallback
+Node 3 — Spec & Criteria: 写 spec → auto-verify（grep 检查）→ 12-QA 矩阵 → 派生验收 criteria → spec-review.html（markdown 渲染 + 12-QA 色块 + 可编辑 criteria + Approve）或终端 review
+Node 4 — Plan & Run Sprint: 写 plan → auto-verify → traceability trace → 建分支 → 启动 sprint server → 推 dashboard.html（实时 DAG + Kanban + criteria）→ 按 wave 并行调度 sub-agent
+Node 5 — Finish: pre-merge gate（typecheck/lint/tests）→ closure gate（criteria 全绿 / CHANGELOG / patterns 浮现）→ finish-report.html（时间轴 + criteria 饼图 + commits + A/B/C/D）或终端 A/B/C/D
   ↳ pre-merge-commit hook 硬性拒绝非 squash 的 merge
 ```
+
+行内验证（grep / 12-QA / traceability）是 node 内的子步骤，不再是独立 phase。HTML
+视图产出在 Node 2/3/4/5；数据层 source-of-truth（spec / plan / criteria /
+state.json）保持 markdown/JSON 供 sub-agent 消费。
 
 ---
 

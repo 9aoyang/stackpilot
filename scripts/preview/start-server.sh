@@ -22,6 +22,7 @@ FOREGROUND="false"
 FORCE_BACKGROUND="false"
 BIND_HOST="127.0.0.1"
 URL_HOST=""
+SPRINT_SLUG=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --project-dir)
@@ -34,6 +35,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --url-host)
       URL_HOST="$2"
+      shift 2
+      ;;
+    --sprint-slug)
+      SPRINT_SLUG="$2"
       shift 2
       ;;
     --foreground|--no-daemon)
@@ -105,13 +110,13 @@ fi
 # Foreground mode for environments that reap detached/background processes.
 if [[ "$FOREGROUND" == "true" ]]; then
   echo "$$" > "$PID_FILE"
-  env BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST" BRAINSTORM_OWNER_PID="$OWNER_PID" node server.cjs
+  env BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST" BRAINSTORM_OWNER_PID="$OWNER_PID" STACKPILOT_SPRINT_SLUG="$SPRINT_SLUG" STACKPILOT_ROOT="${PROJECT_DIR:-$PWD}" node server.cjs
   exit $?
 fi
 
 # Start server, capturing output to log file
 # Use nohup to survive shell exit; disown to remove from job table
-nohup env BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST" BRAINSTORM_OWNER_PID="$OWNER_PID" node server.cjs > "$LOG_FILE" 2>&1 &
+nohup env BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST" BRAINSTORM_OWNER_PID="$OWNER_PID" STACKPILOT_SPRINT_SLUG="$SPRINT_SLUG" STACKPILOT_ROOT="${PROJECT_DIR:-$PWD}" node server.cjs > "$LOG_FILE" 2>&1 &
 SERVER_PID=$!
 disown "$SERVER_PID" 2>/dev/null
 echo "$SERVER_PID" > "$PID_FILE"

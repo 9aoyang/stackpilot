@@ -1,5 +1,10 @@
 # Optimize Sprint
 
+> **DEPRECATED in v2.0** — under review for v2.1. The v1 path was rarely
+> exercised; the same outcome is achievable via the standard 5-node sprint
+> with an acceptance criterion that targets the metric. Kept one release
+> for back-compat. Will be removed or refactored before v2.1.
+
 A purpose-built sprint for quantifiable improvement goals (performance, test pass rate, error rate, bundle size, etc.).
 
 <HARD-GATE>

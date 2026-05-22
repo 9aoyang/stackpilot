@@ -1,6 +1,13 @@
 # Sprint Finish
 
-Run after all tasks are done. Confirms tests pass, optionally starts dev server for preview, then presents merge/PR/keep/discard options.
+Run after all tasks are done. Confirms tests pass, optionally starts dev
+server for preview, then surfaces the sprint outcome via `finish-report.html`
+(or terminal fallback) and executes the user's merge/PR/keep/discard choice.
+
+Inputs assumed present: `.stackpilot/runs/<slug>/TASK-*/state.json` for
+elapsed/phase data, `.stackpilot/specs/<slug>-criteria.md` for criteria,
+agent reports for Pattern/Decision Candidates, `git log <base>..HEAD` for
+the commits list.
 
 ## Step 0 — Pre-merge verification gate
 
@@ -167,12 +174,43 @@ Do NOT blindly run `cargo run`, `go run .`, `python app.py`, or `npm start`.
 
 **Wait for user to finish reviewing.**
 
-## Step 3 — Present options
+## Step 3 — Present options (HTML view + terminal fallback)
 
-> A. Merge into base branch
+### 3a. Generate finish-report.html
+
+Aggregate sprint data into JSON, fill `references/views/finish-report.html`
+tokens, write to `.stackpilot/views/<slug>/finish-report.html`:
+
+```bash
+SLUG="<sprint-slug>"
+BASE=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo main)
+BRANCH=$(git branch --show-current)
+
+# Build DATA_JSON in a temp file (commits / tasks / criteria / patterns / decisions / branch)
+# Then sed-replace tokens in the template
+cp ~/Documents/github/stackpilot/claude-config/skills/stackpilot/references/views/finish-report.html \
+   ".stackpilot/views/${SLUG}/finish-report.html"
+# Tokens to replace: {{SPRINT_SLUG}}, {{BRANCH}}, {{DATA_JSON}}
+```
+
+The dashboard server is still running from Node 4; the same instance
+serves this view at `http://localhost:<port>/sprints/<slug>/finish-report.html`.
+
+Print URL once to terminal alongside this prompt:
+
+> A. Squash merge into `${BASE}`
 > B. Push and create a PR
 > C. Leave as-is (handle later)
-> D. Discard all changes (destructive — confirm first)
+> D. Discard (destructive — confirm first)
+>
+> Click in browser OR reply A/B/C/D here.
+
+### 3b. Wait for action
+
+Poll `.stackpilot/views/<slug>/finish-action.json` every 2 seconds. **First
+to arrive wins** (HTML click or terminal reply). If 30 seconds elapse with
+no action.json AND no terminal response, fall back to terminal-only prompt
+(do not regenerate the HTML; user can still type the choice).
 
 ## Step 4 — Pre-merge commits on feature branch (A and B)
 
@@ -220,8 +258,15 @@ git commit -m "chore(stackpilot): clear sprint artifacts"
 - **C**: Do nothing
 - **D**: Confirm once, then `git checkout <base-branch> && git branch -D <feature-branch>`
 
-## Step 6 — Stop dev server
+## Step 6 — Stop dev server + sprint server
 
 ```bash
+# Dev server (the project's app server started in Step 2, if any)
 kill <PID> 2>/dev/null
+
+# Sprint server (started in Node 4 of SKILL.md)
+bash ~/Documents/github/stackpilot/scripts/preview/stop-server.sh --slug "${SLUG}"
 ```
+
+Stopping the sprint server removes `.stackpilot/views/<slug>/.server-info.json`
+so a future `/stackpilot` invocation won't try to reuse a dead server.

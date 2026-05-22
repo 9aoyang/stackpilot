@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' ws: wss:">
+<title>Design Options — {{SPRINT_SLUG}}</title>
+<style>
+  :root { --bg:#0f1419; --panel:#1a1f29; --border:#2a3038; --text:#e6e9ef; --muted:#8a93a6; --accent:#7aa2f7; --good:#9ece6a; --bad:#f7768e; --warn:#e0af68; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 14px/1.5 -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 24px; min-height: 100vh; }
+  header { max-width: 1400px; margin: 0 auto 24px; }
+  header h1 { font-size: 22px; font-weight: 600; }
+  header .sub { color: var(--muted); margin-top: 4px; font-size: 13px; }
+  .question { max-width: 1400px; margin: 0 auto 20px; color: var(--text); font-size: 16px; }
+  .grid { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .option { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px; transition: border-color .15s; }
+  .option.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(122,162,247,.15); }
+  .option h2 { font-size: 18px; font-weight: 600; display: flex; align-items: baseline; gap: 8px; }
+  .option h2 .letter { display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center; background: var(--accent); color: var(--bg); border-radius: 6px; font-weight: 700; }
+  .option .summary { color: var(--muted); }
+  .option .diagram { background: #0a0d12; border: 1px dashed var(--border); border-radius: 6px; padding: 12px; min-height: 120px; overflow: auto; }
+  .option .diagram svg { max-width: 100%; height: auto; }
+  .option .meta { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; }
+  .option .meta dt { color: var(--muted); }
+  .option ul.pros, .option ul.cons { list-style: none; padding-left: 18px; font-size: 13px; }
+  .option ul.pros li::before { content: "✓ "; color: var(--good); margin-left: -16px; }
+  .option ul.cons li::before { content: "✗ "; color: var(--bad); margin-left: -16px; }
+  .option .pick-btn { margin-top: auto; padding: 10px 16px; background: var(--accent); color: var(--bg); border: 0; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; transition: filter .15s; }
+  .option .pick-btn:hover { filter: brightness(1.1); }
+  .option .pick-btn:disabled { opacity: .5; cursor: default; }
+  .footer-status { max-width: 1400px; margin: 24px auto 0; padding: 12px 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-size: 13px; }
+  .footer-status.success { border-color: var(--good); color: var(--good); }
+  .footer-status.error { border-color: var(--bad); color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Design Options — {{SPRINT_SLUG}}</h1>
+  <div class="sub">{{SPRINT_DESCRIPTION}}</div>
+</header>
+<div class="question">{{QUESTION}}</div>
+<div class="grid" id="options"></div>
+<div class="footer-status" id="status">Click a Pick button to submit your choice.</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+// {{OPTIONS_JSON}} is a JSON array of {key,title,summary,diagram_svg|diagram_mermaid,pros:[],cons:[],complexity,fit}
+// Replaced by main agent at generation time. If left raw, falls back to inline-defined demo data.
+const SPRINT_SLUG = "{{SPRINT_SLUG}}";
+const OPTIONS = (function () {
+  try { return JSON.parse(`{{OPTIONS_JSON}}`); }
+  catch (e) {
+    return [
+      { key: "A", title: "Approach A", summary: "Template fallback — agent did not fill OPTIONS_JSON.", diagram_svg: "", pros: ["pro 1"], cons: ["con 1"], complexity: "low", fit: "demo" }
+    ];
+  }
+})();
+
+const grid = document.getElementById('options');
+const status = document.getElementById('status');
+
+OPTIONS.forEach(opt => {
+  const el = document.createElement('div');
+  el.className = 'option';
+  el.dataset.key = opt.key;
+  const diagram = opt.diagram_mermaid
+    ? `<div class="mermaid">${escape(opt.diagram_mermaid)}</div>`
+    : (opt.diagram_svg || '<span style="color:#666">no diagram</span>');
+  el.innerHTML = `
+    <h2><span class="letter">${opt.key}</span> ${escape(opt.title)}</h2>
+    <p class="summary">${escape(opt.summary)}</p>
+    <div class="diagram">${diagram}</div>
+    <dl class="meta">
+      <dt>Complexity</dt><dd>${escape(opt.complexity || '—')}</dd>
+      <dt>Fit</dt><dd>${escape(opt.fit || '—')}</dd>
+    </dl>
+    ${opt.pros && opt.pros.length ? `<ul class="pros">${opt.pros.map(p => `<li>${escape(p)}</li>`).join('')}</ul>` : ''}
+    ${opt.cons && opt.cons.length ? `<ul class="cons">${opt.cons.map(c => `<li>${escape(c)}</li>`).join('')}</ul>` : ''}
+    <button class="pick-btn" data-pick="${opt.key}">Pick ${opt.key}</button>
+  `;
+  grid.appendChild(el);
+});
+
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-pick]');
+  if (!btn) return;
+  const choice = btn.dataset.pick;
+  document.querySelectorAll('.option').forEach(o => o.classList.toggle('selected', o.dataset.key === choice));
+  document.querySelectorAll('.pick-btn').forEach(b => b.disabled = true);
+  status.textContent = `Submitting choice: ${choice} …`;
+  status.className = 'footer-status';
+  try {
+    await window.sp.action({ slug: SPRINT_SLUG, name: 'design-options', payload: { choice: choice, timestamp: Date.now() } });
+    status.textContent = `✓ Choice "${choice}" submitted. Return to terminal — agent will pick this up.`;
+    status.className = 'footer-status success';
+  } catch (err) {
+    status.textContent = '✗ Submit failed: ' + err.message + ' (you can still type the choice in the terminal)';
+    status.className = 'footer-status error';
+    document.querySelectorAll('.pick-btn').forEach(b => b.disabled = false);
+  }
+});
+
+function escape(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+if (window.mermaid) {
+  window.mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict' });
+  window.mermaid.run({ querySelector: '.mermaid' }).catch(e => console.warn('mermaid render error:', e.message));
+}
+</script>
+</body>
+</html>

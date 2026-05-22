@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' ws: wss:">
+<title>Spec Review — {{SPRINT_SLUG}}</title>
+<style>
+  :root { --bg:#0f1419; --panel:#1a1f29; --border:#2a3038; --text:#e6e9ef; --muted:#8a93a6; --accent:#7aa2f7;
+          --good:#9ece6a; --bad:#f7768e; --warn:#e0af68; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 14px/1.55 -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); display: grid; grid-template-columns: 200px 1fr 280px; grid-template-rows: 1fr auto; min-height: 100vh; }
+  nav { grid-row: 1 / 3; padding: 20px 16px; border-right: 1px solid var(--border); background: var(--panel); position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  nav h3 { font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: .5px; margin-bottom: 12px; }
+  nav ul { list-style: none; }
+  nav li a { display: block; padding: 6px 8px; color: var(--text); text-decoration: none; border-radius: 4px; font-size: 13px; }
+  nav li a:hover { background: var(--bg); color: var(--accent); }
+  main { padding: 24px 32px; max-width: 900px; }
+  main h1 { font-size: 24px; margin-bottom: 16px; }
+  main h2 { font-size: 18px; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+  main h2::before { content: "▾ "; color: var(--muted); font-size: 12px; }
+  main h2.collapsed::before { content: "▸ "; }
+  main h2.collapsed ~ * { display: none; }
+  main p { margin-bottom: 12px; }
+  main code { background: var(--panel); padding: 1px 6px; border-radius: 3px; font-size: 13px; }
+  main pre { background: var(--panel); padding: 12px; border-radius: 6px; overflow-x: auto; margin: 12px 0; }
+  main pre code { background: none; padding: 0; }
+  main table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  main th, main td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  main th { color: var(--muted); }
+  main ul, main ol { margin: 8px 0 12px 24px; }
+  aside { grid-row: 1; padding: 20px 16px; border-left: 1px solid var(--border); background: var(--panel); position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  aside h3 { font-size: 11px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 20px; }
+  .qa-cell { aspect-ratio: 1; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; cursor: pointer; padding: 4px; text-align: center; transition: transform .1s; }
+  .qa-cell:hover { transform: scale(1.05); }
+  .qa-cell .num { font-size: 14px; }
+  .qa-cell.pass { background: var(--good); color: var(--bg); }
+  .qa-cell.warn { background: var(--warn); color: var(--bg); }
+  .qa-cell.fail { background: var(--bad); color: var(--bg); }
+  .qa-cell.na { background: var(--border); color: var(--muted); }
+  footer { grid-column: 1 / 4; padding: 16px 24px; background: var(--panel); border-top: 1px solid var(--border); display: flex; gap: 12px; justify-content: flex-end; position: sticky; bottom: 0; }
+  footer button { padding: 10px 20px; border: 0; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  footer button.approve { background: var(--good); color: var(--bg); }
+  footer button.change { background: var(--warn); color: var(--bg); }
+  footer button.reverify { background: var(--border); color: var(--text); }
+  footer button:disabled { opacity: .5; cursor: default; }
+  .criteria-section { margin: 32px 0 16px; }
+  .criteria-section table input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; color: var(--text); font: inherit; }
+  .criteria-section .verify { font-family: ui-monospace, monospace; font-size: 11px; opacity: .7; }
+  .criteria-section .actions { margin-top: 8px; display: flex; gap: 8px; }
+  .criteria-section .actions button { padding: 4px 10px; background: var(--border); border: 0; border-radius: 4px; color: var(--text); cursor: pointer; font-size: 12px; }
+  .change-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); align-items: center; justify-content: center; z-index: 10; }
+  .change-modal.open { display: flex; }
+  .change-modal .box { background: var(--panel); padding: 24px; border-radius: 8px; width: min(600px, 90%); }
+  .change-modal textarea { width: 100%; min-height: 120px; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px; font: inherit; border-radius: 4px; resize: vertical; }
+  .change-modal .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+  .toast { position: fixed; top: 16px; right: 16px; padding: 12px 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; z-index: 20; max-width: 400px; opacity: 0; transition: opacity .2s; }
+  .toast.show { opacity: 1; }
+  .toast.success { border-color: var(--good); }
+  .toast.error { border-color: var(--bad); }
+</style>
+</head>
+<body>
+<nav>
+  <h3>Sections</h3>
+  <ul id="nav-list"></ul>
+</nav>
+<main id="main">
+  <h1>{{SPRINT_SLUG}} — Spec Review</h1>
+  <div id="spec-rendered"></div>
+
+  <div class="criteria-section">
+    <h2>Acceptance Criteria</h2>
+    <table>
+      <thead><tr><th style="width:60px">ID</th><th>Description (editable)</th><th>Verify (locked)</th></tr></thead>
+      <tbody id="criteria-body"></tbody>
+    </table>
+    <div class="actions">
+      <button id="add-criterion">+ Add criterion</button>
+    </div>
+  </div>
+</main>
+<aside>
+  <h3>12-QA Coverage</h3>
+  <div class="qa-grid" id="qa-grid"></div>
+  <h3>Legend</h3>
+  <div style="font-size:12px;color:var(--muted)">
+    <div style="margin:4px 0"><span style="display:inline-block;width:12px;height:12px;background:var(--good);border-radius:2px;vertical-align:middle"></span> Covered</div>
+    <div style="margin:4px 0"><span style="display:inline-block;width:12px;height:12px;background:var(--warn);border-radius:2px;vertical-align:middle"></span> Partial</div>
+    <div style="margin:4px 0"><span style="display:inline-block;width:12px;height:12px;background:var(--bad);border-radius:2px;vertical-align:middle"></span> Missing</div>
+    <div style="margin:4px 0"><span style="display:inline-block;width:12px;height:12px;background:var(--border);border-radius:2px;vertical-align:middle"></span> N/A</div>
+  </div>
+</aside>
+<footer>
+  <button class="reverify" id="btn-reverify">🔄 Re-run Auto-Verify</button>
+  <button class="change" id="btn-change">✏️ Request Changes</button>
+  <button class="approve" id="btn-approve">✅ Approve</button>
+</footer>
+
+<div class="change-modal" id="change-modal">
+  <div class="box">
+    <h3 style="margin-bottom:12px">Request changes</h3>
+    <textarea id="change-text" placeholder="Describe what you want changed in the spec…"></textarea>
+    <div class="row">
+      <button onclick="document.getElementById('change-modal').classList.remove('open')">Cancel</button>
+      <button class="approve" onclick="submitChange()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
+<script>
+const SPRINT_SLUG = "{{SPRINT_SLUG}}";
+// SPEC_MARKDOWN and CRITERIA_ROWS and QA_RESULT are filled by the main agent.
+const SPEC_MARKDOWN = `{{SPEC_MARKDOWN}}`;
+const CRITERIA_ROWS = (function () { try { return JSON.parse(`{{CRITERIA_JSON}}`); } catch (e) { return []; } })();
+// QA_RESULT: 12-entry array of {dim:1-12, name, status:'pass'|'warn'|'fail'|'na', note}
+const QA_RESULT = (function () { try { return JSON.parse(`{{QA_JSON}}`); } catch (e) { return []; } })();
+
+const md = window.markdownit({ html: false, linkify: true, typographer: true });
+const rendered = md.render(SPEC_MARKDOWN || '_(no spec content)_');
+document.getElementById('spec-rendered').innerHTML = rendered;
+
+// Build left nav from H2s
+const navList = document.getElementById('nav-list');
+document.querySelectorAll('#spec-rendered h2').forEach((h, i) => {
+  const id = 'sec-' + i;
+  h.id = id;
+  h.addEventListener('click', () => h.classList.toggle('collapsed'));
+  const li = document.createElement('li');
+  li.innerHTML = `<a href="#${id}">${escape(h.textContent.replace(/^[▾▸]\s*/, ''))}</a>`;
+  navList.appendChild(li);
+});
+
+// 12-QA grid
+const qaGrid = document.getElementById('qa-grid');
+const DIM_NAMES = ['Happy', 'Error', 'Edge', 'Abuse', 'Scale', 'Concurrent', 'Temporal', 'Data', 'Permission', 'Integration', 'Recovery', 'State'];
+for (let i = 1; i <= 12; i++) {
+  const cell = QA_RESULT.find(q => q.dim === i) || { dim: i, name: DIM_NAMES[i-1], status: 'na', note: '' };
+  const div = document.createElement('div');
+  div.className = 'qa-cell ' + cell.status;
+  div.title = `#${i} ${cell.name}${cell.note ? ' — ' + cell.note : ''}`;
+  div.innerHTML = `<div class="num">${i}</div><div>${escape(cell.name.slice(0, 6))}</div>`;
+  qaGrid.appendChild(div);
+}
+
+// Criteria table
+const criteriaBody = document.getElementById('criteria-body');
+function renderCriteria() {
+  criteriaBody.innerHTML = '';
+  CRITERIA_ROWS.forEach((r, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><b>${escape(r.id)}</b></td><td><input data-idx="${idx}" data-field="description" value="${escape(r.description)}"></td><td class="verify">${escape(r.verify)}</td>`;
+    criteriaBody.appendChild(tr);
+  });
+}
+renderCriteria();
+
+criteriaBody.addEventListener('input', (e) => {
+  const idx = e.target.dataset.idx;
+  const field = e.target.dataset.field;
+  if (idx != null && field) CRITERIA_ROWS[idx][field] = e.target.value;
+});
+
+document.getElementById('add-criterion').addEventListener('click', () => {
+  const nextId = 'C' + (CRITERIA_ROWS.length + 1);
+  CRITERIA_ROWS.push({ id: nextId, description: '', verify: 'TBD', status: 'untested', notes: '' });
+  renderCriteria();
+});
+
+// Footer actions
+document.getElementById('btn-approve').addEventListener('click', async () => {
+  await submitAction({ approved: true, criteria_edits: CRITERIA_ROWS, change_request: null });
+});
+document.getElementById('btn-change').addEventListener('click', () => {
+  document.getElementById('change-modal').classList.add('open');
+});
+async function submitChange() {
+  const text = document.getElementById('change-text').value.trim();
+  if (!text) { toast('Please describe the changes', 'error'); return; }
+  document.getElementById('change-modal').classList.remove('open');
+  await submitAction({ approved: false, criteria_edits: CRITERIA_ROWS, change_request: text });
+}
+document.getElementById('btn-reverify').addEventListener('click', async () => {
+  await submitAction({ approved: false, criteria_edits: CRITERIA_ROWS, change_request: null, reverify: true });
+});
+
+async function submitAction(payload) {
+  document.querySelectorAll('footer button').forEach(b => b.disabled = true);
+  try {
+    await window.sp.action({ slug: SPRINT_SLUG, name: 'spec-review', payload });
+    toast(payload.approved ? '✓ Approved — return to terminal' : (payload.reverify ? '✓ Re-verify requested' : '✓ Change request sent'), 'success');
+  } catch (e) {
+    toast('Failed: ' + e.message, 'error');
+    document.querySelectorAll('footer button').forEach(b => b.disabled = false);
+  }
+}
+
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+function escape(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+</script>
+</body>
+</html>

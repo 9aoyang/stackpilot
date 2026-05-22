@@ -30,7 +30,17 @@ stackpilot/                        ← framework installation
 │   │   └── sp-docs.md             ← documentation updates
 │   └── skills/
 │       ├── stackpilot/
-│       │   └── SKILL.md           ← /stackpilot main entry point
+│       │   ├── SKILL.md           ← /stackpilot main entry point
+│       │   └── references/
+│       │       ├── run-sprint.md
+│       │       ├── sprint-finish.md
+│       │       ├── 12-qa-matrix.md
+│       │       └── views/         ← v2.0 HTML view templates (5 decision-point nodes)
+│       │           ├── design-options.html
+│       │           ├── dashboard.html
+│       │           ├── spec-review.html
+│       │           ├── finish-report.html
+│       │           └── architecture.html
 │       ├── stackpilot-compete/
 │       │   └── SKILL.md           ← /stackpilot-compete competitive gap analysis
 │       ├── stackpilot-research/
@@ -49,17 +59,23 @@ stackpilot/                        ← framework installation
 │   │   ├── pre-merge-commit       ← blocks non-squash merges on main/master
 │   │   └── README.md
 │   └── preview/
-│       ├── start-server.sh        ← visual design companion server
-│       └── stop-server.sh
+│       ├── start-server.sh        ← sprint/visual server (v2: HTML view host + WS state stream)
+│       ├── stop-server.sh
+│       ├── server.cjs             ← extended with /sprints/<slug>, /api/action, /api/state
+│       └── helper.js              ← WS client + window.sp.{action,state} sprint API
 └── templates/
     ├── stackpilot.config.yml      ← config template (qa section only)
     └── stackpilot-inner-gitignore
 
 <project-root>/                    ← user's project
 ├── stackpilot.config.yml          ← qa settings (test_command, coverage_threshold)
-└── .stackpilot/                   ← specs and plans are git-tracked
-    ├── specs/                     ← design documents (current sprint)
-    └── plans/                     ← implementation plans (current sprint)
+└── .stackpilot/
+    ├── ARCHITECTURE.md            ← project memory (data layer)
+    ├── specs/                     ← design documents + criteria (data layer)
+    ├── plans/                     ← implementation plans (data layer)
+    ├── runs/<sprint>/TASK-*/state.json   ← per-task phase state (data layer)
+    └── views/                     ← v2.0 generated HTML artifacts (view layer, gitignored)
+        └── <sprint>/{design-options,dashboard,spec-review,finish-report}.html
 ```
 
 ---
@@ -136,21 +152,21 @@ Agent(
             in-progress        → continue sprint
 ```
 
-**Standard Feature — human intervention points:**
+**Standard Feature — 5 nodes (v2.0 HTML-first):**
 
 ```
-Phase 1: scout code first (grep + read 2-5 files) → clarifying questions (one at a time) → canonical refs captured in spec
-Phase 1.5: visual companion (browser-based mockups, only when visual helps)
-Phase 2: design proposal (sectioned, user approves each)
-Phase 3: spec auto-verify loop (self-fix, escalates only on 3x failure)
-Phase 3.5: spec 12-QA (12-dimension scenario coverage review of spec)
-Phase 4: plan auto-verify loop (self-fix, escalates only on 3x failure)
-Phase 4.5: plan traceability check (spec→task forward trace + task→spec reverse trace; no re-run of 12 dimensions)
-Pre-coding: confirm to start
-Coding: autonomous with per-task progress reporting
-Sprint finish: squash merge (1 commit on main) / PR / leave / discard choice
+Node 1 — Exploration: scout code first (grep + read 2-5 files) → clarifying questions (one at a time) → canonical refs captured in spec
+Node 2 — Design: 2-3 approaches in design-options.html (3-col grid, Pick A/B/C) + terminal fallback
+Node 3 — Spec & Criteria: write spec → auto-verify (grep checks) → 12-QA matrix → derive acceptance criteria → spec-review.html (markdown + 12-QA grid + editable criteria + Approve button) or terminal review
+Node 4 — Plan & Run Sprint: write plan → auto-verify → traceability trace → branch + commit → start sprint server → push dashboard.html (live DAG + Kanban + criteria) → dispatch tasks in parallel waves
+Node 5 — Finish: pre-merge gate (typecheck/lint/tests) → closure gate (criteria all green / CHANGELOG / patterns surfaced) → finish-report.html (timeline + criteria pie + commits + A/B/C/D) or terminal A/B/C/D
   ↳ pre-merge-commit hook rejects non-squash merges on main as a hard guard
 ```
+
+Inline verifications (grep, 12-QA matrix, traceability check) are sub-steps
+inside their node, not separate phases. HTML view artifacts are generated at
+Nodes 2, 3, 4, 5; data-layer source-of-truth files (spec, plan, criteria,
+state.json) remain markdown/JSON for sub-agent consumption.
 
 ---
 

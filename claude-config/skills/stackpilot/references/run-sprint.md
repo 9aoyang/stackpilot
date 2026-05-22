@@ -1,6 +1,8 @@
 # Run Sprint — Detailed Protocol
 
-Sprint execution detailed protocol. `SKILL.md` Run Sprint section is the high-level entry; this file has the full bash + agent dispatch templates + state machine.
+Sprint execution detailed protocol. `SKILL.md` Node 4 (Plan & Run Sprint) is the
+high-level entry; this file has the full bash + agent dispatch templates + state
+machine + sprint server lifecycle.
 
 ## Pre-Sprint
 
@@ -54,11 +56,14 @@ grep -qxF ".stackpilot/runs/" .gitignore 2>/dev/null || echo ".stackpilot/runs/"
 
 for TASK_ID in $ALL_TASK_IDS; do
   mkdir -p "${RUN_DIR}/${TASK_ID}"
+  # depends_on parsed from plan.md for that task
+  DEPS_JSON=$(jq -nc --argjson d "${DEPS_FOR_TASK_AS_JSON_ARRAY}" '$d')
   cat > "${RUN_DIR}/${TASK_ID}/state.json" <<EOF
 {
   "task_id": "${TASK_ID}",
   "wave": ${WAVE_NUM},
   "phase": "pending",
+  "depends_on": ${DEPS_JSON},
   "verify_fix_rounds": 0,
   "retry_count": 0,
   "last_result": null,
@@ -70,6 +75,37 @@ done
 ```
 
 state.json transitions during the loop — see "State Transitions" section below.
+
+The `depends_on` field is consumed by `dashboard.html` to render the DAG edges.
+Keep it in sync with the plan's `depends_on:` field per task.
+
+### 4. Start sprint server + push dashboard (HTML view layer)
+
+```bash
+SERVER_INFO=$(bash ~/Documents/github/stackpilot/scripts/preview/start-server.sh \
+  --project-dir "$PWD" --sprint-slug "${SPRINT_SLUG}" --background 2>&1 | head -1)
+PORT=$(echo "${SERVER_INFO}" | sed -n 's/.*"port":[[:space:]]*\([0-9]*\).*/\1/p')
+URL_HOST=$(echo "${SERVER_INFO}" | sed -n 's/.*"url_host":[[:space:]]*"\([^"]*\)".*/\1/p')
+
+mkdir -p ".stackpilot/views/${SPRINT_SLUG}"
+cp ~/Documents/github/stackpilot/claude-config/skills/stackpilot/references/views/dashboard.html \
+   ".stackpilot/views/${SPRINT_SLUG}/dashboard.html"
+# Replace {{SPRINT_SLUG}} token so the page knows which slug to fetch state for
+sed -i.bak "s/{{SPRINT_SLUG}}/${SPRINT_SLUG}/g" \
+  ".stackpilot/views/${SPRINT_SLUG}/dashboard.html" && rm ".stackpilot/views/${SPRINT_SLUG}/dashboard.html.bak"
+
+DASHBOARD_URL="http://${URL_HOST:-localhost}:${PORT}/sprints/${SPRINT_SLUG}/dashboard.html"
+echo "📊 Live dashboard: ${DASHBOARD_URL}"
+```
+
+**Print the URL exactly once** at sprint start. The dashboard auto-refreshes
+via WebSocket as `state.json` files change — no further URL re-prints unless
+the user closes their browser and asks for it again.
+
+If `start-server.sh` fails (port conflict, node missing, etc.), capture the
+error, log it, and continue sprint in **terminal-only mode** — print
+per-task progress lines per the existing protocol. Do not block the sprint
+on dashboard generation.
 
 ## Pre-coding confirmation
 
@@ -227,7 +263,15 @@ Atomic write (`.tmp` then `mv`) — matches the project's CSV append convention 
 
 ## Sprint Interrupted — read state.json first
 
-When `/stackpilot` detects an interrupted sprint (plans exist, no active TaskList from the current session), prefer reading `.stackpilot/runs/<sprint-slug>/TASK-*/state.json` over grep'ing git log. Only fall back to git log heuristic if state.json is missing.
+When `/stackpilot` detects an interrupted sprint (plans exist, no active
+TaskList from the current session), prefer reading
+`.stackpilot/runs/<sprint-slug>/TASK-*/state.json` over grep'ing git log.
+Only fall back to git log heuristic if state.json is missing.
+
+When resuming, also restart the sprint server (if not still running) and
+print the dashboard URL — re-opening the browser tab will reconnect via WS
+and the resumed task states will populate automatically (no state migration
+needed; dashboard re-fetches via `/api/state/<slug>`).
 
 ```bash
 for STATE_FILE in "${RUN_DIR}"/TASK-*/state.json; do
@@ -243,6 +287,12 @@ Tasks where `phase == "complete" && last_result == "complete"` are done. Otherwi
 
 ## Sprint Complete
 
-YOU MUST complete the Sprint Finish flow before ending the conversation. Read `references/sprint-finish.md` and follow every step. You MUST present the A/B/C/D branch options and wait for user input.
+YOU MUST complete the Sprint Finish flow before ending the conversation. Read
+`references/sprint-finish.md` and follow every step. You MUST present the
+A/B/C/D branch options (either via `finish-report.html` action JSON OR terminal
+fallback) and wait for user input.
+
+The sprint server keeps running through Finish — it is stopped at the end of
+the Finish flow via `stop-server.sh --slug <sprint-slug>`.
 
 > **Note:** A `pre-merge-commit` git hook enforces squash-only merges on main/master. Non-squash merges will be rejected by the hook.

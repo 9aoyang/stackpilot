@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' ws: wss:">
+<title>Architecture — {{REPO_NAME}}</title>
+<style>
+  :root { --bg:#0f1419; --panel:#1a1f29; --border:#2a3038; --text:#e6e9ef; --muted:#8a93a6; --accent:#7aa2f7; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 14px/1.5 -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  header h1 { font-size: 18px; font-weight: 600; }
+  header .toolbar { display: flex; gap: 12px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+  header input[type=text] { padding: 6px 10px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font: inherit; width: 220px; }
+  header label { color: var(--muted); font-size: 13px; cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 4px; }
+  header button { padding: 6px 12px; background: var(--border); color: var(--text); border: 0; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  header button:hover { background: var(--accent); color: var(--bg); }
+  main { flex: 1; overflow: auto; padding: 16px; }
+  #diagram { display: flex; justify-content: center; align-items: flex-start; min-height: 100%; }
+  #diagram .mermaid { width: 100%; }
+  #diagram svg { max-width: 100%; height: auto; }
+  .empty { color: var(--muted); font-style: italic; text-align: center; padding: 80px 0; }
+  footer { padding: 8px 24px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; background: var(--panel); }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Architecture — <span id="repo-name">{{REPO_NAME}}</span></h1>
+  <div class="toolbar">
+    <input type="text" id="filter" placeholder="Filter nodes (regex)">
+    <label><input type="checkbox" id="hide-tests" checked> hide tests</label>
+    <label><input type="checkbox" id="hide-docs"> hide docs</label>
+    <button id="apply">Apply</button>
+    <button id="reset">Reset</button>
+  </div>
+</header>
+
+<main>
+  <div id="diagram"><div class="empty">Loading diagram…</div></div>
+</main>
+
+<footer>
+  Click a node to open the file (if your editor supports <code>vscode://</code> deep links). Generated from <code>.stackpilot/ARCHITECTURE.md</code> + grep of import/require statements.
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict', flowchart: { curve: 'basis', rankSpacing: 60 } });
+
+// MERMAID_SOURCE is the full `flowchart TD ...` body, filled by the main agent.
+const MERMAID_SOURCE = `{{MERMAID_SOURCE}}`;
+// FILE_MAP: { nodeId: "relative/path.ts" } so node clicks resolve to a file.
+const FILE_MAP = (function () { try { return JSON.parse(`{{FILE_MAP_JSON}}`); } catch (e) { return {}; } })();
+
+let currentSource = MERMAID_SOURCE && !MERMAID_SOURCE.startsWith('{{') ? MERMAID_SOURCE : '';
+const diagramEl = document.getElementById('diagram');
+
+async function render() {
+  if (!currentSource.trim()) { diagramEl.innerHTML = '<div class="empty">No diagram source provided. Main agent populates this.</div>'; return; }
+  let src = currentSource;
+  const re = document.getElementById('filter').value.trim();
+  const hideTests = document.getElementById('hide-tests').checked;
+  const hideDocs = document.getElementById('hide-docs').checked;
+  if (re || hideTests || hideDocs) {
+    let pattern;
+    try { pattern = re ? new RegExp(re) : null; } catch (e) { alert('Bad regex: ' + e.message); return; }
+    src = filterMermaid(src, pattern, hideTests, hideDocs);
+  }
+  diagramEl.innerHTML = '<div class="mermaid">' + src + '</div>';
+  try { await mermaid.run({ querySelector: '#diagram .mermaid' }); }
+  catch (e) { diagramEl.innerHTML = '<div class="empty">Render error: ' + escape(e.message) + '</div>'; return; }
+  // Wire clicks
+  document.querySelectorAll('#diagram svg .node').forEach(g => {
+    const id = (g.id || '').replace(/^flowchart-/, '').replace(/-\d+$/, '');
+    const file = FILE_MAP[id];
+    if (!file) return;
+    g.style.cursor = 'pointer';
+    g.addEventListener('click', () => window.open('vscode://file/' + file, '_blank'));
+  });
+}
+
+function filterMermaid(src, pattern, hideTests, hideDocs) {
+  // Crude filter: drop any line mentioning a node whose label matches the criteria.
+  const lines = src.split('\n');
+  const dropNodes = new Set();
+  for (const line of lines) {
+    const m = line.match(/^\s*(\w[\w-]*)\s*[\[\("]+([^"\]\)]+)/);
+    if (!m) continue;
+    const [, id, label] = m;
+    const lower = label.toLowerCase();
+    if (hideTests && /(^|\/)(test|tests|__tests__|spec)(\/|\.|$)/i.test(label)) dropNodes.add(id);
+    if (hideDocs && /(^|\/)(docs?|readme|changelog)(\/|\.|$)/i.test(lower)) dropNodes.add(id);
+    if (pattern && !pattern.test(label)) dropNodes.add(id);
+  }
+  return lines.filter(l => {
+    for (const n of dropNodes) {
+      const re = new RegExp('\\b' + n.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + '\\b');
+      if (re.test(l)) return false;
+    }
+    return true;
+  }).join('\n');
+}
+
+document.getElementById('apply').addEventListener('click', render);
+document.getElementById('reset').addEventListener('click', () => {
+  document.getElementById('filter').value = '';
+  document.getElementById('hide-tests').checked = true;
+  document.getElementById('hide-docs').checked = false;
+  render();
+});
+
+function escape(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+render();
+</script>
+</body>
+</html>

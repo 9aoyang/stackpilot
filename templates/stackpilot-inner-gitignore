@@ -1,1 +1,5 @@
 # Stackpilot runtime state (never commit)
+runs/
+
+# Stackpilot v2.0 HTML view layer — generated, regenerable, never source of truth
+views/

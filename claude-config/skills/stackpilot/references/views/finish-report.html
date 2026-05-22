@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' ws: wss:">
+<title>Sprint Finish — {{SPRINT_SLUG}}</title>
+<style>
+  :root { --bg:#0f1419; --panel:#1a1f29; --border:#2a3038; --text:#e6e9ef; --muted:#8a93a6; --accent:#7aa2f7;
+          --good:#9ece6a; --bad:#f7768e; --warn:#e0af68; --info:#bb9af7; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 14px/1.5 -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 24px 24px 100px; max-width: 1400px; margin: 0 auto; }
+  header { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  header h1 { font-size: 22px; }
+  header .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-top: 16px; }
+  header .stat { text-align: center; }
+  header .stat .val { font-size: 24px; font-weight: 700; color: var(--text); }
+  header .stat .lbl { font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: .5px; margin-top: 4px; }
+  section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 16px; }
+  section h2 { font-size: 16px; margin-bottom: 14px; color: var(--text); }
+  section h2 .count { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .commits { max-height: 360px; overflow-y: auto; }
+  .commit { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .commit:last-child { border-bottom: 0; }
+  .commit .sha { font-family: ui-monospace, monospace; color: var(--accent); }
+  .commit .msg { flex: 1; }
+  .commit .stats { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .commit .stats .add { color: var(--good); }
+  .commit .stats .del { color: var(--bad); }
+  .criteria-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; margin-top: 12px; }
+  .criteria-list .c { padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-left-width: 4px; border-radius: 4px; font-size: 13px; }
+  .criteria-list .c.pass { border-left-color: var(--good); }
+  .criteria-list .c.fail { border-left-color: var(--bad); }
+  .criteria-list .c.untested { border-left-color: var(--muted); }
+  .criteria-list .c.n-a-this-task { border-left-color: var(--warn); }
+  .candidate { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; align-items: flex-start; }
+  .candidate:last-child { border-bottom: 0; }
+  .candidate input[type=checkbox] { margin-top: 4px; }
+  .candidate .text { flex: 1; }
+  .empty { color: var(--muted); font-style: italic; padding: 12px 0; }
+  footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 16px 24px; background: var(--panel); border-top: 1px solid var(--border); display: flex; gap: 12px; justify-content: flex-end; z-index: 10; }
+  footer button { padding: 12px 24px; border: 0; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; }
+  footer .merge { background: var(--good); color: var(--bg); }
+  footer .pr { background: var(--accent); color: var(--bg); }
+  footer .keep { background: var(--border); color: var(--text); }
+  footer .discard { background: var(--bad); color: var(--bg); }
+  footer button:disabled { opacity: .5; cursor: default; }
+  #timeline-canvas { max-height: 280px; }
+  #criteria-canvas { max-height: 200px; max-width: 240px; }
+  .toast { position: fixed; top: 20px; right: 20px; padding: 14px 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; z-index: 20; opacity: 0; transition: opacity .2s; max-width: 420px; }
+  .toast.show { opacity: 1; }
+  .toast.success { border-color: var(--good); }
+  .toast.error { border-color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sprint Finish — {{SPRINT_SLUG}}</h1>
+  <div class="summary">
+    <div class="stat"><div class="val" id="stat-elapsed">—</div><div class="lbl">Elapsed</div></div>
+    <div class="stat"><div class="val" id="stat-tasks">—</div><div class="lbl">Tasks</div></div>
+    <div class="stat"><div class="val" id="stat-commits">—</div><div class="lbl">Commits</div></div>
+    <div class="stat"><div class="val" id="stat-criteria">—</div><div class="lbl">Criteria Pass</div></div>
+    <div class="stat"><div class="val" id="stat-branch">{{BRANCH}}</div><div class="lbl">Branch</div></div>
+  </div>
+</header>
+
+<section>
+  <h2>Task Timeline</h2>
+  <canvas id="timeline-canvas"></canvas>
+</section>
+
+<section>
+  <div class="row">
+    <div>
+      <h2>Acceptance Criteria <span class="count" id="criteria-count"></span></h2>
+      <canvas id="criteria-canvas"></canvas>
+      <div class="criteria-list" id="criteria-list"></div>
+    </div>
+    <div>
+      <h2>Commits <span class="count" id="commits-count"></span></h2>
+      <div class="commits" id="commits"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Pattern Candidates (from sp-qa)</h2>
+  <div id="patterns"></div>
+</section>
+
+<section>
+  <h2>Decision Candidates (from sp-architect, HIGH risk)</h2>
+  <div id="decisions"></div>
+</section>
+
+<footer>
+  <button class="discard" data-action="discard">🗑 Discard</button>
+  <button class="keep" data-action="keep">💾 Leave As-Is</button>
+  <button class="pr" data-action="pr">📤 Push & Create PR</button>
+  <button class="merge" data-action="merge">🟢 Squash Merge</button>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.js"></script>
+<script>
+const SPRINT_SLUG = "{{SPRINT_SLUG}}";
+// Filled by main agent at generation time
+const DATA = (function () { try { return JSON.parse(`{{DATA_JSON}}`); }
+  catch (e) { return { elapsed_ms: 0, tasks: [], commits: [], criteria: [], patterns: [], decisions: [], branch: 'unknown' }; }
+})();
+
+document.getElementById('stat-elapsed').textContent = formatMs(DATA.elapsed_ms || 0);
+document.getElementById('stat-tasks').textContent = (DATA.tasks || []).length;
+document.getElementById('stat-commits').textContent = (DATA.commits || []).length;
+const passCount = (DATA.criteria || []).filter(c => c.status === 'pass' || c.status === 'n-a-this-task').length;
+document.getElementById('stat-criteria').textContent = passCount + '/' + (DATA.criteria || []).length;
+document.getElementById('stat-branch').textContent = DATA.branch || '—';
+
+// Timeline (chart.js stacked bar)
+const tlCtx = document.getElementById('timeline-canvas');
+const taskLabels = (DATA.tasks || []).map(t => t.task_id);
+const phases = ['arch_ms', 'dev_ms', 'qa_ms', 'other_ms'];
+const phaseColors = { arch_ms: '#7aa2f7', dev_ms: '#e0af68', qa_ms: '#bb9af7', other_ms: '#3a4050' };
+const datasets = phases.map(p => ({
+  label: p.replace('_ms', ''),
+  data: (DATA.tasks || []).map(t => (t[p] || 0) / 1000),
+  backgroundColor: phaseColors[p]
+}));
+new Chart(tlCtx, {
+  type: 'bar',
+  data: { labels: taskLabels, datasets: datasets },
+  options: {
+    indexAxis: 'y',
+    scales: { x: { stacked: true, ticks: { color: '#8a93a6' }, title: { display: true, text: 'seconds', color: '#8a93a6' } }, y: { stacked: true, ticks: { color: '#8a93a6' } } },
+    plugins: { legend: { labels: { color: '#e6e9ef' } } }
+  }
+});
+
+// Criteria pie
+const critCtx = document.getElementById('criteria-canvas');
+const critByStatus = { pass: 0, fail: 0, untested: 0, 'n-a-this-task': 0 };
+for (const c of (DATA.criteria || [])) critByStatus[c.status] = (critByStatus[c.status] || 0) + 1;
+new Chart(critCtx, {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(critByStatus),
+    datasets: [{ data: Object.values(critByStatus), backgroundColor: ['#9ece6a', '#f7768e', '#8a93a6', '#e0af68'] }]
+  },
+  options: { plugins: { legend: { labels: { color: '#e6e9ef', font: { size: 11 } } } } }
+});
+
+// Criteria list
+const critList = document.getElementById('criteria-list');
+document.getElementById('criteria-count').textContent = `(${(DATA.criteria || []).length})`;
+for (const c of (DATA.criteria || [])) {
+  const el = document.createElement('div');
+  el.className = 'c ' + (c.status || '').replace(/[^a-z-]/gi, '');
+  el.innerHTML = `<b>${escape(c.id)}</b> <span style="color:var(--muted)">${escape(c.status)}</span><br>${escape(truncate(c.description, 80))}`;
+  critList.appendChild(el);
+}
+
+// Commits
+const commits = document.getElementById('commits');
+document.getElementById('commits-count').textContent = `(${(DATA.commits || []).length})`;
+for (const c of (DATA.commits || [])) {
+  const el = document.createElement('div');
+  el.className = 'commit';
+  el.innerHTML = `<span class="sha">${escape((c.sha || '').slice(0, 7))}</span><span class="msg">${escape(c.message || '')}</span><span class="stats"><span class="add">+${c.add || 0}</span> <span class="del">-${c.del || 0}</span></span>`;
+  commits.appendChild(el);
+}
+if (!(DATA.commits || []).length) commits.innerHTML = '<div class="empty">No commits in this sprint.</div>';
+
+// Patterns
+const patterns = document.getElementById('patterns');
+if (!(DATA.patterns || []).length) {
+  patterns.innerHTML = '<div class="empty">No new pattern candidates surfaced.</div>';
+} else {
+  for (const p of DATA.patterns) {
+    const el = document.createElement('div');
+    el.className = 'candidate';
+    el.innerHTML = `<input type="checkbox" data-pattern-id="${escape(p.id || '')}" checked><div class="text">${escape(p.text || p.description || JSON.stringify(p))}</div>`;
+    patterns.appendChild(el);
+  }
+}
+
+// Decisions
+const decisions = document.getElementById('decisions');
+if (!(DATA.decisions || []).length) {
+  decisions.innerHTML = '<div class="empty">No new decision candidates (no HIGH-risk tasks this sprint).</div>';
+} else {
+  for (const d of DATA.decisions) {
+    const el = document.createElement('div');
+    el.className = 'candidate';
+    el.innerHTML = `<input type="checkbox" data-decision-id="${escape(d.id || '')}" checked><div class="text">${escape(d.text || d.description || JSON.stringify(d))}</div>`;
+    decisions.appendChild(el);
+  }
+}
+
+// Footer actions
+document.querySelector('footer').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  if (action === 'discard') {
+    if (!confirm('Discard destroys the feature branch. Continue?')) return;
+  }
+  const mergePatterns = Array.from(document.querySelectorAll('[data-pattern-id]:checked')).map(i => i.dataset.patternId);
+  const mergeDecisions = Array.from(document.querySelectorAll('[data-decision-id]:checked')).map(i => i.dataset.decisionId);
+  document.querySelectorAll('footer button').forEach(b => b.disabled = true);
+  try {
+    await window.sp.action({ slug: SPRINT_SLUG, name: 'finish', payload: { choice: action, merge_patterns: mergePatterns, merge_decisions: mergeDecisions } });
+    toast(`✓ ${action.toUpperCase()} requested — return to terminal`, 'success');
+  } catch (err) {
+    toast('Failed: ' + err.message, 'error');
+    document.querySelectorAll('footer button').forEach(b => b.disabled = false);
+  }
+});
+
+function formatMs(ms) {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return s + 's';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + 'm ' + (s % 60) + 's';
+  return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+}
+function truncate(s, n) { s = String(s == null ? '' : s); return s.length <= n ? s : s.slice(0, n - 1) + '…'; }
+function escape(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 4500);
+}
+</script>
+</body>
+</html>

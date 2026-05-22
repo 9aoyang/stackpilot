@@ -1,5 +1,10 @@
 # Visual Companion
 
+> **DEPRECATED in v2.0** — folded into the sprint server (`scripts/preview/server.cjs`
+> + `references/views/` HTML templates). Node 2 (Design) in SKILL.md now starts the
+> sprint server itself and renders `design-options.html` via the same infrastructure.
+> This file is kept one release for back-compat; will be removed in v2.1.
+
 Browser-based design visualization for design discussion phases. Use when a design question would be understood better visually than textually.
 
 ## When to Use

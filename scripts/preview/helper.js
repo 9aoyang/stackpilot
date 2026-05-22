@@ -15,6 +15,9 @@
       const data = JSON.parse(msg.data);
       if (data.type === 'reload') {
         window.location.reload();
+      } else if (data.type === 'state-update' || data.type === 'action-received') {
+        // Sprint mode events — templates listen via addEventListener('sp:state-update', ...)
+        window.dispatchEvent(new CustomEvent('sp:' + data.type, { detail: data }));
       }
     };
 
@@ -82,6 +85,27 @@
   window.brainstorm = {
     send: sendEvent,
     choice: (value, metadata = {}) => sendEvent({ type: 'choice', value, ...metadata })
+  };
+
+  // Sprint mode helper — POST to /api/action/<slug>/<name>. Sprint templates use
+  // this instead of data-choice WS events (which target brainstorm state-dir).
+  window.sp = {
+    /** @param {{slug:string, name:string, payload:object}} */
+    async action({ slug, name, payload }) {
+      const res = await fetch('/api/action/' + encodeURIComponent(slug) + '/' + encodeURIComponent(name), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('action failed: ' + res.status + ' ' + (await res.text()));
+      return res.json();
+    },
+    /** @param {string} slug */
+    async state(slug) {
+      const res = await fetch('/api/state/' + encodeURIComponent(slug));
+      if (!res.ok) throw new Error('state fetch failed: ' + res.status);
+      return res.json();
+    }
   };
 
   connect();

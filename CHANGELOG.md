@@ -7,6 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-05-22
+
+### Added — HTML-first rebuild (dual-track architecture)
+
+- **Dual-track principle** introduced in `SKILL.md`: data layer (markdown / YAML
+  / JSON) feeds sub-agents and git diff; view layer (self-contained HTML)
+  feeds human decision-makers at specific nodes. View layer is never source of
+  truth; user actions on HTML write `*-action.json` files that the main agent
+  reads back into the data layer.
+- **5 HTML view templates** under `claude-config/skills/stackpilot/references/views/`:
+  - `design-options.html` — 3-column responsive grid for Node 2 design picks
+  - `dashboard.html` — live DAG (mermaid) + 5-col Kanban + criteria during Run Sprint
+  - `spec-review.html` — left nav + markdown spec + 12-QA grid + editable criteria for Node 3
+  - `finish-report.html` — chart.js task timeline + criteria pie + commits + A/B/C/D footer
+  - `architecture.html` — on-demand full-page mermaid module graph
+  All include CSP meta (self + jsdelivr only); CDN libs pinned (mermaid@10,
+  markdown-it@14, chart.js@4).
+- **Sprint server (extends `scripts/preview/server.cjs`)** — new routes
+  additive to brainstorm back-compat: `GET /sprints/<slug>/<artifact>.html`,
+  `POST /api/action/<slug>/<name>` (64KB body cap → 413), `GET /api/state/<slug>`
+  aggregating `runs/<slug>/TASK-*/state.json` + `<slug>-criteria.md`. fs.watch
+  on `.stackpilot/runs/` + `.stackpilot/specs/` broadcasts `state-update`
+  WebSocket events for live dashboard refresh.
+- **Sprint-slug lifecycle** — `start-server.sh --sprint-slug <name>` writes
+  `.stackpilot/views/<slug>/.server-info.json`; `stop-server.sh --slug <name>`
+  resolves and terminates that exact server. `--help` flag added.
+- **`window.sp.{action,state}` helper API** in `scripts/preview/helper.js` for
+  HTML templates to fetch state and POST actions. Existing brainstorm
+  `data-choice` WS event protocol unchanged for back-compat. New `sp:state-update`
+  CustomEvent dispatched on incoming WS state events.
+- **`tests/test-html-rebuild-e2e.sh`** — 10-check E2E smoke: server start →
+  sprint routing → action POST (200) → action JSON write → oversize body
+  (413) → state JSON → slug-based stop → marker cleanup.
+
+### Changed
+
+- **SKILL.md restructured to 5 named nodes** (Exploration / Design / Spec &
+  Criteria / Plan & Run Sprint / Finish) replacing the 10+ Phase X.Y
+  numbering. Inline grep verifications and 12-QA matrix become sub-steps,
+  not separate phases. File: 431 → 427 lines.
+- **`references/run-sprint.md`** — Pre-Sprint step 4 starts sprint server +
+  copies dashboard.html to `.stackpilot/views/<slug>/`, prints URL once.
+  Sprint Interrupted resume re-prints URL. state.json schema gains
+  `depends_on` (consumed by dashboard DAG renderer).
+- **`references/sprint-finish.md`** — Step 3 generates `finish-report.html`,
+  waits for `finish-action.json` OR terminal A/B/C/D (first wins; 30s
+  fallback to terminal). Step 6 stops sprint server via `--slug`.
+- **`docs/architecture.{md,zh.md}`** synced: new `references/views/`
+  directory, `.stackpilot/views/` layout, server module names.
+- **`.gitignore` + `templates/stackpilot-inner-gitignore` + `scripts/init.sh`**
+  — `.stackpilot/views/` ignored at all levels; init idempotently appends
+  `views/` to existing `.stackpilot/.gitignore` on re-run.
+
+### Deprecated (kept one release for back-compat; removal in v2.1)
+
+- **`references/visual-companion.md`** — folded into sprint server. Node 2
+  Design no longer routes to it.
+- **`references/optimize-sprint.md`** — under review; same outcome achievable
+  via standard 5-node sprint with a metric-targeting acceptance criterion.
+
+### Breaking changes
+
+- Any external tooling that references "Phase X.Y" by name (e.g. "Phase 3.7
+  spec gate") must update — the Phase numbering is gone. Equivalent nodes:
+  Phase 0.5/1 → Node 1; Phase 1.5/2 → Node 2; Phase 3/3.5/3.6/3.7 → Node 3;
+  Phase 4/4.5 + Run Sprint → Node 4; Sprint Finish → Node 5.
+- Sub-agent files (`sp-architect`, `sp-dev`, `sp-qa`, `sp-docs`) and their
+  markdown completion-report schemas are unchanged — no breaking change at
+  the agent contract layer.
+
 ## [1.12.0] - 2026-05-22
 
 ### Changed — qa-12-dimensions skill hardening (v1.0.1 → v1.1.0)
@@ -37,11 +107,11 @@ hard cap, max-2-rounds verify loop.
 
 ### Bumped
 
-- `plugin.json`: `1.11.0 → 1.12.0`
-- `claude-config/skills/stackpilot/SKILL.md` frontmatter: `1.11.0 → 1.12.0`
+- `plugin.json`: `1.11.0 → 1.12.0` (then superseded by `2.0.0` in the same merge window)
+- `claude-config/skills/stackpilot/SKILL.md` frontmatter: same as above
 - `claude-config/skills/qa-12-dimensions/SKILL.md` frontmatter: `1.0.1 → 1.1.0`
 
-### Removed (2026-05-20 — full cleanup of stackpilot-bench skill and Codex support)
+### Removed (2026-05-20 — full cleanup of stackpilot-bench skill and Codex support; included in 2.0.0)
 
 - **`/stackpilot-bench` skill deleted** — `claude-config/skills/stackpilot-bench/`
   (SKILL.md, all 3 workloads, scripts, references, run-codex-bench.sh,

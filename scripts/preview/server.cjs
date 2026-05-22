@@ -81,6 +81,29 @@ const CONTENT_DIR = path.join(SESSION_DIR, 'content');
 const STATE_DIR = path.join(SESSION_DIR, 'state');
 let ownerPid = process.env.BRAINSTORM_OWNER_PID ? Number(process.env.BRAINSTORM_OWNER_PID) : null;
 
+// ========== Sprint Mode (v2 — HTML-first rebuild) ==========
+// Coexists with brainstorm mode. New routes are additive; root path still
+// serves newest-screen for visual-companion back-compat.
+
+const STACKPILOT_ROOT = process.env.STACKPILOT_ROOT || process.cwd();
+const VIEWS_DIR = path.join(STACKPILOT_ROOT, '.stackpilot', 'views');
+const RUNS_DIR = path.join(STACKPILOT_ROOT, '.stackpilot', 'runs');
+const SPECS_DIR = path.join(STACKPILOT_ROOT, '.stackpilot', 'specs');
+const MAX_ACTION_BODY = 64 * 1024; // 413 above this
+
+const SPRINT_HTML_RE = /^\/sprints\/([\w.-]+)\/([\w.-]+\.html)$/;
+const ACTION_RE = /^\/api\/action\/([\w.-]+)\/([\w.-]+)$/;
+const STATE_RE = /^\/api\/state\/([\w.-]+)$/;
+
+function safeJoin(base, ...parts) {
+  const joined = path.join(base, ...parts);
+  const resolved = path.resolve(joined);
+  if (!resolved.startsWith(path.resolve(base) + path.sep) && resolved !== path.resolve(base)) {
+    return null;
+  }
+  return resolved;
+}
+
 const MIME_TYPES = {
   '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript',
   '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg',
@@ -124,10 +147,121 @@ function getNewestScreen() {
   return files.length > 0 ? files[0].path : null;
 }
 
+// ========== Sprint Mode Handlers ==========
+
+function injectHelper(html) {
+  if (html.includes('</body>')) return html.replace('</body>', helperInjection + '\n</body>');
+  return html + helperInjection;
+}
+
+function handleSprintHtml(req, res, slug, artifact) {
+  const filePath = safeJoin(VIEWS_DIR, slug, artifact);
+  if (!filePath || !fs.existsSync(filePath)) {
+    res.writeHead(404); res.end('View not found: ' + slug + '/' + artifact); return;
+  }
+  const html = injectHelper(fs.readFileSync(filePath, 'utf-8'));
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(html);
+}
+
+function handleActionPost(req, res, slug, name) {
+  let total = 0;
+  const chunks = [];
+  let aborted = false;
+  req.on('data', (chunk) => {
+    if (aborted) return;
+    total += chunk.length;
+    if (total > MAX_ACTION_BODY) {
+      aborted = true;
+      res.writeHead(413, { 'Content-Type': 'text/plain' });
+      res.end('Payload Too Large (max ' + MAX_ACTION_BODY + ' bytes / 65536)');
+      try { req.destroy(); } catch (e) {}
+      return;
+    }
+    chunks.push(chunk);
+  });
+  req.on('end', () => {
+    if (aborted) return;
+    const body = Buffer.concat(chunks).toString('utf-8');
+    let data;
+    try { data = JSON.parse(body); }
+    catch (e) { res.writeHead(400); res.end('Invalid JSON: ' + e.message); return; }
+    const dir = safeJoin(VIEWS_DIR, slug);
+    if (!dir) { res.writeHead(400); res.end('Invalid slug'); return; }
+    try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {}
+    const target = path.join(dir, name + '-action.json');
+    const tmp = target + '.tmp';
+    try {
+      const payload = JSON.stringify({ ...data, _received_at: Date.now() }, null, 2);
+      fs.writeFileSync(tmp, payload);
+      fs.renameSync(tmp, target);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, path: target }));
+      broadcast({ type: 'action-received', slug: slug, name: name });
+    } catch (e) {
+      res.writeHead(500); res.end('Write failed: ' + e.message);
+    }
+  });
+  req.on('error', () => {});
+}
+
+function handleStateGet(req, res, slug) {
+  const result = { slug: slug, tasks: [], criteria: [], elapsed_ms: null, generated_at: Date.now() };
+  const runDir = safeJoin(RUNS_DIR, slug);
+  if (runDir && fs.existsSync(runDir)) {
+    let earliest = Infinity;
+    for (const td of fs.readdirSync(runDir)) {
+      if (!td.startsWith('TASK-')) continue;
+      const stateFile = path.join(runDir, td, 'state.json');
+      if (!fs.existsSync(stateFile)) continue;
+      try {
+        const state = JSON.parse(fs.readFileSync(stateFile, 'utf-8'));
+        result.tasks.push(state);
+        if (state.started_at) {
+          const t = new Date(state.started_at).getTime();
+          if (!isNaN(t) && t < earliest) earliest = t;
+        }
+      } catch (e) {}
+    }
+    if (earliest !== Infinity) result.elapsed_ms = Date.now() - earliest;
+  }
+  if (fs.existsSync(SPECS_DIR)) {
+    for (const cf of fs.readdirSync(SPECS_DIR)) {
+      if (!cf.includes(slug) || !cf.endsWith('-criteria.md')) continue;
+      const content = fs.readFileSync(path.join(SPECS_DIR, cf), 'utf-8');
+      const rows = content.split('\n').filter(l => /^\|\s*C\d+\s*\|/.test(l));
+      for (const row of rows) {
+        const cells = row.split('|').map(c => c.trim()).filter((c, i, arr) => !(i === 0 && c === '') && !(i === arr.length - 1 && c === ''));
+        if (cells.length >= 4) {
+          result.criteria.push({
+            id: cells[0], description: cells[1], verify: cells[2],
+            status: cells[3], notes: cells[4] || ''
+          });
+        }
+      }
+    }
+  }
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(result));
+}
+
 // ========== HTTP Request Handler ==========
 
 function handleRequest(req, res) {
   touchActivity();
+
+  // Sprint mode routes — additive, do not break brainstorm back-compat
+  let m;
+  if (req.method === 'GET' && (m = SPRINT_HTML_RE.exec(req.url))) {
+    return handleSprintHtml(req, res, m[1], m[2]);
+  }
+  if (req.method === 'POST' && (m = ACTION_RE.exec(req.url))) {
+    return handleActionPost(req, res, m[1], m[2]);
+  }
+  if (req.method === 'GET' && (m = STATE_RE.exec(req.url))) {
+    return handleStateGet(req, res, m[1]);
+  }
+
   if (req.method === 'GET' && req.url === '/') {
     const screenFile = getNewestScreen();
     let html = screenFile
@@ -298,6 +432,36 @@ function startServer() {
   });
   watcher.on('error', (err) => console.error('fs.watch error:', err.message));
 
+  // Sprint-mode watchers — additive, watch .stackpilot/runs and specs if present
+  const sprintWatchers = [];
+  const sprintDebounce = new Map();
+  function watchSprintPath(dir, opts, sourceLabel) {
+    if (!fs.existsSync(dir)) return;
+    try {
+      const w = fs.watch(dir, opts, (event, fname) => {
+        if (!fname) return;
+        const isStateJson = fname.endsWith('state.json');
+        const isCriteria = fname.endsWith('-criteria.md');
+        if (!isStateJson && !isCriteria) return;
+        const key = sourceLabel + ':' + fname;
+        if (sprintDebounce.has(key)) clearTimeout(sprintDebounce.get(key));
+        sprintDebounce.set(key, setTimeout(() => {
+          sprintDebounce.delete(key);
+          touchActivity();
+          broadcast({ type: 'state-update', source: sourceLabel, file: fname, timestamp: Date.now() });
+        }, 150));
+      });
+      w.on('error', (err) => console.error('sprint-watch error (' + sourceLabel + '):', err.message));
+      sprintWatchers.push(w);
+    } catch (e) {
+      console.error('sprint-watch setup failed (' + sourceLabel + '):', e.message);
+    }
+  }
+  // macOS supports recursive natively; on Linux this throws and we fall back to non-recursive
+  try { watchSprintPath(RUNS_DIR, { recursive: true }, 'runs'); }
+  catch (e) { watchSprintPath(RUNS_DIR, {}, 'runs-flat'); }
+  watchSprintPath(SPECS_DIR, {}, 'specs');
+
   function shutdown(reason) {
     console.log(JSON.stringify({ type: 'server-stopped', reason }));
     const infoFile = path.join(STATE_DIR, 'server-info');
@@ -307,6 +471,7 @@ function startServer() {
       JSON.stringify({ reason, timestamp: Date.now() }) + '\n'
     );
     watcher.close();
+    for (const w of sprintWatchers) { try { w.close(); } catch (e) {} }
     clearInterval(lifecycleCheck);
     server.close(() => process.exit(0));
   }
@@ -344,6 +509,21 @@ function startServer() {
     });
     console.log(info);
     fs.writeFileSync(path.join(STATE_DIR, 'server-info'), info + '\n');
+    // Sprint-mode marker — lets stop-server.sh --slug resolve which server to kill.
+    const sprintSlug = process.env.STACKPILOT_SPRINT_SLUG;
+    if (sprintSlug) {
+      try {
+        const slugDir = safeJoin(VIEWS_DIR, sprintSlug);
+        if (slugDir) {
+          fs.mkdirSync(slugDir, { recursive: true });
+          const marker = {
+            pid: process.pid, port: Number(PORT), url: 'http://' + URL_HOST + ':' + PORT,
+            session_dir: SESSION_DIR, state_dir: STATE_DIR, slug: sprintSlug, started_at: Date.now()
+          };
+          fs.writeFileSync(path.join(slugDir, '.server-info.json'), JSON.stringify(marker, null, 2));
+        }
+      } catch (e) { console.error('sprint-marker write failed:', e.message); }
+    }
   });
 }
 

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' ws: wss:">
+<title>Sprint Dashboard — {{SPRINT_SLUG}}</title>
+<style>
+  :root { --bg:#0f1419; --panel:#1a1f29; --border:#2a3038; --text:#e6e9ef; --muted:#8a93a6; --accent:#7aa2f7;
+          --p-pending:#3a4050; --p-arch:#7aa2f7; --p-dev:#e0af68; --p-simplify:#f7768e; --p-qa:#bb9af7; --p-deep:#9ece6a; --p-complete:#9ece6a;
+          --good:#9ece6a; --bad:#f7768e; --warn:#e0af68; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 14px/1.4 -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 16px; min-height: 100vh; }
+  header { display: flex; justify-content: space-between; align-items: center; max-width: 1600px; margin: 0 auto 16px; }
+  header h1 { font-size: 18px; font-weight: 600; }
+  header .meta { color: var(--muted); font-size: 13px; }
+  .progress { max-width: 1600px; margin: 0 auto 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; }
+  .progress .bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .progress .bar-fill { height: 100%; background: var(--good); width: 0%; transition: width .3s; }
+  .progress .stats { display: flex; gap: 24px; font-size: 13px; color: var(--muted); }
+  .progress .stats span b { color: var(--text); }
+  .main { max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: 60% 40%; gap: 16px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .panel h2 { font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+  #dag { min-height: 360px; overflow: auto; }
+  #dag svg { max-width: 100%; }
+  .kanban { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; min-height: 360px; }
+  .kanban .col { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .kanban .col h3 { font-size: 11px; color: var(--muted); text-transform: uppercase; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .kanban .card { background: var(--panel); border: 1px solid var(--border); border-left-width: 3px; border-radius: 4px; padding: 8px; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .kanban .card:hover { background: #232936; }
+  .kanban .card.p-pending { border-left-color: var(--p-pending); }
+  .kanban .card.p-arch { border-left-color: var(--p-arch); }
+  .kanban .card.p-dev { border-left-color: var(--p-dev); }
+  .kanban .card.p-simplify { border-left-color: var(--p-simplify); }
+  .kanban .card.p-qa { border-left-color: var(--p-qa); }
+  .kanban .card.p-deep-review { border-left-color: var(--p-deep); }
+  .kanban .card.p-complete { border-left-color: var(--p-complete); opacity: .7; }
+  .kanban .card.critical { border-color: var(--bad); }
+  .kanban .card .id { font-weight: 600; color: var(--text); }
+  .kanban .card .title { color: var(--muted); margin-top: 2px; }
+  .criteria { max-width: 1600px; margin: 16px auto 0; }
+  .criteria table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .criteria th, .criteria td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  .criteria th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+  .criteria td.status { font-weight: 600; }
+  .criteria td.status.pass { color: var(--good); }
+  .criteria td.status.fail { color: var(--bad); }
+  .criteria td.status.untested { color: var(--muted); }
+  .criteria td.status.n-a-this-task { color: var(--warn); }
+  .footer { max-width: 1600px; margin: 12px auto 0; padding: 8px 16px; color: var(--muted); font-size: 12px; text-align: right; }
+  .footer .live { color: var(--good); }
+  .footer .live::before { content: "● "; }
+  .footer .stale { color: var(--warn); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sprint Dashboard — <span id="slug">{{SPRINT_SLUG}}</span></h1>
+  <div class="meta" id="elapsed">elapsed: —</div>
+</header>
+
+<div class="progress">
+  <div class="stats">
+    <span>Total <b id="total">0</b></span>
+    <span>Done <b id="done">0</b></span>
+    <span>In progress <b id="inprog">0</b></span>
+    <span>Pending <b id="pending">0</b></span>
+    <span>Failed/Blocked <b id="failed" style="color:var(--bad)">0</b></span>
+  </div>
+  <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
+</div>
+
+<div class="main">
+  <div class="panel">
+    <h2>Dependency Graph</h2>
+    <div id="dag">Loading…</div>
+  </div>
+  <div class="panel">
+    <h2>Kanban</h2>
+    <div class="kanban">
+      <div class="col"><h3>Pending</h3><div data-col="pending"></div></div>
+      <div class="col"><h3>Arch</h3><div data-col="arch"></div></div>
+      <div class="col"><h3>Dev / Simplify</h3><div data-col="dev"></div></div>
+      <div class="col"><h3>QA / Deep</h3><div data-col="qa"></div></div>
+      <div class="col"><h3>Done</h3><div data-col="complete"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="criteria panel">
+  <h2>Acceptance Criteria</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Description</th><th>Verify</th><th>Status</th></tr></thead>
+    <tbody id="criteria-body"></tbody>
+  </table>
+</div>
+
+<div class="footer">
+  <span id="live-indicator" class="live">live</span>
+  <span style="margin-left:8px">last update: <span id="last-update">—</span></span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.js"></script>
+<script>
+const SPRINT_SLUG = document.getElementById('slug').textContent;
+mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict', flowchart: { curve: 'basis' } });
+
+const PHASE_COL = {
+  pending: 'pending', arch: 'arch', dev: 'dev', simplify: 'dev', qa: 'qa', 'deep-review': 'qa', complete: 'complete'
+};
+const PHASE_COLOR = {
+  pending: '#3a4050', arch: '#7aa2f7', dev: '#e0af68', simplify: '#f7768e', qa: '#bb9af7', 'deep-review': '#9ece6a', complete: '#9ece6a'
+};
+
+async function refresh() {
+  let state;
+  try { state = await window.sp.state(SPRINT_SLUG); }
+  catch (e) {
+    document.getElementById('live-indicator').textContent = 'disconnected';
+    document.getElementById('live-indicator').className = 'stale';
+    return;
+  }
+  render(state);
+  document.getElementById('live-indicator').textContent = 'live';
+  document.getElementById('live-indicator').className = 'live';
+  document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+}
+
+function render(state) {
+  const tasks = state.tasks || [];
+  const total = tasks.length;
+  const done = tasks.filter(t => t.phase === 'complete').length;
+  const failed = tasks.filter(t => t.last_result === 'critical' || t.last_result === 'escalation' || (t.retry_count || 0) >= 3).length;
+  const inprog = tasks.filter(t => t.phase !== 'pending' && t.phase !== 'complete').length;
+  const pending = tasks.filter(t => t.phase === 'pending').length;
+
+  document.getElementById('total').textContent = total;
+  document.getElementById('done').textContent = done;
+  document.getElementById('inprog').textContent = inprog;
+  document.getElementById('pending').textContent = pending;
+  document.getElementById('failed').textContent = failed;
+  document.getElementById('bar-fill').style.width = total ? (100 * done / total) + '%' : '0%';
+  document.getElementById('elapsed').textContent = state.elapsed_ms ? 'elapsed: ' + formatMs(state.elapsed_ms) : 'elapsed: —';
+
+  renderKanban(tasks);
+  renderDAG(tasks);
+  renderCriteria(state.criteria || []);
+}
+
+function renderKanban(tasks) {
+  document.querySelectorAll('[data-col]').forEach(c => c.innerHTML = '');
+  for (const t of tasks) {
+    const col = document.querySelector(`[data-col="${PHASE_COL[t.phase] || 'pending'}"]`);
+    if (!col) continue;
+    const card = document.createElement('div');
+    const isCritical = t.last_result === 'critical' || t.last_result === 'escalation';
+    card.className = 'card p-' + t.phase + (isCritical ? ' critical' : '');
+    card.innerHTML = `<div class="id">${escape(t.task_id)}</div><div class="title">phase: ${escape(t.phase)}${t.retry_count ? ` · retry ${t.retry_count}` : ''}</div>`;
+    col.appendChild(card);
+  }
+}
+
+function renderDAG(tasks) {
+  if (!tasks.length) { document.getElementById('dag').textContent = 'No tasks yet.'; return; }
+  // Build mermaid source: nodes colored by phase
+  const lines = ['graph LR'];
+  const byWave = {};
+  for (const t of tasks) {
+    const w = t.wave || 1;
+    (byWave[w] = byWave[w] || []).push(t);
+  }
+  for (const t of tasks) {
+    const safe = t.task_id.replace(/[^\w-]/g, '');
+    lines.push(`  ${safe}["${t.task_id}<br/>${t.phase}"]`);
+    lines.push(`  style ${safe} fill:${PHASE_COLOR[t.phase] || '#3a4050'},color:#0f1419,stroke:#2a3038`);
+  }
+  // Edges from depends_on
+  for (const t of tasks) {
+    const safe = t.task_id.replace(/[^\w-]/g, '');
+    for (const dep of (t.depends_on || [])) {
+      const depSafe = dep.replace(/[^\w-]/g, '');
+      lines.push(`  ${depSafe} --> ${safe}`);
+    }
+  }
+  const src = lines.join('\n');
+  const dag = document.getElementById('dag');
+  dag.innerHTML = '<div class="mermaid">' + src + '</div>';
+  mermaid.run({ querySelector: '#dag .mermaid' }).catch(e => { dag.textContent = 'DAG render error: ' + e.message; });
+}
+
+function renderCriteria(criteria) {
+  const body = document.getElementById('criteria-body');
+  body.innerHTML = '';
+  for (const c of criteria) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><b>${escape(c.id)}</b></td><td>${escape(truncate(c.description, 100))}</td><td><code style="font-size:11px">${escape(truncate(c.verify, 80))}</code></td><td class="status ${escape((c.status || '').replace(/[^a-z-]/gi, ''))}">${escape(c.status)}</td>`;
+    body.appendChild(tr);
+  }
+}
+
+function formatMs(ms) {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return s + 's';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + 'm ' + (s % 60) + 's';
+  return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+}
+
+function truncate(s, n) { s = String(s == null ? '' : s); return s.length <= n ? s : s.slice(0, n - 1) + '…'; }
+function escape(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+window.addEventListener('sp:state-update', refresh);
+window.addEventListener('sp:action-received', refresh);
+refresh();
+setInterval(refresh, 5000); // safety poll in case WS misses an event
+</script>
+</body>
+</html>
