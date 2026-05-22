@@ -48,10 +48,13 @@ What feature would you like to build?
 
 > Add user search with fuzzy matching
 
-Phase 1: Exploring codebase...
-Phase 2: Design proposal ready — approve? (Y/n)
-Phase 3: Writing spec → .stackpilot/specs/2026-04-05-user-search-design.md ✓
-Phase 4: Writing plan → .stackpilot/plans/2026-04-05-user-search-plan.md ✓
+Node 1: Exploring codebase...
+Node 2: Design proposal ready — open http://localhost:51234/sprints/.../design-options.html or approve in terminal? (Y/n)
+Node 3: Writing spec → .stackpilot/specs/2026-04-05-user-search-design.md ✓
+        Writing criteria → .stackpilot/specs/2026-04-05-user-search-criteria.md ✓
+        Spec review open at http://localhost:51234/sprints/.../spec-review.html
+Node 4: Writing plan → .stackpilot/plans/2026-04-05-user-search-plan.md ✓
+        Live dashboard: http://localhost:51234/sprints/.../dashboard.html
 
 Plan is ready. Proceed with coding? (Y/n)
 
@@ -162,10 +165,13 @@ Key design decisions:
 
 > 增加用户搜索，支持模糊匹配
 
-Phase 1: 探索代码库...
-Phase 2: 设计方案就绪 — 确认？(Y/n)
-Phase 3: 写入 spec → .stackpilot/specs/2026-04-05-user-search-design.md ✓
-Phase 4: 写入 plan → .stackpilot/plans/2026-04-05-user-search-plan.md ✓
+Node 1: 探索代码库...
+Node 2: 设计方案就绪 — 浏览器打开 http://localhost:51234/sprints/.../design-options.html 或终端确认？(Y/n)
+Node 3: 写入 spec → .stackpilot/specs/2026-04-05-user-search-design.md ✓
+        写入 criteria → .stackpilot/specs/2026-04-05-user-search-criteria.md ✓
+        Spec 评审视图：http://localhost:51234/sprints/.../spec-review.html
+Node 4: 写入 plan → .stackpilot/plans/2026-04-05-user-search-plan.md ✓
+        实时 Dashboard：http://localhost:51234/sprints/.../dashboard.html
 
 计划就绪，开始编码？(Y/n)
 

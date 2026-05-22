@@ -18,7 +18,9 @@ Stackpilot is a sprint orchestration layer for Claude Code. `/stackpilot` skill 
 |------|---------|
 | `claude-config/agents/sp-*.md` | Agent methodology prompts (architect/dev/qa/docs) |
 | `claude-config/skills/stackpilot/SKILL.md` | Main `/stackpilot` entry point |
-| `claude-config/skills/stackpilot/references/` | Sub-protocols (sprint-finish, optimize-sprint, visual-companion) |
+| `claude-config/skills/stackpilot/references/` | Sub-protocols (run-sprint, sprint-finish, 12-qa-matrix) + `views/` HTML templates (v2.0) |
+| `scripts/preview/{server.cjs,helper.js}` | Sprint server: HTML view host + WebSocket state stream (v2.0) |
+| `.stackpilot/views/<sprint>/` | Generated HTML view layer (gitignored — never source of truth) |
 | `docs/architecture.md` | Full architecture reference |
 | `docs/sync.md` | External skill dependency tracking |
 | `.stackpilot/` | Per-project: specs, plans |
@@ -32,6 +34,12 @@ sp-architect (HIGH complexity only) → sp-dev (TDD, worktree) → sp-qa (12-dim
 ```
 
 ## Key Design Decisions
+
+- **Dual-track architecture (v2.0.0, 2026-05-22)**: every artifact lives in exactly one of two layers. Data layer (markdown / YAML / JSON) feeds sub-agents and git diff; view layer (self-contained HTML, CDN libs) feeds human decision-makers at specific nodes. View HTML is regenerated from data, never source of truth; user actions on HTML (button clicks, criteria edits) `POST /api/action/<slug>/<name>` → server writes `*-action.json` → main agent reads back into data layer. **Why**: text-wall outputs at decision points (design options, sprint progress, finish report) lose spatial information (diff visualization, dependency DAG, criteria status) that humans need; markdown spec/plan stay LLM-consumable for sub-agents. Inspired by [The unreasonable effectiveness of HTML](https://thariqs.github.io/html-effectiveness/). **How to apply**: when adding a new decision point, ask "does the user need to compare / visualize / track over time?" → if yes, generate an HTML view from existing data files. Never make HTML the SoT. New HTML must include CSP meta restricting script-src to `self + jsdelivr` (the only CDN). Sub-agent contracts (sp-*) unchanged — they only see markdown.
+
+- **5-node skill pipeline (v2.0.0, supersedes 10+ Phase X.Y numbering)**: SKILL.md is now organized as 5 named nodes (Exploration / Design / Spec & Criteria / Plan & Run Sprint / Finish). Inline grep verifications + 12-QA matrix + traceability checks are sub-steps inside their node, not separate numbered phases. **Why**: Phase 3.5/3.6/3.7 numbering was noise — humans don't remember which is which, and the gates are still enforced inline. Fewer top-level steps = clearer mental model. **How to apply**: when adding new gates or verifications, embed them inside the relevant node as a sub-step (e.g. "3.3 12-QA matrix"); don't introduce new Node numbers. Breaking change: external tooling referencing "Phase X.Y" by name must be updated. Migration: Phase 0.5/1 → Node 1; Phase 1.5/2 → Node 2; Phase 3/3.5/3.6/3.7 → Node 3; Phase 4/4.5 + Run Sprint → Node 4; Sprint Finish → Node 5.
+
+- **Sprint server extends preview server, single binary, slug-scoped lifecycle (v2.0.0)**: `scripts/preview/server.cjs` (354 lines pre-v2) extended additively with `/sprints/<slug>/<artifact>.html`, `POST /api/action/<slug>/<name>` (64KB cap → 413), `GET /api/state/<slug>` (aggregates `runs/<slug>/TASK-*/state.json` + `<slug>-criteria.md`), fs.watch on runs + criteria broadcasts `state-update` WS events. `start-server.sh --sprint-slug` writes `.stackpilot/views/<slug>/.server-info.json` marker so `stop-server.sh --slug` can resolve which server to kill. Brainstorm root `/` path preserved for back-compat one release. **Why**: visual-companion was a separate server that started/stopped per design question; consolidating to one long-lived sprint server avoids start/stop churn and enables live dashboard. **How to apply**: never spawn ad-hoc servers from new view nodes — generate HTML into `views/<slug>/` and rely on the existing sprint server. Existing helper.js `data-choice` WS protocol unchanged; new templates use `window.sp.{action,state}` fetch API instead.
 
 - **Fork-pattern caching**: agents share parent context → ~66% token savings
 - **Worktree isolation**: each dev task runs in its own git worktree
@@ -68,12 +76,17 @@ sp-architect (HIGH complexity only) → sp-dev (TDD, worktree) → sp-qa (12-dim
 - **sp-docs agents can "describe" files without actually writing them**: observed hallucination mode where the subagent reports "File created at: ..." in its summary but the file does not exist. Always verify file existence after any docs dispatch, especially for Write-only tasks (2026-04-17).
 - **`restore.sh` auto-picks up new skills via wildcard loop**: adding a new directory under `claude-config/skills/` requires no changes to `restore.sh` — the existing `for skill_dir in "$CONFIG_DIR/skills/"*/` loop symlinks them automatically. Resist the temptation to add per-skill install logic.
 
+- **acceptance-criteria `Verify Command` cells must escape grep patterns that match the file structure** (2026-05-22): C6 in the HTML-first rebuild used `grep "sprints/.*\.html"` but server.cjs contains JS regex literals with `sprints\/` (escaped slash), so the grep returned 0 — criterion looked failed but the route was actually present. Fix: when verifying file content with grep, prefer matching the route constant name (`SPRINT_HTML_RE`) or handler function name (`handleSprintHtml`) rather than the regex pattern itself — those are not subject to language-specific escaping. Same principle applies to anything where the verifier's regex shares syntax with the verified file.
+
+- **Squash merge into main loses commit SHA equivalence; `git branch -d` fails on feature branches** (2026-05-22): `git merge --squash` creates a new commit on main with different SHA from the source branch tip, so `git branch -d <feature>` refuses ("not fully merged"). Use `git branch -D` to force-delete after confirming the squash commit contains the work. Don't switch to non-squash merges to avoid this — `pre-merge-commit` hook blocks non-squash on main/master anyway.
+
 ## Review Patterns
 
 <!-- maintained via Sprint Finish; sp-qa surfaces candidates, main agent merges; max 20 entries -->
 
-- [atomicity] multi-row file writes use `write-to-.tmp && mv` pattern so a mid-write crash leaves the original intact ×1
+- [atomicity] multi-row file writes use `write-to-.tmp && mv` pattern so a mid-write crash leaves the original intact ×2 (TASK-001 HTML rebuild reused this for action JSON writes)
 - [size-control] SKILL.md defers deep algorithm details to `references/<name>.md` rather than inlining; keeps main skill readable and under ~500 lines ×1
+- [verification-fragility] grep-based acceptance criteria can fail-by-format when the verifier's regex shares syntax with the verified content (escaped slashes, regex literals, template tokens) — prefer constant/handler names over content patterns ×1 (TASK-016 HTML rebuild C6)
 
 ## External Skill Dependencies
 
