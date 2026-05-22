@@ -59,6 +59,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **`.gitignore` + `templates/stackpilot-inner-gitignore` + `scripts/init.sh`**
   — `.stackpilot/views/` ignored at all levels; init idempotently appends
   `views/` to existing `.stackpilot/.gitignore` on re-run.
+- **`qa-12-dimensions` portable skill hardened (1.0.1 → 1.1.0)** — 43 days of
+  drift behind upstream Anthropic `feature-dev/code-reviewer` and stackpilot's
+  internal sp-qa, closed in three targeted backports:
+  (a) **5-tier confidence rubric** (0/25/50/75/100, only ≥80 reported) replaces
+  the single "≥80%" line — matches feature-dev v2 standard for Claude 4.5+
+  reviewer agents.
+  (b) **Stage 1 renamed "Spec & Project Guidelines Compliance"** — reads
+  `CLAUDE.md` / `GEMINI.md` / `AGENTS.md` / `.cursorrules` as a first-class
+  review angle; guideline violations are first-class findings.
+  (c) **"Adversarial Angles Tried" required field** — sourced from sp-qa;
+  "no findings" only credible when the angle list is non-trivial. Prevents
+  the "review didn't happen → silently approved" failure mode.
+  Sub-agent-only sp-qa features (output schema, Consistency Audit grep
+  triplet, WTF-ratio self-monitoring, 15-fix hard cap, max-2-rounds verify)
+  deliberately NOT backported — different audience.
 
 ### Deprecated (kept one release for back-compat; removal in v2.1)
 
@@ -76,40 +91,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Sub-agent files (`sp-architect`, `sp-dev`, `sp-qa`, `sp-docs`) and their
   markdown completion-report schemas are unchanged — no breaking change at
   the agent contract layer.
-
-## [1.12.0] - 2026-05-22
-
-### Changed — qa-12-dimensions skill hardening (v1.0.1 → v1.1.0)
-
-After 43 days untouched, qa-12-dimensions had drifted behind both its upstream
-(Anthropic feature-dev v2 code-reviewer) and the stackpilot internal sp-qa. Three
-targeted backports without scope expansion:
-
-- **5-tier confidence scale** (Reporting Rules) — replaces the single "≥80%"
-  line with the 0/25/50/75/100 rubric used by `feature-dev/code-reviewer.md`.
-  Each tier has an explicit meaning; only findings ≥ 80 get reported. Closes the
-  gap with Claude 4.5+ standard reviewer-agent practice.
-- **CLAUDE.md / project guidelines compliance** (Stage 1 retitled "Spec & Project
-  Guidelines Compliance") — adds reading project rule files (`CLAUDE.md`,
-  `GEMINI.md`, `AGENTS.md`, `.cursorrules`) as a first-class review angle.
-  Guideline violations are now first-class findings. This was the most
-  conspicuous omission relative to the upstream reviewer.
-- **Adversarial Angles Tried (required field)** — sourced from stackpilot's
-  internal sp-qa. After review, reviewer must list the angles actually attempted;
-  "no findings" is only credible when the list is non-trivial. Prevents
-  "review didn't happen → silently approved" failure mode. Sample angles
-  listed for reference.
-
-Sub-agent-only features deliberately NOT backported (different audience):
-`[CRITICAL]` output prefix, fixed completion-report schema, Consistency Audit
-grep triplet (doc-heavy stackpilot-specific), WTF-ratio self-monitoring, 15-fix
-hard cap, max-2-rounds verify loop.
-
-### Bumped
-
-- `plugin.json`: `1.11.0 → 1.12.0` (then superseded by `2.0.0` in the same merge window)
-- `claude-config/skills/stackpilot/SKILL.md` frontmatter: same as above
-- `claude-config/skills/qa-12-dimensions/SKILL.md` frontmatter: `1.0.1 → 1.1.0`
 
 ### Removed (2026-05-20 — full cleanup of stackpilot-bench skill and Codex support; included in 2.0.0)
 
