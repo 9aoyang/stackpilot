@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: Claude Code native.
 metadata:
   author: stackpilot
-  version: "1.11.0"
+  version: "1.12.0"
 ---
 
 # Stackpilot
