@@ -8,11 +8,15 @@ set -euo pipefail
 FAIL=0
 warn() { echo "pre-commit: FAIL — $1" >&2; FAIL=1; }
 
-# 1. Version consistency: SKILL.md == plugin.json
+# 1. Version consistency: VERSION == SKILL.md == plugin.json
 SKILL_VER=$(grep -m1 'version:' claude-config/skills/stackpilot/SKILL.md | sed 's/.*"\(.*\)"/\1/')
 PLUGIN_VER=$(jq -r '.version' .claude-plugin/plugin.json)
+VERSION_FILE=$(tr -d '[:space:]' < VERSION)
 if [ "$SKILL_VER" != "$PLUGIN_VER" ]; then
   warn "Version mismatch: SKILL.md=$SKILL_VER, plugin.json=$PLUGIN_VER"
+fi
+if [ "$SKILL_VER" != "$VERSION_FILE" ]; then
+  warn "Version mismatch: SKILL.md=$SKILL_VER, VERSION=$VERSION_FILE"
 fi
 
 # 2. CHANGELOG must mention the current version
