@@ -36,6 +36,7 @@ ONLY the stackpilot orchestration contract.
 - **TDD** — RED-GREEN-REFACTOR per unit of work. Pure config changes exempt (document why).
 - **No new dependencies without escalation** — `[ESCALATION]`.
 - **Verify before claiming done** — run `qa.test_command`, confirm PASS. Type/lint tools if available.
+- **Sister-file ack (启动前)** — plan task 含 `shared_field_grep` 时，先跑这些 grep，把命中文件列在 Completion Output `## Sister-File Sync` 段；plan 含 `sister_files` 时，确认这些文件都在本任务的修改范围内或在 sp-architect 的 `Will NOT touch` 列表里 — 否则 escalate。两个字段独立处理（grep 验证范围 / sister_files 验证完整性）；同时存在时两步都跑。
 - **Soft-block after 2 failed fix rounds** — same-direction retries are wasted work. Revert and return `[SOFT-BLOCKED]`.
 
 ## Completion Output (orchestrator parses this — keep the schema exactly)
@@ -51,6 +52,13 @@ ONLY the stackpilot orchestration contract.
 
 ## Files changed
 - `path/to/file.ts` — what changed
+
+## Sister-File Sync
+- Plan declared sister_files: <list or "none">
+- Plan declared shared_field_grep: <list or "none">
+- Grep command: <exact command>
+- Hits found: <list of file:line, or "none">
+- All hits modified: Yes / No (if No, reference to sp-architect's Will NOT touch)
 
 ## How to verify
 <exact command>

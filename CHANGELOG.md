@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — Skill Tighten (sister-file sync via sub-agent contract)
+
+- **Node 1 Scope Lock** — `SKILL.md` Exploration rigor rules 末尾加多文件改动前的 will-touch / will-NOT-touch 文件清单要求；歧义组件名先问再改。
+- **Node 3 默认最小有效版本** — § 3.1 引导句：spec 先出最小可执行版本，comparison framework / decision matrix / 多 audience 切片仅在用户明确要求时加。
+- **Node 4 plan task `sister_files` / `shared_field_grep` 字段** — 任务触动 shared identifier / shared field 时必填，sp-dev 启动前跑 grep 验证范围，sp-qa Stage 4 做 sync audit。§ 4.2 加对应 grep verify 行。
+- **Node 5 pre-merge gate** — 显式三件套（`tsc --noEmit` / lint / test）+ 一次性脚本残留扫描（`scripts/(migrate|audit|debug|oneshot)-*` 命中即提示用户合并前是否删除）。
+- **sp-architect Implementation Blueprint** — 加 `Will NOT touch` 字段；shared identifier 任务必含 grep false-positive 命中点。
+- **sp-dev Required behaviors** — 加 Sister-file ack（启动前 grep + sister_files 验证）；`## Completion Output` 加 `## Sister-File Sync` 段。
+- **sp-qa Consistency Audit** — 加第 4 条 Sister-file sync audit；Adversarial Angles Tried 默认列表加 `sister-file sync`。
+
+### Why
+
+回应 insights 报告（2026-05-25 / 283 sessions / 4520 messages）跨项目 5 大稳定 friction：wrong_approach 34 次（改错组件 / kept-wrong-pages / blocking overlay 当 fire-and-forget）、sister-file 漏改、文档过度工程、一次性脚本残留、完成前没 verify。前两项占主要比重，本次升级 SKILL.md + 3 个 sub-agent 契约把"sister-file sync"从一次性检查变成 plan→dev→qa 接力 enforce。
+
 ## [2.0.0] - 2026-05-22
 
 ### Added — HTML-first rebuild (dual-track architecture)

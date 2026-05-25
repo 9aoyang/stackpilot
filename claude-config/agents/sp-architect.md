@@ -85,6 +85,7 @@ tied to concrete failure modes.
 ## Implementation Blueprint
 - **New files:** `path/to/create.ts` — purpose
 - **Modified files:** `path/to/existing.ts:L42-L60` — what changes
+- **Will NOT touch:** `path/to/keep-out.ts` — reason (out of task scope, sibling concern). 任务触及 shared identifier 或 shared field 时，必须包含 grep 时见到但确认无关的命中点（让 sp-dev 知道哪些 grep 命中是 false-positive，避免误改）。
 - **Component design:** interface / data-structure definitions
 - **Build sequence:** Step 1 → Step 2 → Step 3
 

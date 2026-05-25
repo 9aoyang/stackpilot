@@ -203,6 +203,7 @@ If the request spans multiple subsystems, flag and decompose first.
 - **Challenge status-quo assumptions.** If user describes a solution, ask once: "What problem does this solve that can't be solved by [simpler alternative]?"
 - **Two-push rule.** Push once if first answer is still vague. After two pushes, accept and move on.
 - **Canonical Refs.** Any doc path the user cites → Read immediately; record under `## Canonical Refs` in the spec.
+- **Scope Lock (多文件改动前必须做).** 当请求触及共享 identifier / shared field / 同一概念的多个组件时，先全仓 grep，列出 will-touch / will-NOT-touch 文件清单（按推断 sister-file 关系），等用户确认后再进入 Node 2 / Node 4。歧义组件名（"ConfigPanel" 这种可能多处存在）必须先问再改。
 
 **Light tasks (mini-mode, ≤2 minutes, mandatory):**
 
@@ -254,6 +255,8 @@ Skip mini-mode only when user explicitly said "just do it" / "skip planning" / c
 **Goal:** produce a verifiable spec and 3-7 mechanically checkable acceptance criteria, get user approval before writing the plan.
 
 ### 3.1 Write spec → `.stackpilot/specs/YYYY-MM-DD-<topic>-design.md`
+
+**默认最小有效版本**：spec 先出最小可执行版本（目标 / 范围 / 验收 / Canonical Refs）。Comparison framework / decision matrix / "send to X" framing / 多 audience 切片这类扩展只在用户明确要求时加。≥300 字下限不是要求"凑长度"，是要求"覆盖必要语义"。
 
 ### 3.2 Auto-verify (≤ 1 self-fix round)
 
@@ -329,12 +332,19 @@ git commit -m "docs(spec): <feature> — design + criteria"
 
 Bite-sized tasks (2-5 min each). Every task: `title`, `description`, `type`, `complexity` (light/standard), `depends_on`, `relevant_files`. No placeholders.
 
+**Sister-file 字段（可选）：** 任务触及 shared identifier / shared component / shared field 时，task 必须填这两个字段之一或全部。
+
+- `sister_files`: 必须同步改动的姊妹文件路径列表（如 `[OnboardingView-A.tsx, OnboardingView-B.tsx]`）。
+- `shared_field_grep`: rename / shared field 改动时的 grep 模式列表（如 `["yumi_id", "ageRange"]`），sp-dev 启动前跑这些 grep 验证范围，sp-qa Stage 4 做 sync audit。
+
 ### 4.2 Plan auto-verify (≤ 1 self-fix round)
 
 ```bash
 grep -inE "TBD|TODO|FIXME|\bplaceholder\b" .stackpilot/plans/*.md | wc -l   # 0
 grep -c "^### TASK-" .stackpilot/plans/*.md                                 # ≥ 3
 grep -cE "relevant_files:|depends_on:|complexity:" .stackpilot/plans/*.md   # task_count * 3
+# rename / shared_field / migrate 类型的 task 必须填 shared_field_grep
+grep -B2 -A6 "type:.*\(rename\|shared_field\|migrate\)" .stackpilot/plans/*.md | grep -c "shared_field_grep:"
 ```
 
 Also manually scan for type consistency across tasks. Fail after 1 self-fix → escalate.
@@ -384,7 +394,7 @@ When all tasks complete (or sprint paused for user attention) → proceed to Nod
 
 Full protocol in [references/sprint-finish.md](references/sprint-finish.md). High level:
 
-1. **Pre-merge gate** — type check, lint, `qa.test_command`. Any red → ask user before proceeding.
+1. **Pre-merge gate** — 显式三件套：`tsc --noEmit`（若存在）、`npm run lint` / `pnpm lint`（若存在）、`qa.test_command`（无显式时按 `npm test` / `pytest` 等存在性兜底；都不存在记录 `N/A`）。任一红 → 问用户是否继续。**残留脚本扫描**：`git diff --name-only $(git merge-base main HEAD)..HEAD | grep -E '^scripts/(migrate|audit|debug|oneshot)-.+\.(ts|js|sh|py)$'` — 命中即报告"以下一次性脚本是否合并前删除？"（按全局 CLAUDE.md `## 多文件同步律` 一次性脚本即用即删原则；auto mode 下保留并记录到 finish-report）。
 2. **Closure gate** — acceptance criteria all green (`pass` or `n-a-this-task`), CHANGELOG updated, pattern candidates surfaced. Block merge on red.
 3. **Generate `finish-report.html`** from `references/views/finish-report.html`. Fill: elapsed_ms, tasks (with per-phase timings from state.json), commits (`git log <base>..HEAD --stat`), criteria, patterns, decisions, branch. Push URL to terminal.
 4. **Wait** for `finish-action.json` or terminal A/B/C/D. *(user gate)* Terminal fallback if no action.json in 30s.

@@ -76,6 +76,11 @@ git diff --name-only --diff-filter=D <pre-task-sha>..HEAD | while read -r f; do
   grep -rn "$f" --include='*.md' --include='*.sh' --include='*.ts' 2>/dev/null
 done
 # Hits (excluding CHANGELOG/Evolution Notes) → [CRITICAL].
+
+# 4. Sister-file sync audit — every shared_field_grep hit must be modified
+# Inputs: plan task 的 shared_field_grep list, sp-dev 的 Sister-File Sync report
+# 对每个 pattern: grep -rn '<pattern>' --include='*.ts' --include='*.md' --include='*.sh'
+# 命中不在 dev 修改文件 AND 不在 sp-architect 的 Will NOT touch 列表 → [CRITICAL].
 ```
 
 ## Tests
@@ -122,7 +127,7 @@ PASS | PASS_WITH_FIXES | SOFT-BLOCKED
 - [SEVERITY] <file:line> — <concrete failure scenario>  (confidence: N%)
 
 ## Adversarial Angles Tried
-<one-line per angle: spec compliance / over-engineering / auth / data integrity / nulls / races / absolute claims / consistency / ...>
+<one-line per angle: spec compliance / over-engineering / auth / data integrity / nulls / races / absolute claims / consistency / sister-file sync / ...>
 
 ## Tests Written
 - `path/to/test.ts` — scenarios covered
