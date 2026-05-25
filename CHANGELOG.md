@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-05-25
+
 ### Added — Skill Tighten (sister-file sync via sub-agent contract)
 
 - **Node 1 Scope Lock** — `SKILL.md` Exploration rigor rules 末尾加多文件改动前的 will-touch / will-NOT-touch 文件清单要求；歧义组件名先问再改。
@@ -20,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Why
 
 回应 insights 报告（2026-05-25 / 283 sessions / 4520 messages）跨项目 5 大稳定 friction：wrong_approach 34 次（改错组件 / kept-wrong-pages / blocking overlay 当 fire-and-forget）、sister-file 漏改、文档过度工程、一次性脚本残留、完成前没 verify。前两项占主要比重，本次升级 SKILL.md + 3 个 sub-agent 契约把"sister-file sync"从一次性检查变成 plan→dev→qa 接力 enforce。
+
+### Fixed
+
+- **`scripts/restore.sh`**：agents 从 `cp` 改 `ln -sf`（与 skills 一致）。`cp` 每次仓库改 agent 文件都得手动 re-run；symlink 后改完即生效。
+- **`VERSION` 文件**：v2.0.0 release 漏 bump（仍停在 1.11.0）→ 已校正到 2.0.0（本 release 再 bump 至 2.1.0）。
+- **`.githooks/pre-commit`**：版本一致性检查只看 SKILL.md vs plugin.json，VERSION 单飞它放过；现把 `VERSION` 纳入三方检查。
+- **`docs/architecture.zh.md`**：补 2026-05-25 evolution row（之前 sprint 只加英文版，违反中英双语同步原则）。
 
 ## [2.0.0] - 2026-05-22
 
