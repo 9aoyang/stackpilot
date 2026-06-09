@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.2.2] - 2026-06-09
+
+### Fixed
+
+- **Fixed preview server durability under agent shells** — background preview
+  servers now start through a detached Node daemonizer instead of `nohup` in the
+  caller's process group, so the server remains reachable after
+  `start-server.sh --background` returns. Background servers no longer monitor
+  short-lived owner PIDs by default; explicit `stop-server.sh --slug` and the
+  idle timeout own cleanup.
+
 ## [2.2.1] - 2026-06-09
 
 ### Fixed

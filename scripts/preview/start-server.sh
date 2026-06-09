@@ -13,6 +13,9 @@
 #   --url-host <host>     Hostname shown in returned URL JSON.
 #   --foreground          Run server in the current terminal (no backgrounding).
 #   --background          Force background mode.
+#   --owner-pid <pid>     Optional lifecycle owner. When provided, the server
+#                         exits after this PID dies. Omitted by default so
+#                         agent-launched preview servers survive short-lived shells.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -23,6 +26,7 @@ FORCE_BACKGROUND="false"
 BIND_HOST="127.0.0.1"
 URL_HOST=""
 SPRINT_SLUG=""
+OWNER_PID=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --project-dir)
@@ -39,6 +43,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --sprint-slug)
       SPRINT_SLUG="$2"
+      shift 2
+      ;;
+    --owner-pid)
+      OWNER_PID="$2"
       shift 2
       ;;
     --foreground|--no-daemon)
@@ -99,26 +107,34 @@ fi
 
 cd "$SCRIPT_DIR"
 
-# Resolve the harness PID (grandparent of this script).
-# $PPID is the ephemeral shell the harness spawned to run us — it dies
-# when this script exits. The harness itself is $PPID's parent.
-OWNER_PID="$(ps -o ppid= -p "$PPID" 2>/dev/null | tr -d ' ')"
-if [[ -z "$OWNER_PID" || "$OWNER_PID" == "1" ]]; then
-  OWNER_PID="$PPID"
+OWNER_ENV=()
+if [[ -n "$OWNER_PID" ]]; then
+  OWNER_ENV=(BRAINSTORM_OWNER_PID="$OWNER_PID")
 fi
+SERVER_ENV=(
+  BRAINSTORM_DIR="$SESSION_DIR"
+  BRAINSTORM_HOST="$BIND_HOST"
+  BRAINSTORM_URL_HOST="$URL_HOST"
+  "${OWNER_ENV[@]}"
+  STACKPILOT_SPRINT_SLUG="$SPRINT_SLUG"
+  STACKPILOT_ROOT="${PROJECT_DIR:-$PWD}"
+)
 
 # Foreground mode for environments that reap detached/background processes.
 if [[ "$FOREGROUND" == "true" ]]; then
   echo "$$" > "$PID_FILE"
-  env BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST" BRAINSTORM_OWNER_PID="$OWNER_PID" STACKPILOT_SPRINT_SLUG="$SPRINT_SLUG" STACKPILOT_ROOT="${PROJECT_DIR:-$PWD}" node server.cjs
+  env "${SERVER_ENV[@]}" node server.cjs
   exit $?
 fi
 
 # Start server, capturing output to log file
-# Use nohup to survive shell exit; disown to remove from job table
-nohup env BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST" BRAINSTORM_OWNER_PID="$OWNER_PID" STACKPILOT_SPRINT_SLUG="$SPRINT_SLUG" STACKPILOT_ROOT="${PROJECT_DIR:-$PWD}" node server.cjs > "$LOG_FILE" 2>&1 &
-SERVER_PID=$!
-disown "$SERVER_PID" 2>/dev/null
+# Spawn a detached child so agent tool wrappers that clean up the caller's
+# process group do not kill the preview server immediately after this script exits.
+SERVER_PID=$(env "${SERVER_ENV[@]}" node "$SCRIPT_DIR/daemonize.cjs" "$LOG_FILE" 2>>"$LOG_FILE")
+if [[ -z "$SERVER_PID" ]]; then
+  echo '{"error": "Server daemon failed to start"}'
+  exit 1
+fi
 echo "$SERVER_PID" > "$PID_FILE"
 
 # Wait for server-started message (check log file)

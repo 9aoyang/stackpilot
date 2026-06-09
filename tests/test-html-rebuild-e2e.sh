@@ -58,6 +58,12 @@ SERVER_OUT=$(STACKPILOT_ROOT="$TMPDIR" bash "$START" --project-dir "$TMPDIR" --s
 PORT=$(echo "$SERVER_OUT" | sed -n 's/.*"port":[[:space:]]*\([0-9]*\).*/\1/p')
 
 check "server started with a port" "[ -n '$PORT' ]"
+check "background server does not monitor short-lived owner PID" "echo '$SERVER_OUT' | grep -q '\"owner_pid_monitored\":false'"
+MARKER=".stackpilot/views/$SLUG/.server-info.json"
+SERVER_PID=$(sed -n 's/.*"pid"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$MARKER" | head -1)
+SERVER_PGID=$(ps -o pgid= -p "$SERVER_PID" 2>/dev/null | tr -d ' ')
+CALLER_PGID=$(ps -o pgid= -p "$$" 2>/dev/null | tr -d ' ')
+check "background server is detached from caller process group" "[ -n '$SERVER_PGID' ] && [ '$SERVER_PGID' != '$CALLER_PGID' ]"
 sleep 0.5  # let server bind
 
 if [ -z "$PORT" ]; then

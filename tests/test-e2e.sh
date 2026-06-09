@@ -94,6 +94,7 @@ check "scripts/init.sh"            "$WORKTREE_DIR/scripts/init.sh"
 check "scripts/restore.sh"         "$WORKTREE_DIR/scripts/restore.sh"
 check "scripts/release.sh"         "$WORKTREE_DIR/scripts/release.sh"
 check "scripts/lib/config.sh"      "$WORKTREE_DIR/scripts/lib/config.sh"
+check "scripts/preview/daemonize.cjs" "$WORKTREE_DIR/scripts/preview/daemonize.cjs"
 if [ ! -e "$WORKTREE_DIR/scripts/dispatch.sh" ]; then
   echo "  PASS: scripts/dispatch.sh removed in v2"
   PASS=$((PASS + 1))
