@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: Claude Code native.
 metadata:
   author: stackpilot
-  version: "2.1.0"
+  version: "2.2.1"
 ---
 
 # Stackpilot
@@ -29,6 +29,7 @@ Every stackpilot artifact lives in exactly one of two layers: the **data layer**
 
 - Sub-agents only consume / produce data layer. They never see HTML.
 - View HTML is regenerated from the data layer; deleting `.stackpilot/views/` is always safe.
+- Every HTML view handoff must start or reuse the sprint server and print the browser URL (`http://localhost:<port>/sprints/<slug>/<view>.html`) as the primary user-facing output. Do not merely say the file was generated under `.stackpilot/views/...`; file paths are secondary context after the URL.
 - User actions on HTML (button click, editing criteria rows) write `*-action.json` files via `POST /api/action/<slug>/<name>`. The main agent reads that JSON and applies edits back to the data layer (e.g. updated criteria descriptions written into `criteria.md`).
 - When CDN is blocked, the server fails to start, or the user prefers terminal — fall back to terminal prompt at every node. HTML is an enhancement, not a prerequisite.
 
@@ -46,7 +47,7 @@ ls -t .stackpilot/plans/*.md 2>/dev/null || echo "NO_PLANS"
 ls -t .stackpilot/specs/*.md 2>/dev/null || echo "NO_SPECS"
 
 echo "---DEBRIS---"
-ls .claude/plans/*.md 2>/dev/null || true
+find .claude/plans -maxdepth 1 -name '*.md' -type f -print 2>/dev/null || true
 [ -d .superpowers ] && echo "SUPERPOWERS_EXISTS"
 git status --porcelain 2>/dev/null | head -5
 ```
@@ -180,6 +181,8 @@ Ask what to build. After response, route:
 
 If **B (auto mode)**: skip every `(user gate)` prompt. At Node 5, auto-select "Leave as-is". Pick the conservative non-destructive default at any decision point.
 
+**Action Safety Gate (auto mode cannot bypass):** before any tool call or command that can cause irreversible external side effects, stop and ask for explicit user confirmation. This includes force push, remote delete, production database changes, credential or secret movement, public network upload of repository data, deployment, destructive cloud/app/MCP actions, or disabling verification gates. If uncertain whether an action crosses this boundary, treat it as gated and record the decision in the sprint event log.
+
 Then choose path by scope:
 - **Light** (single clear requirement, ≤ 2 sentences): skip Node 2 + Node 3; do Node 1 (mini) → write plan → Node 4 → Node 5
 - **Standard** (multi-module, ambiguous, architectural decisions): full Node 1 → 2 → 3 → 4 → 5
@@ -226,6 +229,13 @@ Skip mini-mode only when user explicitly said "just do it" / "skip planning" / c
 
 **Goal:** present 2-3 architectural approaches, get user to pick one.
 
+**Design view contract:**
+
+- The UI must use an Apple-like minimal style: light neutral surface, system typography, restrained borders, generous spacing, and no decorative gradients/orbs.
+- Always provide 2-3 real, selectable options. Do not hand off a view with a single demo option, placeholder pros/cons, or `Template fallback` content.
+- `OPTIONS_JSON` must be valid JSON and each option must include `key`, `title`, `summary`, `pros`, `cons`, `complexity`, and `fit`; include `diagram_mermaid` when an architecture sketch adds clarity.
+- Before printing the URL, grep the generated file for unresolved tokens (`{{OPTIONS_JSON}}`, `{{SPRINT_SLUG}}`, `{{QUESTION}}`) and placeholder text (`Template fallback`, `pro 1`, `con 1`). If any remain, regenerate or fall back to terminal-only choices.
+
 **Produce two things in lockstep:**
 
 1. Text proposal in terminal (always — fallback when HTML/server unavailable).
@@ -241,10 +251,11 @@ Skip mini-mode only when user explicitly said "just do it" / "skip planning" / c
      --project-dir "$PWD" --sprint-slug "$SLUG" --background 2>&1 | head -1
    ```
    Parse the returned JSON for `port` and `url`.
-3. Fill template tokens — `{{SPRINT_SLUG}}`, `{{SPRINT_DESCRIPTION}}`, `{{QUESTION}}`, `{{OPTIONS_JSON}}` — write to `.stackpilot/views/<slug>/design-options.html`. The template will fetch it and render via mermaid (CDN) on load. Each option provides `diagram_mermaid` (preferred) or `diagram_svg` for the architecture sketch.
-4. Print to terminal: the 3 approaches in compressed form + the URL `http://localhost:<port>/sprints/<slug>/design-options.html`.
-5. **Wait for either** the user's terminal response OR `.stackpilot/views/<slug>/design-options-action.json` (poll every 2-5s; the server writes this when a Pick button is clicked). First to arrive wins. *(user gate)*
-6. Record the choice. Proceed to Node 3.
+3. Fill template tokens — `{{SPRINT_SLUG}}`, `{{SPRINT_DESCRIPTION}}`, `{{QUESTION}}`, `{{OPTIONS_JSON}}` — write to `.stackpilot/views/<slug>/design-options.html`. The template renders Apple-like selectable option cards via mermaid (CDN) on load. Each option provides `diagram_mermaid` (preferred) or `diagram_svg` for the architecture sketch.
+4. Validate the generated HTML: no unresolved template tokens, no placeholder fallback text, and 2-3 rendered options available from `OPTIONS_JSON`.
+5. Print to terminal: the 2-3 approaches in compressed form + the URL `http://localhost:<port>/sprints/<slug>/design-options.html`.
+6. **Wait for either** the user's terminal response OR `.stackpilot/views/<slug>/design-options-action.json` (poll every 2-5s; the server writes this when a Pick button is clicked). First to arrive wins. *(user gate)*
+7. Record the choice. Proceed to Node 3.
 
 **Fallback:** if server failed to start or template not found, print 3 approaches in terminal only and wait for text response.
 
@@ -298,6 +309,7 @@ Examples:
 | API endpoint | `curl -w '%{http_code}' /api/X` returns `200`; `pytest tests/test_X.py` exits 0; p95 ≤ N ms |
 | Bug fix | failing-test-from-repro now passes; `npm test` no regression; specific log line absent |
 | Refactor | `npm test` still passes; LOC of module decreases ≥ X%; no new `any` types |
+| Frontend/UI | rendered UI route opens; screenshot/DOM check proves target state; responsive overflow check passes |
 | Docs | `markdown-link-check` passes; section word count ≥ N; required headings present |
 
 In auto mode, still write criteria — sp-qa needs them.
@@ -375,7 +387,7 @@ Pre-Sprint:
 
 Sprint Execution Loop (per wave):
   Dispatch ALL wave-tasks in PARALLEL via TaskCreate + simultaneous Agent calls.
-  Pipeline per task: Track → Arch Review (HIGH only) → sp-dev (worktree) → Simplify (skip light)
+  Pipeline per task: Track → Arch Review (standard only) → sp-dev (worktree) → Simplify (skip light)
     → sp-qa (skip light; updates acceptance-criteria.md) → Deep Review (HIGH) → Complete
   Wait for ALL wave-tasks before next wave. Pause on CRITICAL or 3x SOFT-BLOCKED.
 
@@ -394,7 +406,7 @@ When all tasks complete (or sprint paused for user attention) → proceed to Nod
 
 Full protocol in [references/sprint-finish.md](references/sprint-finish.md). High level:
 
-1. **Pre-merge gate** — 显式三件套：`tsc --noEmit`（若存在）、`npm run lint` / `pnpm lint`（若存在）、`qa.test_command`（无显式时按 `npm test` / `pytest` 等存在性兜底；都不存在记录 `N/A`）。任一红 → 问用户是否继续。**残留脚本扫描**：`git diff --name-only $(git merge-base main HEAD)..HEAD | grep -E '^scripts/(migrate|audit|debug|oneshot)-.+\.(ts|js|sh|py)$'` — 命中即报告"以下一次性脚本是否合并前删除？"（按全局 CLAUDE.md `## 多文件同步律` 一次性脚本即用即删原则；auto mode 下保留并记录到 finish-report）。
+1. **Pre-merge gate** — 显式三件套：`tsc --noEmit`（若存在）、`npm run lint` / `pnpm lint`（若存在）、`qa.test_command`（无显式时按 `npm test` / `pytest` 等存在性兜底；都不存在记录 `N/A`）。任一红 → 问用户是否继续。**Action Safety Gate** 仍生效：force push、remote delete、production database、credential/secret movement、部署或外部上传不能被 auto mode 静默执行。**残留脚本扫描**：`git diff --name-only $(git merge-base main HEAD)..HEAD | grep -E '^scripts/(migrate|audit|debug|oneshot)-.+\.(ts|js|sh|py)$'` — 命中即报告"以下一次性脚本是否合并前删除？"（按全局 CLAUDE.md `## 多文件同步律` 一次性脚本即用即删原则；auto mode 下保留并记录到 finish-report）。
 2. **Closure gate** — acceptance criteria all green (`pass` or `n-a-this-task`), CHANGELOG updated, pattern candidates surfaced. Block merge on red.
 3. **Generate `finish-report.html`** from `references/views/finish-report.html`. Fill: elapsed_ms, tasks (with per-phase timings from state.json), commits (`git log <base>..HEAD --stat`), criteria, patterns, decisions, branch. Push URL to terminal.
 4. **Wait** for `finish-action.json` or terminal A/B/C/D. *(user gate)* Terminal fallback if no action.json in 30s.

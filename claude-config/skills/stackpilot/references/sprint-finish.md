@@ -7,7 +7,17 @@ server for preview, then surfaces the sprint outcome via `finish-report.html`
 Inputs assumed present: `.stackpilot/runs/<slug>/TASK-*/state.json` for
 elapsed/phase data, `.stackpilot/specs/<slug>-criteria.md` for criteria,
 agent reports for Pattern/Decision Candidates, `git log <base>..HEAD` for
-the commits list.
+the commits list, and `.stackpilot/runs/<slug>/events.jsonl` for durable
+dispatch / verification / decision evidence.
+
+## Action Safety Gate
+
+This gate is active for the whole Finish flow, including auto mode. Do not
+execute or silently approve force push, remote delete, production database
+mutation, credential or secret movement, deployment, public network upload of
+repository data, destructive cloud/app/MCP actions, or disabling verification
+checks without explicit user confirmation. Record the decision in
+`.stackpilot/runs/<slug>/events.jsonl`.
 
 ## Step 0 — Pre-merge verification gate
 
@@ -185,8 +195,9 @@ tokens, write to `.stackpilot/views/<slug>/finish-report.html`:
 SLUG="<sprint-slug>"
 BASE=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo main)
 BRANCH=$(git branch --show-current)
+EVENT_LOG=".stackpilot/runs/${SLUG}/events.jsonl"
 
-# Build DATA_JSON in a temp file (commits / tasks / criteria / patterns / decisions / branch)
+# Build DATA_JSON in a temp file (commits / tasks / criteria / patterns / decisions / event log / branch)
 # Then sed-replace tokens in the template
 cp ~/Documents/github/stackpilot/claude-config/skills/stackpilot/references/views/finish-report.html \
    ".stackpilot/views/${SLUG}/finish-report.html"
@@ -211,6 +222,13 @@ Poll `.stackpilot/views/<slug>/finish-action.json` every 2 seconds. **First
 to arrive wins** (HTML click or terminal reply). If 30 seconds elapse with
 no action.json AND no terminal response, fall back to terminal-only prompt
 (do not regenerate the HTML; user can still type the choice).
+
+Record the final branch decision in the event log:
+
+```bash
+printf '{"ts":"%s","type":"decision","payload":{"gate":"finish","choice":"%s"}}\n' \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "<A|B|C|D>" >> "${EVENT_LOG}"
+```
 
 ## Step 4 — Pre-merge commits on feature branch (A and B)
 
@@ -245,6 +263,8 @@ git commit -m "chore(stackpilot): clear sprint artifacts"
 
 - **A**: Squash merge — produces exactly one commit on base branch:
   ```bash
+  # Action Safety Gate still applies: do not add force push, remote delete,
+  # production database actions, or credential movement to this path.
   git checkout <base-branch>
   git merge --squash <feature-branch>
   git commit -m "<descriptive summary of the sprint>"

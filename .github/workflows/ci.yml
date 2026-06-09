@@ -30,3 +30,9 @@ jobs:
 
       - name: Run e2e tests
         run: bash tests/test-e2e.sh
+
+      - name: Run HTML rebuild e2e tests
+        run: bash tests/test-html-rebuild-e2e.sh
+
+      - name: Run v2.2 upgrade regression tests
+        run: bash tests/test-v2-2-upgrade.sh

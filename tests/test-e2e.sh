@@ -130,7 +130,7 @@ fi
 echo ""
 
 # 7. Agent methodology contracts — protect stackpilot-specific invariants from
-#    drift, WITHOUT re-testing generic behaviors Claude 4.7 does natively.
+#    drift, WITHOUT re-testing generic behaviors frontier coding models handle natively.
 echo "--- Agent contracts (structural assertions) ---"
 grep_in() { grep -q "$1" "$WORKTREE_DIR/$2" 2>/dev/null; }
 
@@ -180,7 +180,7 @@ grep_in "Pattern Candidates" "claude-config/agents/sp-qa.md" \
   && { echo "  PASS: sp-qa emits Pattern Candidates"; PASS=$((PASS + 1)); } \
   || { echo "  FAIL: sp-qa missing Pattern Candidates"; FAIL=$((FAIL + 1)); }
 
-# SKILL.md auto-verify is 1 round (4.7 first-pass)
+# SKILL.md auto-verify is 1 round (failures escalate with concrete evidence)
 grep_in "1 self-fix round\|up to 1 self-fix" "claude-config/skills/stackpilot/SKILL.md" \
   && { echo "  PASS: SKILL.md auto-verify is 1 round"; PASS=$((PASS + 1)); } \
   || { echo "  FAIL: SKILL.md auto-verify not declared as 1 round"; FAIL=$((FAIL + 1)); }

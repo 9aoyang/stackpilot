@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-06-09
+
+### Fixed
+
+- **Hardened Node 2 design options** — `design-options.html` now uses an
+  Apple-like minimal interface with real selectable cards, validates
+  `OPTIONS_JSON` before rendering, and refuses to show placeholder/demo choices
+  such as `Approach A`, `pro 1`, or `con 1`.
+
+## [2.2.0] - 2026-06-07
+
+### Changed — Official-frontier protocol refresh
+
+- **Removed stale point-release model anchors from live prompts** — `sp-dev`,
+  `sp-qa`, `templates/stackpilot.config.yml`, README, and architecture docs now
+  describe capability tiers and Stackpilot-specific contracts instead of
+  hard-coding claims like "Claude 4.7 self-catches..." or "haiku 4.5".
+- **Aligned architecture-review routing** — `SKILL.md` now matches
+  `references/run-sprint.md`: architecture review runs for `standard`
+  complexity tasks. HIGH risk is an output of that review, not a valid trigger
+  before the review exists.
+- **Fixed zsh startup debris scan** — Step 0 now uses `find .claude/plans ...`
+  instead of an unmatched `.claude/plans/*.md` glob, preventing `no matches
+  found` noise when no plan files exist.
+- **Added Action Safety Gate** — auto mode cannot silently run force push,
+  remote delete, production database mutation, credential/secret movement,
+  deployment, public repo-data upload, destructive MCP/app actions, or disabled
+  verification gates. Decisions are recorded in the sprint event log.
+- **Added sprint-level `events.jsonl`** — Run Sprint now defines a durable event
+  log for `task-dispatched`, `phase-change`, `verification`, `decision`,
+  `action-safety-gate`, and completion events. Sprint Finish consumes it for
+  final report evidence.
+- **Raised frontend acceptance bar** — frontend/UI criteria now require rendered
+  UI evidence such as browser/devtools smoke, screenshot/DOM assertion,
+  responsive overflow check, or native Playwright/Cypress route test; a server
+  curl alone is not enough.
+- **Made HTML view handoff explicit** — every HTML decision/report node must
+  start or reuse the sprint server and print the `localhost` browser URL as the
+  primary output; `.stackpilot/views/...` file paths are secondary context only.
+- **Clarified OpenAI Codex boundary** — portable methodology skills remain
+  compatible with OpenAI Codex Agent Skills, but `/stackpilot` sprint
+  orchestration remains Claude Code-specific until a maintained Codex plugin or
+  `.agents/skills` orchestration package is shipped.
+
+### Evidence
+
+- OpenAI Codex official docs/blog now emphasize Agent Skills, subagents,
+  sandboxed worktrees, Sites/browser-style app verification, SDK/app-server
+  event streams, and Claude-like long-running agent workflows.
+- Anthropic Claude Code official engineering/news posts now emphasize auto-mode
+  safety gates, long-running harnesses with durable session logs, dynamic
+  workflows, and large parallel subagent teams.
+- Added `tests/test-v2-2-upgrade.sh` to mechanically guard every v2.2.0
+  upgrade claim, then ran it RED before implementation and GREEN after changes.
+  Full test suite verification is recorded in the release handoff.
+
 ## [2.1.0] - 2026-05-25
 
 ### Added — Skill Tighten (sister-file sync via sub-agent contract)

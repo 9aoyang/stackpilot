@@ -1,6 +1,6 @@
 # Stackpilot Architecture
 
-> Last updated: 2026-05-20
+> Last updated: 2026-06-07
 
 Stackpilot is a methodology-driven sprint orchestration layer for Claude Code.
 It turns a specification into working code by driving the host agent's native
@@ -74,6 +74,7 @@ stackpilot/                        ← framework installation
     ├── specs/                     ← design documents + criteria (data layer)
     ├── plans/                     ← implementation plans (data layer)
     ├── runs/<sprint>/TASK-*/state.json   ← per-task phase state (data layer)
+    ├── runs/<sprint>/events.jsonl        ← durable dispatch / verification / decision log
     └── views/                     ← v2.0 generated HTML artifacts (view layer, gitignored)
         └── <sprint>/{design-options,dashboard,spec-review,finish-report}.html
 ```
@@ -107,7 +108,7 @@ sp-architect, /simplify, and sp-qa are skipped for light tasks (low ROI on small
 | **sp-architect** | Reviews task against codebase; returns architecture decision | Non-negotiable boundaries at top of prompt (read-only, one decision not a list, justified risk). Extended thinking on every review (not HIGH-only). Multi-persona: full 3 on HIGH, single on LOW/MEDIUM. Reads `.stackpilot/ARCHITECTURE.md § Key Design Decisions`, cites prior decisions verbatim. Prescriptive Process 1-5 steps replaced by general "what to ground in" instructions per Anthropic's Claude 4.x guidance ("prefer general instructions over prescriptive steps"). Emits `## Decision Candidates` on HIGH; returns `[ESCALATION]` for new deps or structural conflicts |
 | **sp-dev** | Implements the task | Six explicit "Don't add X" boundaries at the top (primacy position, mirroring Anthropic's "Avoid over-engineering" template): no error handling for impossible cases, no defensive validation on trusted inputs, no comments explaining well-named code, no single-use helpers, no unrelated refactors, no unrequested tests. Reads `git log` to avoid repeating failed approaches. TDD (RED-GREEN-REFACTOR). Verify/fix loop with stuck detection; reverts on failure; `[SOFT-BLOCKED]` after 2 failed rounds |
 | **sp-qa** | Reviews code, writes tests | Opens with adversarial KPI ("your job is finding reasons this PR should not ship"). Every finding requires `file:line` + concrete failure scenario + ≥80% confidence. Mandatory "Adversarial Angles Tried" completion field so "no findings" is earned, not assumed. Prescriptive Stages 1-3 replaced by open adversarial angles; deterministic Consistency Audit (absolute-claim / scope-completeness / dead-reference, HIGH-risk mandatory) preserved verbatim — stackpilot's unique value. Reads `.stackpilot/ARCHITECTURE.md` for Review Patterns; emits `## Pattern Candidates`. **Dispatches on standard complexity** — light tasks rely on sp-dev's TDD. |
-| **sp-docs** | Updates README, comments, API docs | **Uses haiku 4.5** (mechanical task); runs after QA passes; documentation only. |
+| **sp-docs** | Updates README, comments, API docs | Uses the haiku model tier for mechanical documentation work; runs after QA passes; documentation only. |
 
 ---
 
@@ -158,7 +159,7 @@ Agent(
 Node 1 — Exploration: scout code first (grep + read 2-5 files) → clarifying questions (one at a time) → canonical refs captured in spec
 Node 2 — Design: 2-3 approaches in design-options.html (3-col grid, Pick A/B/C) + terminal fallback
 Node 3 — Spec & Criteria: write spec → auto-verify (grep checks) → 12-QA matrix → derive acceptance criteria → spec-review.html (markdown + 12-QA grid + editable criteria + Approve button) or terminal review
-Node 4 — Plan & Run Sprint: write plan → auto-verify → traceability trace → branch + commit → start sprint server → push dashboard.html (live DAG + Kanban + criteria) → dispatch tasks in parallel waves
+Node 4 — Plan & Run Sprint: write plan → auto-verify → traceability trace → branch + commit → start sprint server → push dashboard.html (live DAG + Kanban + criteria) → dispatch tasks in parallel waves → record events.jsonl
 Node 5 — Finish: pre-merge gate (typecheck/lint/tests) → closure gate (criteria all green / CHANGELOG / patterns surfaced) → finish-report.html (timeline + criteria pie + commits + A/B/C/D) or terminal A/B/C/D
   ↳ pre-merge-commit hook rejects non-squash merges on main as a hard guard
 ```
@@ -166,7 +167,7 @@ Node 5 — Finish: pre-merge gate (typecheck/lint/tests) → closure gate (crite
 Inline verifications (grep, 12-QA matrix, traceability check) are sub-steps
 inside their node, not separate phases. HTML view artifacts are generated at
 Nodes 2, 3, 4, 5; data-layer source-of-truth files (spec, plan, criteria,
-state.json) remain markdown/JSON for sub-agent consumption.
+state.json / events.jsonl) remain markdown/JSON for sub-agent consumption.
 
 ---
 
@@ -181,7 +182,7 @@ pending → in-progress → done
 - `soft-blocked`: agent returned `[SOFT-BLOCKED]`; main session retries up to 3 times
 - `blocked`: 3 retries exhausted, escalated to user for decision
 - Tracking via Claude Code's `TaskCreate`/`TaskUpdate` (session-scoped)
-- Persistence via plan files (git-tracked, survives session restarts)
+- Persistence via plan files (git-tracked), per-task `state.json`, and sprint-level `events.jsonl`
 
 ---
 
@@ -243,7 +244,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 **Prompt-based inter-agent communication.** Agent outputs flow directly as prompt context to downstream agents. No intermediate files (arch-review/, done/). The main session is the coordinator.
 
-**Plan as persistence layer.** Tasks are tracked in-session via TaskCreate. Plan files are the persistent source of truth. The resume flow reconstructs state from plan + git log.
+**Plan + state + event log as persistence layer.** Tasks are tracked in-session via TaskCreate. Plan files define intended work; per-task `state.json` records phase completion; sprint-level `events.jsonl` records dispatch, verification, safety, and user/action decisions. Resume reads state first, then falls back to git history only for legacy sprints.
 
 **Zero external dependencies.** All agent protocols are inlined. The skill works without any external plugin installed.
 
@@ -253,19 +254,25 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 **Git as memory.** sp-dev reads `git log --oneline -20` before every task. Prior failed approaches are visible in commit history.
 
-**Agents dispatch via explicit subagent_type.** SKILL.md's `Agent()` calls pass `subagent_type="sp-architect"` / `"sp-dev"` / `"sp-qa"` / `"sp-docs"` so Claude Code routes to the registered agent (with its frontmatter-declared model and tool restrictions) rather than falling back to `general-purpose`. Required path: agents must be registered at `~/.claude/agents/` or within an installed plugin. Claude Code caches the registry at session start — after install, restart Claude Code to activate. sp-docs is routed by task.type: `type: docs` tasks go to sp-docs (haiku), all others to sp-dev (sonnet).
+**Agents dispatch via explicit subagent_type.** SKILL.md's `Agent()` calls pass `subagent_type="sp-architect"` / `"sp-dev"` / `"sp-qa"` / `"sp-docs"` so Claude Code routes to the registered agent (with its frontmatter-declared model and tool restrictions) rather than falling back to `general-purpose`. Required path: agents must be registered at `~/.claude/agents/` or within an installed plugin. Claude Code caches the registry at session start — after install, restart Claude Code to activate. sp-docs is routed by task.type: `type: docs` tasks go to sp-docs (haiku tier), all others to sp-dev (sonnet tier).
 
-**Don't re-teach Claude what it knows.** Agent methodology files specify the stackpilot orchestration contract — input format, completion output format, escalation signals, cross-sprint memory hooks. They do NOT include generic engineering advice (how to TDD, how to review, how to debug) because Claude 4.7 does those natively. This principle drove a ~47% trim of sp-dev and sp-qa methodologies on 2026-04-17.
+**Don't re-teach frontier coding models what they already handle.** Agent methodology files specify the stackpilot orchestration contract — input format, completion output format, escalation signals, safety gates, event logging, and cross-sprint memory hooks. They do NOT include generic engineering advice (how to TDD, how to review, how to debug). This principle drove a ~47% trim of sp-dev and sp-qa methodologies on 2026-04-17 and remains the prompt-shaping rule for newer Claude Code and OpenAI Codex model families.
 
 **Agent-prompt engineering principles (adopted 2026-04-20).** After a cross-sourced review of Anthropic docs (Claude 4.x prompting guide, effective context engineering, Claude Code best practices), academic literature (Lost in the Middle, Curse of Instructions, Sprague 2024 "To CoT or not to CoT"), and the 2026-04-20 survey in `research/260420-1130-prompt-length-claims/`, sp-* agent prompts follow these rules:
 
 1. **Non-negotiable boundaries at the TOP of every prompt.** First-position tokens have the highest attention weight (primacy + attention-sink), so hard red lines go there — not buried in the middle. U-shape design: repeat critical reminders at the bottom.
 2. **≤5 hard rules per agent.** Research on instruction count (Curse of Instructions, IFScale) shows following-rate decays toward ~80% once you exceed ~5 instructions. Anything beyond that belongs as guidance, not as an invariant.
 3. **Prefer general instructions over prescriptive steps** (official Anthropic Claude 4.x guidance). Explicit "step 1, step 2, step 3" lists now often *reduce* quality on strong models with adaptive thinking; they're kept only where the structure is part of the output contract (e.g., sp-dev's Completion Output schema).
-4. **Explicit negative boundaries for over-engineering.** sp-dev carries six `Don't add X` lines matching Anthropic's own "Avoid over-engineering" template. Anthropic has publicly acknowledged Claude Opus 4.5/4.6 over-engineer by default (FeatBench 2025: 73.6% of coding-agent failures are scope creep). A concrete negative boundary is the single biggest quality lever for a code agent.
+4. **Explicit negative boundaries for over-engineering.** sp-dev carries six `Don't add X` lines matching Anthropic's "Avoid over-engineering" guidance. Recent Opus-family coding models are strong but can still be over-eager; concrete negative boundaries remain a high-leverage guardrail for code agents.
 5. **No positive-example filler.** "You are a senior engineer who takes pride in…" filler drops the signal-to-token ratio without measurable benefit on Claude 4.x.
 
 **Self-verification at Sprint Finish.** When Step 2 starts the dev server, the main agent auto-curls the preview URL and reports HTTP status before handing control to the user. Non-2xx/3xx or connection failure is surfaced with the last 20 lines of server log — catches the "server binds but app 500s" class of regression without any per-task overhead.
+
+**Action Safety Gate survives auto mode.** Auto mode may skip routine user gates, but it never bypasses destructive or external side-effect boundaries. Force pushes, remote deletes, production database changes, credential movement, public uploads of repository data, deployments, destructive MCP/app actions, and disabled verification gates require explicit user confirmation and are logged in `events.jsonl`.
+
+**Rendered UI verification for frontend work.** Frontend criteria must include at least one rendered-page check when the task changes user-visible UI: browser/devtools smoke, screenshot or DOM assertion, responsive overflow check, or project-native Playwright/Cypress route test. A Node 5 curl proves only that the server responds; it does not prove the visual state.
+
+**OpenAI Codex boundary.** Portable methodology skills remain compatible with OpenAI Codex's Agent Skills discovery model, but `/stackpilot` sprint orchestration is Claude Code-specific until a maintained Codex plugin or `.agents/skills` orchestration package exists. Do not imply multi-host orchestration unless the corresponding host implementation is shipped.
 
 **Single-file project memory.** `.stackpilot/ARCHITECTURE.md` is the sole per-project memory surface. Fixed sections: What This Project Is / Stack / Key Directories / Data Flow / Key Design Decisions / Conventions & Gotchas / Review Patterns. Only the main agent writes it, and only at Sprint Finish (Step 4a). Sub-agents are read-only: `sp-architect` reads `§ Key Design Decisions` and surfaces new HIGH-risk decisions via a `## Decision Candidates` block in its report; `sp-qa` reads `§ Review Patterns` & `§ Conventions & Gotchas` and surfaces new patterns via a `## Pattern Candidates` block. The main agent merges both at Sprint Finish. This keeps writes serial on the feature branch and avoids worktree-level write contention.
 
@@ -279,6 +286,7 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
+| 2026-06-07 | **v2.2.0**: Official-frontier refresh. Removed stale Claude/Opus point-release anchors from live prompts, aligned SKILL.md and run-sprint architecture review triggers (`standard` tasks, not HIGH risk), replaced the zsh-unsafe `.claude/plans/*.md` glob with `find`, added Action Safety Gate text to SKILL / Run Sprint / Finish, added sprint-level `events.jsonl` for durable dispatch / verification / decision evidence, required rendered UI verification for frontend tasks, and clarified that portable skills work in OpenAI Codex while `/stackpilot` orchestration remains Claude Code-specific. |
 | 2026-05-25 | **v2.1.0**: Skill Tighten — sister-file sync via sub-agent contract. Node 1 加 Scope Lock（多文件 refactor 前列 will-touch / will-NOT-touch）；Node 3 § 3.1 默认最小有效版本引导；Node 4 plan task schema 加可选 `sister_files` / `shared_field_grep`，§ 4.2 加对应 grep verify；Node 5 pre-merge 显式三件套（typecheck/lint/test）+ 残留脚本扫描（`scripts/(migrate\|audit\|debug\|oneshot)-*` 命中提示是否合并前删除）。Sub-agent 接力：sp-architect Implementation Blueprint 加 `Will NOT touch`；sp-dev Required behaviors 加 Sister-file ack + Completion Output 加 `## Sister-File Sync` 段；sp-qa Consistency Audit 加第 4 条 sister-file sync audit + Adversarial Angles 加 `sister-file sync`。Why: insights 报告（2026-05-25 / 283 sessions / 4520 messages）跨项目 5 大稳定 friction 中 wrong_approach（34 次）和 sister-file 漏改占主要比重，需要从 SKILL.md 一次性检查升级为 plan→dev→qa 接力 enforce。 |
 | 2026-05-22 | **qa-12-dimensions hardening (skill v1.0.1 → v1.1.0; shipped as part of v2.0.0).** After 43 days untouched the portable skill had drifted behind both upstream (Anthropic feature-dev v2 code-reviewer) and the stackpilot internal sp-qa. Three targeted backports: (1) 5-tier confidence rubric (0/25/50/75/100) replaces the single ">=80%" line, matching feature-dev v2; (2) Stage 1 renamed "Spec & Project Guidelines Compliance" and reads `CLAUDE.md` / `GEMINI.md` / `AGENTS.md` / `.cursorrules` as a first-class review angle; (3) "Adversarial Angles Tried" required field sourced from sp-qa — "no findings" only credible when angle list is non-trivial. Sub-agent-only sp-qa features (output schema, Consistency Audit grep triplet, WTF ratio, hard caps) deliberately NOT backported. |
 | 2026-05-20 | **Removed `/stackpilot-bench` skill and `codex-config/` Codex support.** Bench harness (3 workloads, history.csv, scoring/verdict scripts, run-codex-bench.sh, references/headless-mode.md) deleted; `codex-config/agents/` Codex-native sp-* prompts deleted; `claude-config/skills/stackpilot/references/codex-dispatch.md` deleted; `docs/bench-implementation.md` deleted; `qa.disable_criteria_gate` and `qa.disable_state_json` config flags (which only existed for the `stackpilot-serial` bench leg) removed from SKILL.md + run-sprint.md. Reason: bench v2 schema/runner/workload were inconsistent and unrunnable, and Codex orchestration was no longer maintained. |

@@ -12,6 +12,7 @@ machine + sprint server lifecycle.
 PLAN=$(ls -t .stackpilot/plans/*.md | head -1)
 SPRINT_SLUG=$(basename "${PLAN}" .md)
 RUN_DIR=".stackpilot/runs/${SPRINT_SLUG}"
+EVENT_LOG="${RUN_DIR}/events.jsonl"
 
 MAX_PARALLEL=$(yq '.qa.max_parallel // 3' stackpilot.config.yml 2>/dev/null || echo 3)
 TEST_CMD=$(yq '.qa.test_command' stackpilot.config.yml)
@@ -53,6 +54,22 @@ Total: 6 tasks across 3 waves
 ```bash
 mkdir -p "${RUN_DIR}"
 grep -qxF ".stackpilot/runs/" .gitignore 2>/dev/null || echo ".stackpilot/runs/" >> .gitignore
+: > "${EVENT_LOG}"
+
+append_event() {
+  local event_type="$1"
+  local task_id="${2:-}"
+  local payload="${3:-{}}"
+  jq -nc \
+    --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg type "${event_type}" \
+    --arg task_id "${task_id}" \
+    --argjson payload "${payload}" \
+    '{ts: $ts, type: $type, task_id: (if $task_id == "" then null else $task_id end), payload: $payload}' \
+    >> "${EVENT_LOG}"
+}
+
+append_event "sprint-started" "" "$(jq -nc --arg slug "${SPRINT_SLUG}" '{slug:$slug}')"
 
 for TASK_ID in $ALL_TASK_IDS; do
   mkdir -p "${RUN_DIR}/${TASK_ID}"
@@ -71,10 +88,15 @@ for TASK_ID in $ALL_TASK_IDS; do
   "updated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 EOF
+  append_event "task-state-initialized" "${TASK_ID}" "$(jq -nc --argjson deps "${DEPS_JSON}" --argjson wave "${WAVE_NUM}" '{wave:$wave, depends_on:$deps}')"
 done
 ```
 
 state.json transitions during the loop — see "State Transitions" section below.
+`events.jsonl` is the durable event log for the whole sprint. It records
+task-dispatched, phase-change, verification, decision, action-safety-gate, and
+task-complete events so a resumed run can reconstruct what happened without
+depending on the main conversation context.
 
 The `depends_on` field is consumed by `dashboard.html` to render the DAG edges.
 Keep it in sync with the plan's `depends_on:` field per task.
@@ -114,6 +136,28 @@ on dashboard generation.
 
 <!-- CONFIRM-GATE: pre-coding -->
 
+Record the chosen branch in the event log:
+
+```bash
+append_event "decision" "" "$(jq -nc --arg gate pre-coding --arg choice "<A-or-B>" '{gate:$gate, choice:$choice}')"
+```
+
+## Action Safety Gate
+
+Auto mode and wave execution do not bypass external side-effect safety. Before
+running a command, tool call, MCP/app action, or browser action that could cause
+irreversible or external side effects, pause and ask the user for explicit
+confirmation. Gated examples: force push, remote delete, production database
+mutation, credential or secret movement, public network upload of repo data,
+deployment, deleting cloud resources, or disabling verification checks.
+
+When a gated action appears, record the prompt and result:
+
+```bash
+append_event "action-safety-gate" "${TASK_ID:-}" \
+  "$(jq -nc --arg action "<command-or-tool>" --arg decision "<approved|denied>" '{action:$action, decision:$decision}')"
+```
+
 ## Sprint Execution Loop
 
 ### For each wave (topological order):
@@ -129,6 +173,7 @@ on dashboard generation.
 ```
 TaskCreate(subject="TASK-NNN: <title>", description="<one-line>", activeForm="<gerund>")
 TaskUpdate(taskId=<id>, status="in_progress")
+append_event "task-dispatched" TASK-NNN "$(jq -nc --arg title "<title>" '{title:$title}')"
 update_state TASK-NNN phase="arch" started_at=$NOW
 ```
 
@@ -193,6 +238,12 @@ Agent(description="QA: TASK-NNN",
 
 **sp-qa acceptance-criteria contract:** after passing the standard 12-dim review, sp-qa MUST execute each acceptance criterion's verify command and update the corresponding row's Status field (pass / fail / n-a-this-task) in `.stackpilot/specs/<feature>-criteria.md`. Criteria not applicable to this task → mark `n-a-this-task` with a one-line reason.
 
+For frontend or UI-facing tasks, at least one criterion must verify the rendered
+state, not just source text: browser/devtools smoke, screenshot pixel/DOM check,
+responsive overflow check, or a project-native Playwright/Cypress route test.
+If the route requires auth or external services, mark the criterion with the
+exact unavailable dependency and keep the terminal fallback evidence.
+
 For light tasks, skip the sp-qa dispatch. Main agent still runs the Stage 4 consistency audit grep checks inline (absolute-claim / scope-completeness / dead-reference) since these are deterministic and cheap.
 
 `update_state TASK-NNN phase="deep-review"`
@@ -222,6 +273,8 @@ Merge findings into the QA report before Step 6. If `qa.deep_review: false` is e
 ```
 TaskUpdate(taskId=<id>, status="completed")
 update_state TASK-NNN phase="complete" last_result="complete" updated_at=$NOW
+append_event "verification" TASK-NNN "$(jq -nc --arg command "<qa.test_command or criterion command>" --arg result pass '{command:$command, result:$result}')"
+append_event "task-complete" TASK-NNN "$(jq -nc --arg result complete '{result:$result}')"
 ```
 
 Print progress line:
@@ -256,6 +309,7 @@ update_state() {
   jq --arg p "${phase}" --arg t "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
      '.phase = $p | .updated_at = $t' "${state_file}" > "${state_file}.tmp" \
     && mv "${state_file}.tmp" "${state_file}"
+  append_event "phase-change" "${task_id}" "$(jq -nc --arg phase "${phase}" '{phase:$phase}')"
 }
 ```
 

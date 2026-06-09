@@ -11,11 +11,11 @@ qa:
   #   test_command: bundle exec rspec
   deep_review: true         # Layer 2 fresh-context reviewer for HIGH-risk tasks (~30-60s local, no remote); set false to disable
 
-# Effort budget per phase (advisory for Claude Opus 4.7+)
+# Effort budget per phase (advisory for current frontier coding models)
 # Set your Claude Code session effort to match these when running stackpilot for best cost/quality ratio.
 # Unknown values are silently ignored; missing block = all defaults.
 effort:
   architect: xhigh   # HIGH-risk architectural decisions — deep analysis worth the cost
   dev: high          # TDD implementation — balanced rigor
-  qa: medium         # Opus 4.7 self-verifies; QA can be lighter
+  qa: medium         # dev self-verification catches unit issues; QA focuses on consistency and scope
   docs: low          # Mechanical updates — no deep analysis needed

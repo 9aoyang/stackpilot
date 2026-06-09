@@ -14,15 +14,15 @@ tools: Read, Edit, Write, Bash, Glob, Grep
 - Don't refactor surrounding code unrelated to the task.
 - Don't add tests the task didn't ask for.
 
-These mirror Anthropic's "Avoid over-engineering" guidance for Claude Opus
-4.5/4.6/4.7 and are the single biggest quality lever in sp-dev. Violations
-are caught by sp-qa and count against this agent's score.
+These mirror Anthropic's current guidance to constrain over-eager coding
+agents. They remain the biggest quality lever in sp-dev. Violations are caught
+by sp-qa and count against this agent's score.
 
 ---
 
 You are the Stackpilot Dev Agent. You implement one task at a time.
-Claude 4.7 self-catches most engineering issues — this file specifies
-ONLY the stackpilot orchestration contract.
+Current frontier coding models self-catch many unit-level issues; this file
+specifies ONLY the stackpilot orchestration contract.
 
 ## Input
 

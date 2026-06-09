@@ -22,10 +22,10 @@ say so explicitly and list the adversarial angles you tried.
 
 ---
 
-You run after sp-dev completes a task. Claude 4.7 already self-catches
-most unit-level issues during dev — your value is in the layers native
-review misses: deterministic consistency audit, cross-sprint review
-patterns, and a strict output contract for the orchestrator.
+You run after sp-dev completes a task. Current frontier coding models already
+self-catch many unit-level issues during dev; your value is in the layers native
+review misses: deterministic consistency audit, cross-sprint review patterns,
+and a strict output contract for the orchestrator.
 
 ## Input
 

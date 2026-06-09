@@ -1,6 +1,6 @@
 # Stackpilot 架构文档
 
-> 最后更新：2026-05-20
+> 最后更新：2026-06-07
 
 Stackpilot 是一个面向 Claude Code 的方法论驱动 Sprint 编排层。它将设计文档转化为可运行代码，通过驱动宿主 agent 原生的计划和委派能力完成，无需自建服务基础设施。
 
@@ -72,6 +72,7 @@ stackpilot/                        ← 框架安装目录
     ├── specs/                     ← 设计文档 + 验收标准（数据层）
     ├── plans/                     ← 实现计划（数据层）
     ├── runs/<sprint>/TASK-*/state.json   ← 每任务 phase 状态（数据层）
+    ├── runs/<sprint>/events.jsonl        ← 持久化 dispatch / verification / decision 事件日志
     └── views/                     ← v2.0 生成的 HTML 视图（视图层，gitignore）
         └── <sprint>/{design-options,dashboard,spec-review,finish-report}.html
 ```
@@ -105,7 +106,7 @@ sp-dev → sp-qa
 | **sp-architect** | 对照代码库审查任务；返回架构决策 | 每次 review 都用 extended thinking（不限 HIGH）；定风险前先列 ≥2 个具体失败模式；Risk 评级必须配一行说理（blast radius / rollback cost）；读取 `.stackpilot/ARCHITECTURE.md § Key Design Decisions`；唯一架构决策 + 完整蓝图；HIGH 跑 3 personas，LOW/MEDIUM 至少 1 个；输出 `## Decision Candidates`；新依赖/结构冲突返回 `[ESCALATION]` |
 | **sp-dev** | 实现任务 | 读 `git log` 避免重复失败路径；追踪入口点+调用链；强制 TDD（RED-GREEN-REFACTOR）；4 阶段根因调查；verify/fix 循环含卡住检测；失败后回滚；3 轮后返回 `[SOFT-BLOCKED]` |
 | **sp-qa** | 审查代码、编写测试 | Stage 1-3 语义审查（spec 合规 + 代码质量 + 对抗性）；Stage 4 确定性 grep 审计（absolute-claim / scope-completeness / dead-reference，HIGH 风险强制）；读取 `.stackpilot/ARCHITECTURE.md` 获取 Review Patterns 和 Conventions；输出 `## Pattern Candidates`（从不直接写）；Layer 2 全新上下文 Deep Review（HIGH 风险默认开）；置信度 ≥ 80。**只在 standard 复杂度下 dispatch** — 轻量任务靠 sp-dev 的 TDD 兜。 |
-| **sp-docs** | 更新 README、注释、API 文档 | **使用 haiku 4.5**（机械任务）；QA 通过后运行；只改文档不改逻辑。 |
+| **sp-docs** | 更新 README、注释、API 文档 | 机械文档任务使用 haiku 模型层；QA 通过后运行；只改文档不改逻辑。 |
 
 ---
 
@@ -155,14 +156,14 @@ Agent(
 Node 1 — Exploration: 先 scout 代码（grep + 读 2-5 个文件）→ 逐个澄清问题 → spec 中记录 canonical refs
 Node 2 — Design: 2-3 个方案以 design-options.html 呈现（3 列网格 + Pick A/B/C 按钮）+ 终端 fallback
 Node 3 — Spec & Criteria: 写 spec → auto-verify（grep 检查）→ 12-QA 矩阵 → 派生验收 criteria → spec-review.html（markdown 渲染 + 12-QA 色块 + 可编辑 criteria + Approve）或终端 review
-Node 4 — Plan & Run Sprint: 写 plan → auto-verify → traceability trace → 建分支 → 启动 sprint server → 推 dashboard.html（实时 DAG + Kanban + criteria）→ 按 wave 并行调度 sub-agent
+Node 4 — Plan & Run Sprint: 写 plan → auto-verify → traceability trace → 建分支 → 启动 sprint server → 推 dashboard.html（实时 DAG + Kanban + criteria）→ 按 wave 并行调度 sub-agent → 记录 events.jsonl
 Node 5 — Finish: pre-merge gate（typecheck/lint/tests）→ closure gate（criteria 全绿 / CHANGELOG / patterns 浮现）→ finish-report.html（时间轴 + criteria 饼图 + commits + A/B/C/D）或终端 A/B/C/D
   ↳ pre-merge-commit hook 硬性拒绝非 squash 的 merge
 ```
 
 行内验证（grep / 12-QA / traceability）是 node 内的子步骤，不再是独立 phase。HTML
 视图产出在 Node 2/3/4/5；数据层 source-of-truth（spec / plan / criteria /
-state.json）保持 markdown/JSON 供 sub-agent 消费。
+state.json / events.jsonl）保持 markdown/JSON 供 sub-agent 消费。
 
 ---
 
@@ -177,7 +178,7 @@ pending → in-progress → done
 - `soft-blocked`：Agent 返回 `[SOFT-BLOCKED]`；主会话重试最多 3 次
 - `blocked`：重试耗尽，升级给用户
 - 运行时跟踪：Claude Code 的 `TaskCreate`/`TaskUpdate`（会话级）
-- 持久化：plan 文件（git 跟踪，跨会话存续）
+- 持久化：plan 文件（git 跟踪）、每任务 `state.json`、sprint 级 `events.jsonl`
 
 ---
 
@@ -239,7 +240,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 **Prompt 级 Agent 间通信。** Agent 输出直接作为 prompt 上下文传递给下游 Agent。无中间文件（arch-review/、done/）。主会话即 coordinator。
 
-**Plan 即持久层。** 任务在会话内通过 TaskCreate 跟踪。Plan 文件是持久化的 source of truth。resume 流程从 plan + git log 重建状态。
+**Plan + state + event log 即持久层。** 任务在会话内通过 TaskCreate 跟踪。Plan 文件定义预期工作；每任务 `state.json` 记录 phase 完成状态；sprint 级 `events.jsonl` 记录 dispatch、verification、safety、user/action decision。resume 先读 state，只有 legacy sprint 缺失 state 时才回退 git history。
 
 **零外部依赖。** 所有 Agent 协议内联，无需安装任何外部插件。
 
@@ -249,11 +250,17 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 **Git 即记忆。** sp-dev 每次任务前读 `git log --oneline -20`，不重复已失败的方案。
 
-**显式 subagent_type 调度。** SKILL.md 的 `Agent()` 调用显式传 `subagent_type="sp-architect"` / `"sp-dev"` / `"sp-qa"` / `"sp-docs"`，让 Claude Code 路由到注册好的 agent（含 frontmatter 里的 model 和 tool 限制），不退化到 `general-purpose`。要求：agent 必须在 `~/.claude/agents/` 或已安装的 plugin 里。Claude Code 启动时缓存注册表——装完必须重启。sp-docs 按 task.type 路由：`type: docs` → sp-docs（haiku），其他 → sp-dev（sonnet）。
+**显式 subagent_type 调度。** SKILL.md 的 `Agent()` 调用显式传 `subagent_type="sp-architect"` / `"sp-dev"` / `"sp-qa"` / `"sp-docs"`，让 Claude Code 路由到注册好的 agent（含 frontmatter 里的 model 和 tool 限制），不退化到 `general-purpose`。要求：agent 必须在 `~/.claude/agents/` 或已安装的 plugin 里。Claude Code 启动时缓存注册表——装完必须重启。sp-docs 按 task.type 路由：`type: docs` → sp-docs（haiku tier），其他 → sp-dev（sonnet tier）。
 
-**不和 Claude 抢活。** Agent 方法论文件只规定 stackpilot 的编排契约——输入格式、完成报告格式、升级信号、跨 sprint 记忆挂钩。**不**写"怎么做 TDD / 怎么做 code review / 怎么调试"这些通用工程方法论，因为 Claude 4.7 本来就会。2026-04-17 的重构按这条原则砍了 sp-dev 和 sp-qa 方法论 ~47%。
+**不和 frontier coding model 抢活。** Agent 方法论文件只规定 stackpilot 的编排契约——输入格式、完成报告格式、升级信号、安全门、事件日志、跨 sprint 记忆挂钩。**不**写"怎么做 TDD / 怎么做 code review / 怎么调试"这些通用工程方法论。2026-04-17 的重构按这条原则砍了 sp-dev 和 sp-qa 方法论 ~47%，对更新的 Claude Code 与 OpenAI Codex 模型族仍然适用。
 
 **Sprint Finish 自验证。** Step 2 启动 dev server 后，主 agent 在交给用户前自动 curl 一次 preview URL 并报 HTTP 状态。非 2xx/3xx 或连接失败会打出 server log 尾 20 行——抓住"进程起来了但应用 500"这类回归，零 per-task 开销。
+
+**Action Safety Gate 不被 auto mode 绕过。** Auto mode 可以跳过常规用户确认，但不能绕过破坏性或外部副作用边界。force push、remote delete、production database 改动、credential 移动、公开上传 repo 数据、部署、破坏性 MCP/app action、关闭验证门禁都必须显式问用户并记录到 `events.jsonl`。
+
+**前端任务必须验证渲染态。** 只要任务改了用户可见 UI，criteria 至少包含一个 rendered-page check：browser/devtools smoke、screenshot 或 DOM 断言、responsive overflow check、或项目原生 Playwright/Cypress route test。Node 5 的 curl 只能证明服务有响应，不能证明视觉状态正确。
+
+**OpenAI Codex 边界。** 便携式方法论 skills 与 OpenAI Codex 的 Agent Skills 发现模型兼容，但 `/stackpilot` sprint 编排在维护好的 Codex plugin 或 `.agents/skills` 编排包出现前仍是 Claude Code-specific。不要暗示多宿主编排，除非对应宿主实现已经交付。
 
 **单文件项目记忆。** `.stackpilot/ARCHITECTURE.md` 是项目级记忆的唯一落点，固定章节：What This Project Is / Stack / Key Directories / Data Flow / Key Design Decisions / Conventions & Gotchas / Review Patterns。只有主 agent 在 Sprint Finish Step 4a 写它；子 agent 全部只读——`sp-architect` 读 `§ Key Design Decisions` 作为历史决策参考，HIGH 风险时通过完成报告里的 `## Decision Candidates` 块上交新决策；`sp-qa` 读 `§ Review Patterns` 与 `§ Conventions & Gotchas`，发现新模式时通过 `## Pattern Candidates` 块上交。主 agent 在 Sprint Finish 决定是否合入。写操作串行在 feature branch 上，规避 worktree 并发写冲突。
 
@@ -267,6 +274,7 @@ Stackpilot 遵循 Anthropic 维护的 [Agent Skills 开放标准](https://agents
 
 | 日期 | 变更 |
 |------|------|
+| 2026-06-07 | **v2.2.0**：官方一线进度刷新。移除 live prompt 中过期的 Claude/Opus 点版本锚点；同步 SKILL.md 与 run-sprint 的架构审查触发条件（`standard` task，而不是 HIGH risk）；用 `find` 替换 zsh 下不安全的 `.claude/plans/*.md` glob；在 SKILL / Run Sprint / Finish 加 Action Safety Gate；新增 sprint 级 `events.jsonl` 作为 dispatch / verification / decision 的持久证据；前端任务要求 rendered UI verification；明确 portable skills 可用于 OpenAI Codex，但 `/stackpilot` 编排仍是 Claude Code-specific。 |
 | 2026-05-25 | **v2.1.0**: Skill Tighten — 通过 sub-agent 契约做 sister-file sync。 Node 1 加 Scope Lock（多文件 refactor 前列 will-touch / will-NOT-touch）；Node 3 § 3.1 加"默认最小有效版本"引导；Node 4 plan task schema 加可选 `sister_files` / `shared_field_grep`，§ 4.2 加对应 grep verify；Node 5 pre-merge 显式三件套（typecheck/lint/test）+ 残留脚本扫描（`scripts/(migrate\|audit\|debug\|oneshot)-*` 命中提示是否合并前删除）。Sub-agent 接力：sp-architect Implementation Blueprint 加 `Will NOT touch`；sp-dev Required behaviors 加 Sister-file ack + Completion Output 加 `## Sister-File Sync` 段；sp-qa Consistency Audit 加第 4 条 sister-file sync audit + Adversarial Angles 加 `sister-file sync`。原因：insights 报告（2026-05-25 / 283 sessions / 4520 messages）跨项目 5 大稳定 friction 中 wrong_approach（34 次）和 sister-file 漏改占主要比重，需要从 SKILL.md 一次性检查升级为 plan→dev→qa 接力 enforce。 |
 | 2026-05-22 | **qa-12-dimensions 加固（skill v1.0.1 → v1.1.0；随 v2.0.0 一并发布）**。43 天没动，已 drift 到上游（Anthropic feature-dev v2 code-reviewer）和 stackpilot 内部 sp-qa 之后。三处定向 backport：(1) Reporting Rules 改为 5 档置信度量表（0/25/50/75/100），跟上游 feature-dev v2 对齐；(2) Stage 1 改名 "Spec & Project Guidelines Compliance"，把读 `CLAUDE.md` / `GEMINI.md` / `AGENTS.md` / `.cursorrules` 当首要 review 角度，违反指南是 first-class finding；(3) 新增 "Adversarial Angles Tried" 必填字段（源自 sp-qa）——只有当 angle 列表非空、内容扎实时 "no findings" 才可信，防止"静默通过"失败模式。Sub-agent 专属特性（输出 schema、Consistency Audit grep 三件套、WTF ratio、硬上限）刻意 **不** backport——受众不同。 |
 | 2026-05-20 | **移除 `/stackpilot-bench` skill 与 `codex-config/` Codex 支持**。bench harness（3 个 workload、history.csv、scoring/verdict 脚本、run-codex-bench.sh、references/headless-mode.md）、`codex-config/agents/` 的 Codex 原生 sp-* prompts、`claude-config/skills/stackpilot/references/codex-dispatch.md`、`docs/bench-implementation.md` 全部删除；只为 `stackpilot-serial` bench leg 存在的 `qa.disable_criteria_gate` 与 `qa.disable_state_json` 两个 config flag 从 SKILL.md / run-sprint.md 一并移除。原因：bench v2 的 schema/runner/workload 三方不一致跑不起来；Codex 编排不再维护。 |
