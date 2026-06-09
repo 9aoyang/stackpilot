@@ -39,6 +39,8 @@ trap 'rm -rf "$TMPDIR"' EXIT
 git init -q "$TMPDIR/test-repo"
 cd "$TMPDIR/test-repo"
 git checkout -q -b main
+git config user.name "Stackpilot Tests"
+git config user.email "stackpilot-tests@example.com"
 
 # Initial commit on main
 echo "init" > file.txt
