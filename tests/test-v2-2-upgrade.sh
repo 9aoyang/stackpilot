@@ -46,10 +46,11 @@ echo ""
 
 # Version metadata must move as one unit.
 VERSION_VALUE="$(tr -d '[:space:]' < "$ROOT_DIR/VERSION")"
-[ "$VERSION_VALUE" = "2.2.2" ] && pass "VERSION is 2.2.2" || fail "VERSION is '$VERSION_VALUE', expected 2.2.2"
-assert_contains "SKILL.md metadata version is 2.2.2" 'version: "2\.2\.2"' "claude-config/skills/stackpilot/SKILL.md"
-assert_contains "plugin.json version is 2.2.2" '"version": "2\.2\.2"' ".claude-plugin/plugin.json"
-assert_contains "CHANGELOG has 2.2.2 release entry" '^## \[2\.2\.2\] - 2026-06-09' "CHANGELOG.md"
+[ "$VERSION_VALUE" = "2.3.0" ] && pass "VERSION is 2.3.0" || fail "VERSION is '$VERSION_VALUE', expected 2.3.0"
+assert_contains "SKILL.md metadata version is 2.3.0" 'version: "2\.3\.0"' "claude-config/skills/stackpilot/SKILL.md"
+assert_contains "plugin.json version is 2.3.0" '"version": "2\.3\.0"' ".claude-plugin/plugin.json"
+assert_contains "CHANGELOG has 2.3.0 release entry" '^## \[2\.3\.0\] - 2026-06-10' "CHANGELOG.md"
+assert_contains "CHANGELOG keeps 2.2.2 release entry" '^## \[2\.2\.2\] - 2026-06-09' "CHANGELOG.md"
 assert_contains "CHANGELOG keeps 2.2.1 release entry" '^## \[2\.2\.1\] - 2026-06-09' "CHANGELOG.md"
 assert_contains "CHANGELOG keeps 2.2.0 release entry" '^## \[2\.2\.0\] - 2026-06-07' "CHANGELOG.md"
 
@@ -102,8 +103,12 @@ assert_contains "sprint-finish consumes the event log" 'events\.jsonl' "claude-c
 assert_contains "SKILL.md criteria examples include rendered UI verification" 'rendered UI|screenshot|browser' "claude-config/skills/stackpilot/SKILL.md"
 assert_contains "run-sprint QA includes visual/browser verification for frontend tasks" 'visual|browser|screenshot|responsive' "claude-config/skills/stackpilot/references/run-sprint.md"
 assert_contains "sprint-finish includes preview URL response check" 'HTTP_CODE|curl.*http_code' "claude-config/skills/stackpilot/references/sprint-finish.md"
-assert_contains "HTML view handoffs must start or reuse server and print localhost URL" 'Every HTML view handoff must start or reuse the sprint server and print the browser URL' "claude-config/skills/stackpilot/SKILL.md"
+assert_contains "SKILL.md is terminal-first for user gates" 'Terminal output is mandatory at every user gate' "claude-config/skills/stackpilot/SKILL.md"
+assert_contains "SKILL.md has browser view eligibility gate" 'browser/HTML view that passes the eligibility gate' "claude-config/skills/stackpilot/SKILL.md"
+assert_contains "SKILL.md forbids prose-only card HTML" 'Do not generate card-only HTML for prose choices' "claude-config/skills/stackpilot/SKILL.md"
+assert_contains "eligible browser views must print localhost URL" 'print the browser URL \(`http://localhost:<port>/sprints/<slug>/<view>\.html`\)' "claude-config/skills/stackpilot/SKILL.md"
 assert_contains "HTML view handoffs must not only report generated files" 'Do not merely say the file was generated under `\.stackpilot/views/' "claude-config/skills/stackpilot/SKILL.md"
+assert_not_contains "SKILL.md no longer says HTML-first" 'HTML-first' "claude-config/skills/stackpilot/SKILL.md"
 
 # Design option handoff must be real, selectable, and visually constrained.
 assert_contains "Node 2 requires Apple-like minimal UI" 'Apple-like minimal style' "claude-config/skills/stackpilot/SKILL.md"
@@ -115,12 +120,21 @@ assert_contains "design-options template has selectable cards" 'selectOption' "c
 assert_contains "design-options template posts Pick choice to sprint server" 'window\.sp\.action' "claude-config/skills/stackpilot/references/views/design-options.html"
 assert_not_contains "design-options template has no demo fallback summary" 'agent did not fill OPTIONS_JSON|Approach A|pro 1|con 1' "claude-config/skills/stackpilot/references/views/design-options.html"
 
-# Codex support boundary: portable methodology yes, Stackpilot orchestration remains Claude Code-only until a Codex plugin is shipped.
-assert_contains "README states portable skills work in Codex" 'Portable methodology skills.*Codex|Codex.*portable methodology' "README.md"
-assert_contains "README states Stackpilot orchestration is Claude Code-only" 'Stackpilot orchestration.*Claude Code-only|Claude Code-only.*Stackpilot orchestration' "README.md"
+# Cross-host boundary: StackPilot is a general methodology core; Claude Code is one adapter.
+assert_contains "README states methodology core works across hosts" 'methodology core.*Codex|general methodology|host adapters|通用方法论' "README.md"
+assert_contains "README names Claude Code as an adapter" 'Claude Code adapter|Host adapters|宿主适配器' "README.md"
+assert_contains "README names packaged non-Claude hosts" 'Cursor|OpenAI Codex|Gemini CLI|\.codex-plugin|\.cursor-plugin|gemini-extension' "README.md"
+assert_contains "README names portable workflow gates" 'stackpilot-planning|stackpilot-workspace|stackpilot-plan-execution|stackpilot-parallel-agents|stackpilot-review-response|stackpilot-completion-verification|stackpilot-skill-authoring' "README.md"
+assert_contains "README links Superpowers gap audit" 'superpowers-gap-audit' "README.md"
 assert_not_contains "README no longer claims host-specific Stackpilot dispatch" 'host-specific dispatch' "README.md"
 assert_contains "architecture docs mention OpenAI Codex skills discovery" 'OpenAI Codex|Codex' "docs/architecture.md"
-assert_contains "architecture docs explicitly keep orchestration Claude Code-specific" 'Claude Code-specific|Claude Code-only' "docs/architecture.md"
+assert_contains "architecture docs separate methodology core from adapters" 'Methodology Core|Host Adapters|adapter' "docs/architecture.md"
+assert_contains "architecture docs list packaged host surfaces" 'Packaged host surfaces|\.codex-plugin|\.cursor-plugin|gemini-extension' "docs/architecture.md"
+assert_contains "architecture docs list portable workflow gates" 'stackpilot-planning|stackpilot-workspace|stackpilot-plan-execution|stackpilot-parallel-agents|stackpilot-review-response|stackpilot-completion-verification|stackpilot-skill-authoring' "docs/architecture.md"
+assert_contains "architecture docs mention Superpowers parity audit" 'Superpowers parity audit|superpowers-gap-audit' "docs/architecture.md"
+assert_not_contains "architecture no longer says StackPilot orchestration is Claude Code-only" 'Stackpilot orchestration remains Claude Code-specific|Stackpilot orchestration is Claude Code-specific|Claude Code-only dispatch' "docs/architecture.md"
+assert_contains "Claude plugin description is methodology-first" 'General methodology for coding agents' ".claude-plugin/plugin.json"
+assert_not_contains "Claude plugin description no longer starts sprint-only" 'Sprint orchestration for Claude Code' ".claude-plugin/plugin.json"
 
 # The changelog should name the evidence-backed reasons for the update, not just subjective cleanup.
 assert_contains "CHANGELOG cites OpenAI Codex evidence" 'OpenAI Codex' "CHANGELOG.md"

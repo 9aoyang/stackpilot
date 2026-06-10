@@ -1,0 +1,24 @@
+{
+  "name": "stackpilot",
+  "displayName": "StackPilot",
+  "description": "One StackPilot entry for coding-agent methodology: design, spec, plan, TDD, review, verification, and finish gates.",
+  "version": "2.3.0",
+  "author": {
+    "name": "9aoyang",
+    "url": "https://github.com/9aoyang"
+  },
+  "homepage": "https://github.com/9aoyang/stackpilot",
+  "repository": "https://github.com/9aoyang/stackpilot",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "methodology",
+    "tdd",
+    "planning",
+    "code-review",
+    "verification"
+  ],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "hooks": "./hooks/hooks-cursor.json"
+}

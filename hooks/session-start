@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# SessionStart hook for the Stackpilot plugin.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+BOOTSTRAP="${PLUGIN_ROOT}/claude-config/skills/stackpilot-bootstrap/SKILL.md"
+
+bootstrap_content="$(cat "${BOOTSTRAP}" 2>&1 || echo "Error reading stackpilot-bootstrap skill")"
+
+escape_for_json() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  s="${s//$'\t'/\\t}"
+  printf '%s' "$s"
+}
+
+bootstrap_escaped="$(escape_for_json "$bootstrap_content")"
+session_context="<EXTREMELY_IMPORTANT>\nYou have Stackpilot.\n\nBelow is the full content of the stackpilot-bootstrap skill. It establishes automatic routing discipline for feature work, debugging, TDD, QA, and completion verification. For all other skills, use the host skill tool before acting:\n\n${bootstrap_escaped}\n</EXTREMELY_IMPORTANT>"
+
+if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
+  printf '{\n  "additional_context": "%s"\n}\n' "$session_context"
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+  printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$session_context"
+else
+  printf '{\n  "additionalContext": "%s"\n}\n' "$session_context"
+fi

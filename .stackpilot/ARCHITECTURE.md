@@ -4,19 +4,30 @@
 
 ## What This Project Is
 
-Stackpilot is a sprint orchestration layer for Claude Code. `/stackpilot` skill drives the full dev loop: spec → plan → agent dispatch → QA → ship.
+StackPilot is a general methodology for coding agents with one normal user
+entry. The portable `stackpilot-methodology` core defines the flow; smaller
+portable skills are internal gates; host adapters such as the Claude Code
+`/stackpilot` skill execute the method with native tools.
 
 ## Stack
 
-- **Runtime**: Claude Code native (Agent tool, TaskCreate, worktrees — no custom infra)
+- **Runtime**: StackPilot entry routes through host-neutral Agent Skills gates; Claude Code adapter uses Agent tool, TaskCreate, worktrees, preview server, state, and events
 - **Language**: Markdown-driven skills + Bash scripts
-- **Distribution**: install.sh → symlinks into `~/.claude/`
+- **Distribution**: Claude Code installer/symlinks plus host plugin manifests for Claude, Cursor, Codex, and Gemini StackPilot entry/routing surfaces
 
 ## Key Directories
 
 | Path | Purpose |
 |------|---------|
 | `claude-config/agents/sp-*.md` | Agent methodology prompts (architect/dev/qa/docs) |
+| `claude-config/skills/stackpilot-methodology/SKILL.md` | Internal portable StackPilot Methodology Core |
+| `claude-config/skills/stackpilot-planning/SKILL.md` | Internal spec/design to executable task plan gate |
+| `claude-config/skills/stackpilot-workspace/SKILL.md` | Internal workspace isolation/setup/baseline gate |
+| `claude-config/skills/stackpilot-plan-execution/SKILL.md` | Internal task-by-task plan execution gate |
+| `claude-config/skills/stackpilot-parallel-agents/SKILL.md` | Internal independent parallel dispatch gate |
+| `claude-config/skills/stackpilot-review-response/SKILL.md` | Internal review feedback verification/response gate |
+| `claude-config/skills/stackpilot-completion-verification/SKILL.md` | Internal evidence-before-claims finish gate |
+| `claude-config/skills/stackpilot-skill-authoring/SKILL.md` | Maintainer-only StackPilot skill creation/update gate |
 | `claude-config/skills/stackpilot/SKILL.md` | Main `/stackpilot` entry point |
 | `claude-config/skills/stackpilot/references/` | Sub-protocols (run-sprint, sprint-finish, 12-qa-matrix) + `views/` HTML templates (v2.0) |
 | `scripts/preview/{server.cjs,helper.js}` | Sprint server: HTML view host + WebSocket state stream (v2.0) |
@@ -26,6 +37,11 @@ Stackpilot is a sprint orchestration layer for Claude Code. `/stackpilot` skill 
 | `.stackpilot/` | Per-project: specs, plans, run state, event logs |
 | `scripts/` | init.sh, hooks, preview server |
 | `templates/` | stackpilot.config.yml |
+| `.claude-plugin/` | Claude Code full adapter package metadata |
+| `.cursor-plugin/` | Cursor StackPilot routing + portable gate package metadata |
+| `.codex-plugin/` | Codex StackPilot package metadata |
+| `gemini-extension.json`, `GEMINI.md` | Gemini StackPilot routing context |
+| `hooks/pre-tool-use` | Mechanical routing gate before feature/bug/code tool use |
 
 ## Agent Pipeline
 
@@ -43,7 +59,7 @@ sp-architect (standard complexity only) → sp-dev (TDD, worktree) → sp-qa (12
 
 - **Fork-pattern caching**: agents share parent context → ~66% token savings
 - **Worktree isolation**: each dev task runs in its own git worktree
-- **Zero custom infra**: everything uses Claude Code native tools
+- **Claude adapter infrastructure boundary**: the full sprint adapter uses Claude Code native tools; portable hosts must implement the Host Adapter Contract with their own native tools instead of copying Claude-specific `Agent` calls.
 - **Deep review (2-layer, local)**: Layer 1 — sp-qa Stage 4 Consistency Audit (grep-based, HIGH-risk mandatory, <1s). Layer 2 — main agent spawns a fresh-context reviewer after sp-qa on HIGH-risk tasks (default on, `qa.deep_review: false` disables; ~30-60s, no remote)
 - **Don't re-teach frontier coding models what they already handle**: agent methodology files specify stackpilot's orchestration contract (input format, completion output format, escalation signals, safety gates, event logging, cross-sprint memory hooks) — NOT generic engineering advice (how to do TDD, how to review code, how to debug). sp-dev and sp-qa were trimmed ~47% on 2026-04-17 to enforce this separation.
 - **Light tasks skip sp-qa dispatch**: for `complexity: light`, sp-dev's TDD verify/fix is sufficient. Main agent still runs Stage 4 consistency audit inline (cheap deterministic greps). sp-qa dispatch only fires on standard complexity.
@@ -51,7 +67,17 @@ sp-architect (standard complexity only) → sp-dev (TDD, worktree) → sp-qa (12
 - **Auto-verify 1 round, not 2**: current frontier coding models usually self-catch first-pass document issues. A second blind round is rarely worth the cost; escalate specific failures instead.
 - **Plan review = traceability check, not 12-QA re-run**: spec 12-QA already scored all 12 dimensions. Plan review only verifies spec→task forward trace and task→spec reverse trace. No re-derivation.
 - **Registered agents >> inline methodology**: 2026-04-17 micro-benchmark on identical read-only QA task: sp-qa dispatch = 10.7k tokens / 13.6s; general-purpose with inlined sp-qa methodology = 21.5k tokens / 31.1s. 2x cheaper and 2.3x faster. Root cause: registered agent methodology caches as Claude Code system prompt; inline counts as input tokens every dispatch. This is WHY sp-* registration correctness matters — without it, every optimization (haiku for docs, opus for arch, tool restrictions) is dead code.
-- **/stackpilot is explicit-invocation only — never auto-route by inferred complexity**: the user opts in by typing `/stackpilot`. By that act, they have already decided this task warrants the heavy machinery. The skill must NOT add internal routing like "this looks light → skip sp-architect" — that breaks the user's mental contract (they invoked the heavy tool deliberately). Internal `complexity: light|standard` flags inside a plan ARE allowed (they're authored by the user/main-agent, not auto-inferred), but the `/stackpilot` entry point itself never branches on heuristic complexity guesses. **Why**: this is the explicit positioning that distinguishes stackpilot from superpowers (which auto-triggers on prompt keywords). **How to apply**: when proposing optimizations, never suggest "auto-detect simple tasks and skip phases". If a phase is wasteful for a class of tasks, the right fix is letting the user not invoke /stackpilot for that class — not auto-stripping the pipeline. (2026-04-17)
+- **Single StackPilot entry, internal gates**: StackPilot's product shape is one user entry, not a public catalog of process skills. `/stackpilot` is the primary Claude Code entry; natural-language requests route into StackPilot through bootstrap; `stackpilot-methodology`, `stackpilot-planning`, `stackpilot-workspace`, `stackpilot-plan-execution`, `stackpilot-parallel-agents`, `stackpilot-review-response`, `stackpilot-completion-verification`, and `stackpilot-skill-authoring` are internal/default/maintainer gates. **Why**: the user works across many models and wants Superpowers-like strictness without memorizing a skill taxonomy or making StackPilot look like a Superpowers clone. **How to apply**: docs should present StackPilot first, then explain gates as automatic/on-demand internals; new host packages should expose one StackPilot route and use discrete skills only for host compatibility. (2026-06-10)
+
+- **Methodology Core + Host Adapters**: StackPilot is not a Claude Code-only sprint tool. `stackpilot-methodology` is the portable core behind the StackPilot route; `/stackpilot` is the Claude Code adapter. **Why**: user works across many models/hosts, so the product must define durable gates independent of Claude Code while preserving the existing full adapter. **How to apply**: new host support implements the Host Adapter Contract (design before code, mechanical criteria, traceable plan, TDD/exception, spec-compliance review before quality review, independent verification, finish/safety gates) instead of forking a new workflow. (2026-06-10)
+
+- **Cross-host package surfaces**: StackPilot ships package metadata for Claude Code (`.claude-plugin/`), Cursor (`.cursor-plugin/`), Codex (`.codex-plugin/`), and Gemini (`gemini-extension.json` + `GEMINI.md`). **Why**: a methodology users can apply across many models needs actual discovery/activation surfaces, not just prose claims. **How to apply**: keep portable gates host-neutral; keep `/stackpilot` clearly labeled as the Claude Code adapter; when adding a new host, add the smallest StackPilot routing/tool-mapping layer first, then a full adapter only if the host can enforce the Host Adapter Contract. (2026-06-10)
+
+- **Superpowers workflow coverage without skill-count cloning**: StackPilot maintains coverage for the workflow classes Superpowers exposes (planning, workspace, plan execution, parallel dispatch, review response, completion verification, skill authoring), but those capabilities are internal/default/maintainer gates under the StackPilot entry. **Why**: the competitive gap is strict process enforcement, not matching Superpowers one public skill at a time. **How to apply**: use `docs/superpowers-gap-audit.md` to find workflow gaps; do not add a new public skill just because Superpowers has one. (2026-06-10)
+
+- **Session bootstrap auto-route — Superpowers-like entry experience**: StackPilot installs a SessionStart hook that injects `stackpilot-bootstrap` at conversation start. Natural feature work, behavior changes, and multi-file requests route to the internal `stackpilot-methodology` gate before inspection or implementation; Claude Code can then hand execution to `/stackpilot` as the host adapter. **Why**: observed user experience showed explicit-only routing made the strict process easy to skip, while Superpowers gets reliability from session bootstrap + automatic skill triggering. **How to apply**: keep user/project instructions highest priority; explicit "skip planning", "just answer", or "I'll verify myself" requests override the route. Do not auto-strip internal gates based on inferred simplicity — adapter mini-mode/auto-mode rules decide the lighter path. (2026-06-10)
+
+- **PreToolUse routing gate**: StackPilot backs up prompt-level bootstrap with `hooks/pre-tool-use`. For natural feature/bug/code work, the hook blocks implementation or inspection tools until a StackPilot process skill is activated. **Why**: real triggering tests showed some models read the bootstrap and still rationalized skipping it for "small" tasks; a methodology needs mechanical gates where the host offers them. **How to apply**: keep the hook conservative and fail-open when transcript inspection is unavailable; user explicit opt-outs still win; do not block subagents. (2026-06-10)
 - **Read ARCHITECTURE.md before proposing changes that touch project conventions**: when designing a new feature/refactor, scan this file's Key Design Decisions and Conventions & Gotchas sections first. If you're about to assert a convention not listed here, ask the user "is this a hard rule?" before coding it. If it IS a hard rule, add it here as part of the change. **Why**: undocumented rules existing only in the user's head force re-discovery and waste iterations; encoding them here lets future design proposals surface tensions early. **How to apply**: before any non-trivial design proposal, grep this file for keywords related to your design space, and surface any tension to the user explicitly. (2026-04-17)
 
 - **Plan / spec self-review grep verification can false-positive on documents that mention placeholder vocabulary** (2026-05-19, surfaced sprint Phase 4 verify): the `grep -inE "TBD|TODO|FIXME|\bplaceholder\b"` verify check in stackpilot SKILL.md Phase 3/4 false-positives when a self-review section contains literal words like "no placeholders" or "no TBDs". **Why**: grep cannot distinguish self-referential mentions from actual placeholders. **How to apply**: when authoring spec / plan self-review sections, use alternate phrasing ("All task descriptions are fully resolved") instead of "no placeholders / no TBDs". Don't add `# noqa`-style escape mechanisms — keep the verify cheap and dumb. Related files: `claude-config/skills/stackpilot/SKILL.md` Phase 3/4 verify blocks.

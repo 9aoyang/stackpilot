@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Mechanical StackPilot routing gate.
+#
+# Blocks feature/bug/code work from using implementation or inspection tools
+# before a StackPilot process skill is activated. This backs up the prompt-level
+# bootstrap with an enforceable Claude Code PreToolUse hook.
+
+set -euo pipefail
+
+INPUT="$(cat)"
+
+if ! command -v jq >/dev/null 2>&1; then
+  # Fail open if jq is unavailable; the bootstrap prompt still applies.
+  exit 0
+fi
+
+TOOL_NAME="$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)"
+TRANSCRIPT_PATH="$(printf '%s' "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null || true)"
+AGENT_ID="$(printf '%s' "$INPUT" | jq -r '.agent_id // empty' 2>/dev/null || true)"
+
+[ -n "$AGENT_ID" ] && exit 0
+[ "$TOOL_NAME" = "Skill" ] && exit 0
+[ -n "$TOOL_NAME" ] || exit 0
+[ -f "$TRANSCRIPT_PATH" ] || exit 0
+
+PROCESS_SKILL_ACTIVATED="$(
+  jq -r '
+    select(.type == "assistant") |
+    .message.content[]? |
+    select(type == "object" and .type == "tool_use" and .name == "Skill") |
+    (.input.skill // .input.name // "")
+  ' "$TRANSCRIPT_PATH" 2>/dev/null \
+    | grep -E '(^|:)stackpilot$|(^|:)stackpilot-(methodology|planning|workspace|plan-execution|parallel-agents|completion-verification|review-response|skill-authoring)$|^stackpilot:(stackpilot|stackpilot-methodology|stackpilot-planning|stackpilot-workspace|stackpilot-plan-execution|stackpilot-parallel-agents|stackpilot-completion-verification|stackpilot-review-response|stackpilot-skill-authoring|systematic-debugging|tdd-development|qa-12-dimensions|architecture-review)$|^(systematic-debugging|tdd-development|qa-12-dimensions|architecture-review)$' \
+    | head -1 || true
+)"
+
+if [ -n "$PROCESS_SKILL_ACTIVATED" ]; then
+  exit 0
+fi
+
+USER_TEXT="$(
+  jq -r '
+    select(.type == "user") |
+    if (.message.content | type) == "string" then
+      .message.content
+    elif (.message.content | type) == "array" then
+      [.message.content[]? |
+        if type == "object" and .type == "text" then .text
+        elif type == "string" then .
+        else empty end
+      ] | join("\n")
+    else empty end
+  ' "$TRANSCRIPT_PATH" 2>/dev/null | tr '[:upper:]' '[:lower:]'
+)"
+
+[ -n "$USER_TEXT" ] || exit 0
+
+if printf '%s' "$USER_TEXT" | grep -qE 'skip planning|do not use stackpilot|just answer|i.ll verify myself|自己验证|跳过规划|不要用[[:space:]]*stackpilot|直接回答'; then
+  exit 0
+fi
+
+if printf '%s' "$USER_TEXT" | grep -qE 'build|implement|add|create|modify|change|refactor|fix|debug|failing|failure|bug|feature|todo list|构建|实现|添加|新增|修改|变更|重构|修复|排查|调试|故障|失败|功能|开发'; then
+  cat >&2 <<EOF
+StackPilot routing gate blocked ${TOOL_NAME}.
+
+This looks like feature, bug, or production-code work, but no StackPilot process
+has been activated yet. Start with StackPilot; the route can then trigger the
+relevant internal gate:
+
+- stackpilot:stackpilot as the primary Claude Code entry
+- stackpilot:stackpilot-methodology for feature/build/change work
+- stackpilot:stackpilot-planning for turning an approved spec into a plan
+- stackpilot:stackpilot-plan-execution for existing plans
+- stackpilot:stackpilot-parallel-agents for independent parallel domains
+- stackpilot:stackpilot-workspace before isolated implementation
+- stackpilot:systematic-debugging for bugs or failing tests
+- stackpilot:tdd-development before production code edits
+
+General preferences for speed, concise responses, or avoiding over-engineering
+are not opt-outs; use the lightweight path inside the methodology instead.
+EOF
+  exit 2
+fi
+
+exit 0

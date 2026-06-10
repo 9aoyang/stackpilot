@@ -1,17 +1,29 @@
 # Skill References
 
-Skills that have been evaluated and/or inlined into stackpilot agents and portable skills.
+Skills that have been evaluated for StackPilot's methodology, agents, or
+internal gates.
 
-> **v2 note**: In v1, external skill protocols were inlined into agent files (sp-dev.md, sp-qa.md, etc.). In v2, methodologies are extracted as standalone portable Agent Skills (tdd-development, qa-12-dimensions, architecture-review, systematic-debugging). The orchestration skill (SKILL.md) references these portable skills by name when dispatching agents.
+> **v2 note**: This file tracks source ideas and coverage decisions. It is not a
+> cloning ledger. A referenced skill may contribute a gate, invariant, or test
+> expectation without becoming a public StackPilot command. The product shape is
+> still one StackPilot entry with default/on-demand internal routing.
 
-| Skill | Inline Target (v2) | Core Contribution | Status | Last Checked |
-|-------|-------------------|-------------------|--------|--------------|
-| brainstorming | SKILL.md | HARD-GATE before any code; explore→clarify one-at-a-time→2-3 approaches→spec→self-review→user gate before proceeding; Visual Companion (browser mockups); design-for-isolation principle; spec self-review with 4 checks; "Too Simple to Need a Design" anti-pattern (every project deserves a 30-second design pause, including Light tasks → mini-brainstorm in SKILL.md Light Feature path); explicit User Reviews Spec gate after self-review (Phase 3.7) | inlined | 2026-05-18 |
-| writing-plans | SKILL.md | Bite-sized tasks (2-5 min), file structure map first, zero placeholders allowed, plan self-review, type consistency check | inlined | 2026-04-08 |
-| finishing-a-development-branch | SKILL.md (references/sprint-finish.md) | Verify tests → present 4 options (merge/PR/keep/discard) → execute → cleanup | inlined | 2026-04-08 |
-| feature-dev:code-architect | architecture-review (portable skill) | Analyze existing patterns first; one decisive architecture choice; full implementation blueprint; multi-persona adversarial review for HIGH-risk tasks | extracted | 2026-04-08 |
-| feature-dev:code-explorer | tdd-development (portable skill) | Locate entry point (file:line); trace call chain up and down; find similar implementations; confirm file list before writing | extracted | 2026-04-08 |
-| feature-dev:code-reviewer | qa-12-dimensions (portable skill) | Based on git diff only; report only issues with confidence ≥ 80 with specific file:line evidence; Critical → flag, Important → fix directly if ≤ 5 lines | extracted | 2026-04-08 |
-| autoresearch | tdd-development, qa-12-dimensions, architecture-review, SKILL.md | Five concepts: (1) git-as-memory; (2) atomic change + stuck detection; (3) 12-dimension scenario testing; (4) multi-persona adversarial review; (5) Optimize Sprint mode with Guard command | extracted | 2026-04-08 |
-| superpowers:systematic-debugging | systematic-debugging (portable skill) | 4-phase root cause investigation (observe→trace→hypothesize→fix); red flag detection; architecture check after 3 failed fixes | extracted | 2026-04-08 |
-| superpowers:test-driven-development | tdd-development (portable skill) | Rationalization blockers: 7 common excuses explicitly countered; "delete and start over" rule for code written before test | extracted | 2026-04-08 |
+| Skill | StackPilot Surface | Core Contribution | Status | Last Checked |
+|-------|--------------------|-------------------|--------|--------------|
+| brainstorming | SKILL.md | HARD-GATE before any code; explore→clarify one-at-a-time→2-3 approaches→spec→self-review→user gate before proceeding; Visual Companion (browser mockups); design-for-isolation principle; spec self-review with 4 checks; "Too Simple to Need a Design" anti-pattern (every project deserves a 30-second design pause, including Light tasks → mini-brainstorm in SKILL.md Light Feature path); explicit User Reviews Spec gate after self-review (Phase 3.7) | covered in adapter protocol | 2026-05-18 |
+| writing-plans | SKILL.md | Bite-sized tasks (2-5 min), file structure map first, fully resolved task descriptions, plan self-review, type consistency check | covered in adapter protocol | 2026-04-08 |
+| finishing-a-development-branch | SKILL.md (references/sprint-finish.md) | Verify tests → present 4 options (merge/PR/keep/discard) → execute → cleanup | covered in adapter protocol | 2026-04-08 |
+| feature-dev:code-architect | architecture-review (internal portable gate) | Analyze existing patterns first; one decisive architecture choice; full implementation blueprint; multi-persona adversarial review for HIGH-risk tasks | covered as internal gate | 2026-04-08 |
+| feature-dev:code-explorer | tdd-development (internal portable gate) | Locate entry point (file:line); trace call chain up and down; find similar implementations; confirm file list before writing | covered as internal gate | 2026-04-08 |
+| feature-dev:code-reviewer | qa-12-dimensions (internal portable gate) | Based on git diff only; report only issues with confidence ≥ 80 with specific file:line evidence; Critical → flag, Important → fix directly if ≤ 5 lines | covered as internal gate | 2026-04-08 |
+| autoresearch | tdd-development, qa-12-dimensions, architecture-review, SKILL.md | Five concepts: (1) git-as-memory; (2) atomic change + stuck detection; (3) 12-dimension scenario testing; (4) multi-persona adversarial review; (5) Optimize Sprint mode with Guard command | covered as internal gates | 2026-04-08 |
+| superpowers:systematic-debugging | systematic-debugging (internal portable gate) | 4-phase root cause investigation (observe→trace→hypothesize→fix); red flag detection; architecture check after 3 failed fixes | covered as internal gate | 2026-04-08 |
+| superpowers:test-driven-development | tdd-development (internal portable gate) | Rationalization blockers: 7 common excuses explicitly countered; "delete and start over" rule for code written before test | covered as internal gate | 2026-04-08 |
+| superpowers:writing-plans | stackpilot-planning (internal portable gate) | Exact executable plans: file map first, fully resolved task descriptions, task-sized steps, TDD steps, verification commands, traceability self-review | covered as internal gate | 2026-06-10 |
+| superpowers:using-git-worktrees | stackpilot-workspace (internal portable gate) | Detect existing isolation first; prefer host-native workspaces; git worktree fallback only after ignore verification; setup and baseline verification before implementation | covered as internal gate | 2026-06-10 |
+| superpowers:executing-plans | stackpilot-plan-execution (internal portable gate) | Execute an existing plan task-by-task, stop on blockers, preserve review/verification gates, then route to finish workflow | covered as internal gate | 2026-06-10 |
+| superpowers:subagent-driven-development | stackpilot-plan-execution (internal portable gate) | Fresh scoped worker per task when host supports subagents; spec-compliance review before code-quality review; controller verifies evidence before advancing | covered as internal gate | 2026-06-10 |
+| superpowers:dispatching-parallel-agents | stackpilot-parallel-agents (internal portable gate) | Dispatch one scoped worker per independent domain; verify independence, inspect each result, then run integration verification | covered as internal gate | 2026-06-10 |
+| superpowers:receiving-code-review | stackpilot-review-response (internal portable gate) | Parse review feedback into items, clarify unclear points before coding, verify suggestions against codebase reality, implement accepted items with tests | covered as internal gate | 2026-06-10 |
+| superpowers:verification-before-completion | stackpilot-completion-verification (internal portable gate) | Evidence-before-claims finish gate: identify claim, run fresh proving command, inspect output, verify requirements before saying complete/fixed/passing | covered as internal gate | 2026-06-10 |
+| superpowers:writing-skills | stackpilot-skill-authoring (maintainer-only gate) | Skill changes require concrete trigger scope, host-neutral body, routing/docs/test updates, and verification before claim | covered as maintainer gate | 2026-06-10 |

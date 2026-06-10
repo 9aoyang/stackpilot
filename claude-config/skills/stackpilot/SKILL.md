@@ -1,37 +1,41 @@
 ---
 name: stackpilot
-description: Sprint orchestration for Claude Code. Turns feature requests into working code through a 5-node pipeline (Exploration → Design → Spec & Criteria → Plan & Run Sprint → Finish). HTML view artifacts at human decision points; markdown data layer for sub-agents. Use when starting, resuming, tidying, or checking on development work.
+description: Primary Claude Code entry and host adapter for the StackPilot methodology. Turns feature requests into working code through a 5-node pipeline (Exploration → Design → Spec & Criteria → Plan & Run Sprint → Finish) using Claude Code-native agents, tasks, worktrees, and verification gates. Use in Claude Code when starting, resuming, tidying, or checking on development work.
 license: Apache-2.0
-compatibility: Claude Code native.
 metadata:
   author: stackpilot
-  version: "2.2.2"
+  version: "2.3.0"
 ---
 
 # Stackpilot
 
-> v2.0 HTML-first rebuild. Data layer (markdown/YAML/JSON) feeds sub-agents and git diff;
-> view layer (self-contained HTML) gets generated at human decision points and is never
-> source of truth. See `## Dual-Track Principle` below.
+> Browser artifacts are evidence tools, not decoration. The data layer
+> (markdown/YAML/JSON) feeds sub-agents and git diff; terminal text is the
+> default human interface; self-contained HTML is generated only when the
+> browser adds visual, interactive, editable, or live-state signal.
+> See `## Dual-Track Principle` below.
 
 ## Dual-Track Principle
 
-**One-liner: data layer → sub-agents, view layer → humans.**
+**One-liner: data layer → sub-agents, terminal by default, browser only when it adds signal.**
 
-Every stackpilot artifact lives in exactly one of two layers: the **data layer** (markdown / YAML / JSON for sub-agents and git) or the **view layer** (HTML rendered from the data layer for humans). The data layer is always source of truth; the view layer can be deleted and regenerated.
+Every stackpilot artifact lives in exactly one of two layers: the **data layer** (markdown / YAML / JSON for sub-agents and git) or the **view layer** (HTML rendered from the data layer for humans). The data layer is always source of truth; the view layer is optional, disposable, and justified only by information the terminal cannot communicate as well.
 
 | Layer | Audience | Format | SoT? | Examples |
 |-------|----------|--------|------|----------|
 | **Data** | sub-agents (sp-architect/dev/qa/docs), git diff, version control | markdown / YAML / JSON | ✅ | `.stackpilot/ARCHITECTURE.md`, `specs/*-design.md`, `specs/*-criteria.md`, `plans/*-plan.md`, `runs/<sprint>/TASK-*/state.json`, agent completion reports |
-| **View** | human decision-maker, browser | HTML (self-contained, CDN libs) | ❌ | `.stackpilot/views/<sprint>/{design-options,dashboard,spec-review,finish-report,architecture}.html` |
+| **View** | human decision-maker, browser | HTML (self-contained, CDN libs) | ❌ | `.stackpilot/views/<sprint>/{design-options,dashboard,spec-review,finish-report,architecture}.html` when eligible |
 
 **Rules:**
 
 - Sub-agents only consume / produce data layer. They never see HTML.
 - View HTML is regenerated from the data layer; deleting `.stackpilot/views/` is always safe.
-- Every HTML view handoff must start or reuse the sprint server and print the browser URL (`http://localhost:<port>/sprints/<slug>/<view>.html`) as the primary user-facing output. Do not merely say the file was generated under `.stackpilot/views/...`; file paths are secondary context after the URL.
+- Terminal output is mandatory at every user gate. If the decision is just text, choices, trade-offs, or approval, keep it in terminal.
+- Use the browser only for: UI/layout/interaction design; visual architecture or dataflow diagrams that reduce ambiguity; interactive prototypes; editable review tables; live multi-task progress; visual/browser verification evidence; or dense reports where charts/timelines make comparison faster.
+- Do not generate card-only HTML for prose choices, pros/cons lists, small A/B/C approvals, or architecture decisions where a compact terminal table is clearer.
+- For every browser/HTML view that passes the eligibility gate, start or reuse the sprint server and print the browser URL (`http://localhost:<port>/sprints/<slug>/<view>.html`) alongside the terminal equivalent. Do not merely say the file was generated under `.stackpilot/views/...`; file paths are secondary context after the URL.
 - User actions on HTML (button click, editing criteria rows) write `*-action.json` files via `POST /api/action/<slug>/<name>`. The main agent reads that JSON and applies edits back to the data layer (e.g. updated criteria descriptions written into `criteria.md`).
-- When CDN is blocked, the server fails to start, or the user prefers terminal — fall back to terminal prompt at every node. HTML is an enhancement, not a prerequisite.
+- When CDN is blocked, the server fails to start, the view is not eligible, or the user prefers terminal — use the terminal prompt. HTML is an enhancement, not a prerequisite.
 
 ## Step 0+1: Initialize (single bash call — do NOT split)
 
@@ -229,33 +233,43 @@ Skip mini-mode only when user explicitly said "just do it" / "skip planning" / c
 
 **Goal:** present 2-3 architectural approaches, get user to pick one.
 
-**Design view contract:**
+**Default:** terminal-only. Generate `design-options.html` only when the choice depends on visual layout, interaction flow, information hierarchy, or a diagram that materially reduces ambiguity. A prose-only architecture trade-off belongs in the terminal.
+
+**Design view eligibility gate:**
+
+- Eligible: UI layout options, interaction prototypes, data visualization choices, architecture diagrams with non-obvious topology, workflow maps with many states, or anything the user must see/click to judge.
+- Not eligible: textual trade-off lists, simple data-source choices, yes/no approvals, pros/cons cards, or mermaid diagrams that merely restate the paragraph.
+- If unsure, keep it terminal-only and offer to generate a browser view only if the user wants to inspect layout/interaction.
+
+**Design view contract when eligible:**
 
 - The UI must use an Apple-like minimal style: light neutral surface, system typography, restrained borders, generous spacing, and no decorative gradients/orbs.
 - Always provide 2-3 real, selectable options. Do not hand off a view with a single demo option, placeholder pros/cons, or `Template fallback` content.
-- `OPTIONS_JSON` must be valid JSON and each option must include `key`, `title`, `summary`, `pros`, `cons`, `complexity`, and `fit`; include `diagram_mermaid` when an architecture sketch adds clarity.
+- `OPTIONS_JSON` must be valid JSON and each option must include `key`, `title`, `summary`, `pros`, `cons`, `complexity`, and `fit`; include `diagram_mermaid` only when an architecture sketch adds clarity.
 - Before printing the URL, grep the generated file for unresolved tokens (`{{OPTIONS_JSON}}`, `{{SPRINT_SLUG}}`, `{{QUESTION}}`) and placeholder text (`Template fallback`, `pro 1`, `con 1`). If any remain, regenerate or fall back to terminal-only choices.
 
-**Produce two things in lockstep:**
+**Produce:**
 
-1. Text proposal in terminal (always — fallback when HTML/server unavailable).
-2. `design-options.html` view artifact (template at `references/views/design-options.html`).
+1. Text proposal in terminal (always).
+2. `design-options.html` view artifact only if the eligibility gate passes (template at `references/views/design-options.html`).
 
 **Steps:**
 
 1. Propose 2-3 approaches with trade-offs and your recommendation.
-2. Start sprint server if not yet running:
+2. Decide and state whether a browser view is eligible in one sentence.
+3. If not eligible: print the terminal choices, wait for terminal response, record the choice, and proceed to Node 3.
+4. If eligible, start sprint server if not yet running:
    ```bash
    SLUG="$(date +%Y-%m-%d)-<feature-slug>"
    bash ~/Documents/github/stackpilot/scripts/preview/start-server.sh \
      --project-dir "$PWD" --sprint-slug "$SLUG" --background 2>&1 | head -1
    ```
    Parse the returned JSON for `port` and `url`.
-3. Fill template tokens — `{{SPRINT_SLUG}}`, `{{SPRINT_DESCRIPTION}}`, `{{QUESTION}}`, `{{OPTIONS_JSON}}` — write to `.stackpilot/views/<slug>/design-options.html`. The template renders Apple-like selectable option cards via mermaid (CDN) on load. Each option provides `diagram_mermaid` (preferred) or `diagram_svg` for the architecture sketch.
-4. Validate the generated HTML: no unresolved template tokens, no placeholder fallback text, and 2-3 rendered options available from `OPTIONS_JSON`.
-5. Print to terminal: the 2-3 approaches in compressed form + the URL `http://localhost:<port>/sprints/<slug>/design-options.html`.
-6. **Wait for either** the user's terminal response OR `.stackpilot/views/<slug>/design-options-action.json` (poll every 2-5s; the server writes this when a Pick button is clicked). First to arrive wins. *(user gate)*
-7. Record the choice. Proceed to Node 3.
+5. Fill template tokens — `{{SPRINT_SLUG}}`, `{{SPRINT_DESCRIPTION}}`, `{{QUESTION}}`, `{{OPTIONS_JSON}}` — write to `.stackpilot/views/<slug>/design-options.html`. The template renders Apple-like selectable option cards via mermaid (CDN) on load. Each option provides `diagram_mermaid` (only when useful) or `diagram_svg` for the architecture sketch.
+6. Validate the generated HTML: no unresolved template tokens, no placeholder fallback text, and 2-3 rendered options available from `OPTIONS_JSON`.
+7. Print to terminal: the 2-3 approaches in compressed form + the URL `http://localhost:<port>/sprints/<slug>/design-options.html`.
+8. **Wait for either** the user's terminal response OR `.stackpilot/views/<slug>/design-options-action.json` (poll every 2-5s; the server writes this when a Pick button is clicked). First to arrive wins. *(user gate)*
+9. Record the choice. Proceed to Node 3.
 
 **Fallback:** if server failed to start or template not found, print 3 approaches in terminal only and wait for text response.
 
@@ -314,18 +328,24 @@ Examples:
 
 In auto mode, still write criteria — sp-qa needs them.
 
-### 3.5 User reviews spec — HTML view
+### 3.5 User reviews spec
 
-Generate `spec-review.html` from `references/views/spec-review.html`. Fill tokens: `{{SPRINT_SLUG}}`, `{{SPEC_MARKDOWN}}` (raw spec text), `{{CRITERIA_JSON}}` (criteria as JSON array), `{{QA_JSON}}` (12-QA result as `[{dim, name, status, note}, ...]`). Write to `.stackpilot/views/<slug>/spec-review.html`.
+Terminal review is the default for short specs. Generate `spec-review.html` only when inline editing or visual scanning is useful: ≥5 criteria, multiple QA warnings, long spec, user explicitly wants browser review, or the criteria table is easier to edit in a form than in text.
 
-Print URL `http://localhost:<port>/sprints/<slug>/spec-review.html` to terminal. Also print:
+When not generating HTML, print:
+
+> "Spec written and committed to `.stackpilot/specs/<file>`. Reply with 'approve' / 'changes: <text>' / 'reverify'."
+
+When generating HTML, fill `references/views/spec-review.html` tokens: `{{SPRINT_SLUG}}`, `{{SPEC_MARKDOWN}}` (raw spec text), `{{CRITERIA_JSON}}` (criteria as JSON array), `{{QA_JSON}}` (12-QA result as `[{dim, name, status, note}, ...]`). Write to `.stackpilot/views/<slug>/spec-review.html`.
+
+Print URL `http://localhost:<port>/sprints/<slug>/spec-review.html` to terminal alongside:
 
 > "Spec written and committed to `.stackpilot/specs/<file>`. Open the URL or reply in terminal with 'approve' / 'changes: <text>' / 'reverify'."
 
-Wait for either `spec-review-action.json` (`{approved, criteria_edits, change_request, reverify}`) or terminal reply. *(user gate)*
+Wait for terminal reply, or for `spec-review-action.json` (`{approved, criteria_edits, change_request, reverify}`) if HTML was generated. *(user gate)*
 
 - If `approved: true` → apply `criteria_edits` back to `criteria.md` (write each row's edited description), commit, proceed to Node 4.
-- If `change_request` → edit spec, re-run 3.2 + 3.3, regenerate `spec-review.html`, wait again.
+- If `change_request` → edit spec, re-run 3.2 + 3.3, regenerate `spec-review.html` only if still eligible, wait again.
 - If `reverify: true` → re-run 3.2 + 3.3 only.
 
 Skip 3.5 only in auto mode.
@@ -381,9 +401,10 @@ Pre-Sprint:
   1. Parse plan + read config (qa.max_parallel default 3, qa.test_command, qa.deep_review)
   2. Dependency wave analysis — topological sort over depends_on, cap per wave by max_parallel
   3. Init .stackpilot/runs/<sprint-slug>/TASK-NNN/state.json
-  4. Start sprint server (if not already running) with --sprint-slug; copy
-     references/views/dashboard.html → .stackpilot/views/<slug>/dashboard.html
-  5. Print dashboard URL once
+  4. Start sprint server + dashboard only when there are multiple waves,
+     >3 tasks, long-running tasks, user wants browser monitoring, or the
+     dependency DAG is easier to inspect visually
+  5. If dashboard is skipped, print terminal progress only
 
 Sprint Execution Loop (per wave):
   Dispatch ALL wave-tasks in PARALLEL via TaskCreate + simultaneous Agent calls.
@@ -396,7 +417,7 @@ Pre-coding confirmation:
   A. Yes   B. I'll handle it elsewhere
 ```
 
-Dashboard auto-refreshes via WS as `state.json` files change — user can leave it open the whole sprint. Terminal still prints per-task `✅ TASK-NNN  passed (k/N)` lines.
+When generated, the dashboard auto-refreshes via WS as `state.json` files change — user can leave it open the whole sprint. Terminal still prints per-task `✅ TASK-NNN  passed (k/N)` lines.
 
 When all tasks complete (or sprint paused for user attention) → proceed to Node 5.
 
@@ -408,8 +429,8 @@ Full protocol in [references/sprint-finish.md](references/sprint-finish.md). Hig
 
 1. **Pre-merge gate** — 显式三件套：`tsc --noEmit`（若存在）、`npm run lint` / `pnpm lint`（若存在）、`qa.test_command`（无显式时按 `npm test` / `pytest` 等存在性兜底；都不存在记录 `N/A`）。任一红 → 问用户是否继续。**Action Safety Gate** 仍生效：force push、remote delete、production database、credential/secret movement、部署或外部上传不能被 auto mode 静默执行。**残留脚本扫描**：`git diff --name-only $(git merge-base main HEAD)..HEAD | grep -E '^scripts/(migrate|audit|debug|oneshot)-.+\.(ts|js|sh|py)$'` — 命中即报告"以下一次性脚本是否合并前删除？"（按全局 CLAUDE.md `## 多文件同步律` 一次性脚本即用即删原则；auto mode 下保留并记录到 finish-report）。
 2. **Closure gate** — acceptance criteria all green (`pass` or `n-a-this-task`), CHANGELOG updated, pattern candidates surfaced. Block merge on red.
-3. **Generate `finish-report.html`** from `references/views/finish-report.html`. Fill: elapsed_ms, tasks (with per-phase timings from state.json), commits (`git log <base>..HEAD --stat`), criteria, patterns, decisions, branch. Push URL to terminal.
-4. **Wait** for `finish-action.json` or terminal A/B/C/D. *(user gate)* Terminal fallback if no action.json in 30s.
+3. **Present finish decision in terminal by default.** Generate `finish-report.html` only for dense outcome review: many tasks/commits/criteria, nontrivial patterns/decisions, timeline comparison, or user-requested browser audit. Fill: elapsed_ms, tasks (with per-phase timings from state.json), commits (`git log <base>..HEAD --stat`), criteria, patterns, decisions, branch.
+4. **Wait** for terminal A/B/C/D, or `finish-action.json` if an HTML report was generated. *(user gate)* Terminal fallback if no action.json in 30s.
 5. **Execute choice:**
    - **merge** → squash merge into base branch, delete feature branch
    - **pr** → push + `gh pr create`

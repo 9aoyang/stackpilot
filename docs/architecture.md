@@ -1,20 +1,27 @@
 # Stackpilot Architecture
 
-> Last updated: 2026-06-07
+> Last updated: 2026-06-10
 
-Stackpilot is a methodology-driven sprint orchestration layer for Claude Code.
-It turns a specification into working code by driving the host agent's native
-planning and delegation primitives, with no custom service infrastructure.
+StackPilot is a general methodology for coding agents. It turns a request into
+verified software through exploration, design, spec, criteria, planning,
+execution, review, and finish. Host adapters implement the same gates with each
+agent platform's native tools; the Claude Code adapter is currently the most
+complete implementation.
 
 ---
 
 ## Mental Model
 
 ```
-User describes feature → design discussion → spec + plan → agents build it → review + ship
+User describes feature → StackPilot entry → internal gates route → host adapter executes → evidence gates → finish
 ```
 
-The user's interface is the `/stackpilot` skill. The skill orchestrates everything using Claude Code's native tools.
+The user's interface is StackPilot, not a flat catalog of process skills. In
+Claude Code, the visible entry is `/stackpilot` or a natural-language request
+routed by `stackpilot-bootstrap`. `stackpilot-methodology` and the smaller
+portable skills are internal gates that keep the method strict across hosts; the
+`/stackpilot` command is the Claude Code host adapter for autonomous sprint
+execution.
 
 ---
 
@@ -29,13 +36,29 @@ stackpilot/                        ← framework installation
 │   │   ├── sp-qa.md               ← code review + testing
 │   │   └── sp-docs.md             ← documentation updates
 │   └── skills/
+│       ├── stackpilot-methodology/
+│       │   └── SKILL.md           ← internal portable methodology core
+│       ├── stackpilot-planning/
+│       │   └── SKILL.md           ← internal implementation planning gate
+│       ├── stackpilot-workspace/
+│       │   └── SKILL.md           ← internal isolation/setup/baseline gate
+│       ├── stackpilot-plan-execution/
+│       │   └── SKILL.md           ← internal task-by-task execution gate
+│       ├── stackpilot-parallel-agents/
+│       │   └── SKILL.md           ← internal independent parallel dispatch gate
+│       ├── stackpilot-review-response/
+│       │   └── SKILL.md           ← internal review feedback handling gate
+│       ├── stackpilot-completion-verification/
+│       │   └── SKILL.md           ← internal evidence-before-claims finish gate
+│       ├── stackpilot-skill-authoring/
+│       │   └── SKILL.md           ← maintainer-only skill creation/update gate
 │       ├── stackpilot/
 │       │   ├── SKILL.md           ← /stackpilot main entry point
 │       │   └── references/
 │       │       ├── run-sprint.md
 │       │       ├── sprint-finish.md
 │       │       ├── 12-qa-matrix.md
-│       │       └── views/         ← v2.0 HTML view templates (5 decision-point nodes)
+│       │       └── views/         ← optional browser view templates
 │       │           ├── design-options.html
 │       │           ├── dashboard.html
 │       │           ├── spec-review.html
@@ -63,6 +86,19 @@ stackpilot/                        ← framework installation
 │       ├── stop-server.sh
 │       ├── server.cjs             ← extended with /sprints/<slug>, /api/action, /api/state
 │       └── helper.js              ← WS client + window.sp.{action,state} sprint API
+├── hooks/
+│   ├── hooks.json                 ← Claude plugin SessionStart hook manifest
+│   ├── hooks-cursor.json          ← Cursor plugin sessionStart hook manifest
+│   ├── session-start              ← injects stackpilot-bootstrap at conversation start
+│   └── pre-tool-use               ← blocks feature/bug/code tools before process skill activation
+├── .claude-plugin/
+│   └── plugin.json                ← Claude Code plugin metadata
+├── .cursor-plugin/
+│   └── plugin.json                ← Cursor StackPilot routing/package metadata
+├── .codex-plugin/
+│   └── plugin.json                ← Codex StackPilot package metadata
+├── gemini-extension.json          ← Gemini extension metadata
+├── GEMINI.md                      ← Gemini routing + tool mapping context
 └── templates/
     ├── stackpilot.config.yml      ← config template (qa section only)
     └── stackpilot-inner-gitignore
@@ -75,7 +111,7 @@ stackpilot/                        ← framework installation
     ├── plans/                     ← implementation plans (data layer)
     ├── runs/<sprint>/TASK-*/state.json   ← per-task phase state (data layer)
     ├── runs/<sprint>/events.jsonl        ← durable dispatch / verification / decision log
-    └── views/                     ← v2.0 generated HTML artifacts (view layer, gitignored)
+    └── views/                     ← optional generated browser artifacts (view layer, gitignored)
         └── <sprint>/{design-options,dashboard,spec-review,finish-report}.html
 ```
 
@@ -140,7 +176,7 @@ Agent(
 
 ## Event Flow
 
-### User-triggered (via `/stackpilot` skill)
+### User-triggered (via the StackPilot entry)
 
 ```
 /stackpilot [feature description]
@@ -153,19 +189,19 @@ Agent(
             in-progress        → continue sprint
 ```
 
-**Standard Feature — 5 nodes (v2.0 HTML-first):**
+**Standard Feature — 5 nodes (terminal-first, browser when useful):**
 
 ```
 Node 1 — Exploration: scout code first (grep + read 2-5 files) → clarifying questions (one at a time) → canonical refs captured in spec
-Node 2 — Design: 2-3 approaches in design-options.html (3-col grid, Pick A/B/C) + terminal fallback
-Node 3 — Spec & Criteria: write spec → auto-verify (grep checks) → 12-QA matrix → derive acceptance criteria → spec-review.html (markdown + 12-QA grid + editable criteria + Approve button) or terminal review
-Node 4 — Plan & Run Sprint: write plan → auto-verify → traceability trace → branch + commit → start sprint server → push dashboard.html (live DAG + Kanban + criteria) → dispatch tasks in parallel waves → record events.jsonl
-Node 5 — Finish: pre-merge gate (typecheck/lint/tests) → closure gate (criteria all green / CHANGELOG / patterns surfaced) → finish-report.html (timeline + criteria pie + commits + A/B/C/D) or terminal A/B/C/D
+Node 2 — Design: 2-3 terminal approaches; optional design-options.html only for visual layout, interaction, or nontrivial diagrams
+Node 3 — Spec & Criteria: write spec → auto-verify (grep checks) → 12-QA matrix → derive acceptance criteria → terminal review, or spec-review.html when editable visual review helps
+Node 4 — Plan & Run Sprint: write plan → auto-verify → traceability trace → branch + commit → optional dashboard.html for multi-wave/dense live progress → dispatch tasks in parallel waves → record events.jsonl
+Node 5 — Finish: pre-merge gate (typecheck/lint/tests) → closure gate (criteria all green / CHANGELOG / patterns surfaced) → terminal A/B/C/D, or finish-report.html for dense timelines/reports
   ↳ pre-merge-commit hook rejects non-squash merges on main as a hard guard
 ```
 
 Inline verifications (grep, 12-QA matrix, traceability check) are sub-steps
-inside their node, not separate phases. HTML view artifacts are generated at
+inside their node, not separate phases. Browser view artifacts are optional at
 Nodes 2, 3, 4, 5; data-layer source-of-truth files (spec, plan, criteria,
 state.json / events.jsonl) remain markdown/JSON for sub-agent consumption.
 
@@ -200,18 +236,31 @@ Model routing is handled by Claude Code natively (agent frontmatter `model:` fie
 
 ---
 
-## Skill Entry Points
+## Entry Layers
 
-| Slash Command | Purpose |
-|--------------|---------|
-| `/stackpilot` | Main entry: tidy + resume + status + auto/interactive mode + sprint execution. |
-| `/stackpilot-compete` | Competitive gap analysis from power-user persona |
-| `/stackpilot-research` | Deep research reports using cross-longitudinal analysis (横纵分析法) |
-| `/stackpilot-sync` | External skill tracking and sync (developer maintenance) |
-| `/tdd-development` | **Portable** — TDD + verify/fix + rationalization blockers |
-| `/qa-12-dimensions` | **Portable** — 12-dimension test coverage + code review |
-| `/architecture-review` | **Portable** — Codebase pattern analysis + blueprint |
-| `/systematic-debugging` | **Portable** — 4-phase root cause investigation + red flags |
+StackPilot intentionally exposes one normal user entry. The other skill files
+exist so hosts with Agent Skills can route to strict gates mechanically; they
+are implementation surfaces, not a user-facing command taxonomy.
+
+| Layer | Entry | Purpose |
+|-------|-------|---------|
+| User-facing | `/stackpilot` | **Claude Code primary entry** — tidy + resume + status + auto/interactive mode + sprint execution. Natural-language feature requests are routed here through bootstrap when possible. |
+| Default internal gate | `stackpilot-methodology` | Host-neutral StackPilot flow: explore → design → spec/criteria → plan → execute → review → finish. |
+| Default internal gate | `stackpilot-planning` | Implementation planning from approved spec/design to exact executable tasks. |
+| Default internal gate | `stackpilot-workspace` | Workspace isolation, setup, and clean baseline verification before implementation. |
+| Default internal gate | `stackpilot-plan-execution` | Task-by-task plan execution with TDD, spec review, quality review, and controller evidence gates. |
+| Default internal gate | `stackpilot-parallel-agents` | Parallel dispatch for independent tasks, failures, review domains, or research targets. |
+| Default internal gate | `stackpilot-review-response` | Code-review feedback handling with technical verification and scoped fixes. |
+| Default internal gate | `stackpilot-completion-verification` | Fresh evidence gate before completion, merge, PR, or success claims. |
+| Default internal gate | `tdd-development` | TDD + verify/fix + rationalization blockers. |
+| Default internal gate | `qa-12-dimensions` | 12-dimension test coverage + code review. |
+| Default internal gate | `architecture-review` | Codebase pattern analysis + blueprint. |
+| Default internal gate | `systematic-debugging` | 4-phase root cause investigation + red flags. |
+| Bootstrap only | `stackpilot-bootstrap` | SessionStart routing discipline; not a user-facing command. |
+| Expert on-demand | `/stackpilot-compete` | Competitive gap analysis from power-user persona. |
+| Expert on-demand | `/stackpilot-research` | Deep research reports using cross-longitudinal analysis (横纵分析法). |
+| Maintainer-only | `/stackpilot-sync` | External skill tracking and sync. |
+| Maintainer-only | `stackpilot-skill-authoring` | StackPilot skill creation/update workflow with routing, docs, and tests. |
 
 ---
 
@@ -219,30 +268,89 @@ Model routing is handled by Claude Code natively (agent frontmatter `model:` fie
 
 Stackpilot follows the [Agent Skills open standard](https://agentskills.io) maintained by Anthropic.
 
-**Portable methodology skills** — work in any Agent Skills-compatible product (Cursor, VS Code Copilot, Gemini CLI, OpenAI Codex, JetBrains Junie, and 25+ more):
+**Methodology gates** — portable internals used by the StackPilot route in any
+Agent Skills-compatible product (Cursor, VS Code Copilot, Gemini CLI, OpenAI
+Codex, JetBrains Junie, and 25+ more):
 
-| Skill | What it does | Portable? |
-|-------|-------------|-----------|
-| `tdd-development` | TDD cycle + verify/fix loop + rationalization blockers | Yes |
-| `qa-12-dimensions` | Two-stage code review + 12-dimension test coverage | Yes |
-| `architecture-review` | Pattern analysis + decisive architecture choice + blueprint | Yes |
-| `systematic-debugging` | 4-phase root cause investigation + red flag detection | Yes |
+| Gate | What it does | Exposure |
+|------|-------------|----------|
+| `stackpilot-methodology` | Host-neutral sprint method and gates | Default internal |
+| `stackpilot-planning` | Spec/design to executable implementation plan | Default internal |
+| `stackpilot-workspace` | Workspace isolation, setup, and baseline verification | Default internal |
+| `stackpilot-plan-execution` | Existing-plan execution with review and evidence gates | Default internal |
+| `stackpilot-parallel-agents` | Independent parallel dispatch with controller integration | Default internal |
+| `stackpilot-review-response` | Review feedback verification and response workflow | Default internal |
+| `stackpilot-completion-verification` | Evidence-before-claims finish gate | Default internal |
+| `stackpilot-skill-authoring` | Skill creation/update quality gate | Maintainer-only |
+| `tdd-development` | TDD cycle + verify/fix loop + rationalization blockers | Default internal |
+| `qa-12-dimensions` | Two-stage code review + 12-dimension test coverage | Default internal |
+| `architecture-review` | Pattern analysis + decisive architecture choice + blueprint | Default internal |
+| `systematic-debugging` | 4-phase root cause investigation + red flag detection | Default internal |
 
-**Orchestration skills** — Claude Code-specific (use native Agent tool, TaskCreate):
+**Host Adapters** — implement the same Methodology Core with host-native tools:
 
 | Skill | What it does |
 |-------|-------------|
-| `stackpilot` | Full sprint lifecycle: tidy → resume → design → spec → plan → code → QA → ship. Includes auto mode (skip confirmations) and workspace cleanup. |
+| `stackpilot` | Claude Code adapter: full sprint lifecycle using Agent, TaskCreate, worktree isolation, preview server, state, and event logs. |
+
+**Packaged host surfaces**:
+
+| Host | Package surface | Status |
+|------|-----------------|--------|
+| Claude Code | `.claude-plugin/` + `hooks/hooks.json` | Full autonomous sprint adapter + SessionStart auto-route |
+| Cursor | `.cursor-plugin/` + `hooks/hooks-cursor.json` | StackPilot routing bootstrap + portable internal gates |
+| OpenAI Codex | `.codex-plugin/plugin.json` | StackPilot package metadata + portable internal gates; full sprint adapter not yet implemented |
+| Gemini CLI | `gemini-extension.json` + `GEMINI.md` | StackPilot routing context, tool mapping, and portable internal gates |
 
 **Progressive disclosure** — SKILL.md stays under 500 lines. Heavy content (visual companion, optimize sprint, sprint finish) lives in `references/` and loads on demand.
+
+**Superpowers gap audit** — `docs/superpowers-gap-audit.md` maps each
+Superpowers workflow to the StackPilot gate or adapter that covers the same
+product behavior. It is not a target for matching Superpowers' skill count or
+public command shape.
 
 ---
 
 ## Key Design Decisions
 
-**Claude Code-native orchestration (v2).** Agents are dispatched via Claude Code's Agent tool with `isolation: "worktree"`. No custom bash dispatcher, no git worktree management, no file locking. Claude Code handles all infrastructure.
+**One StackPilot entry.** The normal product experience is "use StackPilot" and
+let bootstrap, hooks, and the host adapter route into default gates. The smaller
+portable skills remain real files for Agent Skills compatibility, triggering,
+and tests, but they are not the public product shape.
+
+**Methodology Core first.** StackPilot is a general methodology, not a
+single-host script. The core defines gates and artifacts; adapters choose the
+mechanics.
+
+**Host Adapter Contract.** An adapter must preserve the core gates: design before
+implementation, mechanical criteria, plan traceability, TDD or stated exemption,
+spec-compliance review before quality review, independent verification before
+phase advancement, completion verification, and safety gates for destructive or
+external side effects.
+
+**Claude Code adapter (v2).** Agents are dispatched via Claude Code's Agent tool with `isolation: "worktree"`. No custom bash dispatcher, no git worktree management, no file locking. Claude Code handles all infrastructure.
+
+**Session bootstrap auto-route (v2.3).** Claude plugin installs
+`hooks/session-start`, which injects `stackpilot-bootstrap` into each new
+conversation. This replaces the old explicit-only posture: users may still type
+`/stackpilot`, but natural feature work is routed there automatically before
+file reads or implementation. User and project instructions remain highest
+priority, so explicit "skip planning", "just answer", or "I'll verify myself"
+requests override the route.
+
+**PreToolUse routing gate.** Prompt-only routing is not sufficient for all
+models. The Claude/Cursor package installs `hooks/pre-tool-use`, which blocks
+implementation or inspection tools for natural feature/bug/code work until a
+StackPilot process skill has been activated. The hook fails open if it cannot
+inspect the transcript, and it respects explicit user opt-outs.
 
 **Prompt-based inter-agent communication.** Agent outputs flow directly as prompt context to downstream agents. No intermediate files (arch-review/, done/). The main session is the coordinator.
+
+**Controller contract gates.** Agent outputs flow as prompt context, but the
+main controller must not trust success reports. Before advancing task phase, it
+checks required Completion Output sections, independently inspects the git diff,
+re-runs or verifies the reported command evidence, and confirms criteria Status
+updates in the data layer.
 
 **Plan + state + event log as persistence layer.** Tasks are tracked in-session via TaskCreate. Plan files define intended work; per-task `state.json` records phase completion; sprint-level `events.jsonl` records dispatch, verification, safety, and user/action decisions. Resume reads state first, then falls back to git history only for legacy sprints.
 
@@ -272,7 +380,11 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 **Rendered UI verification for frontend work.** Frontend criteria must include at least one rendered-page check when the task changes user-visible UI: browser/devtools smoke, screenshot or DOM assertion, responsive overflow check, or project-native Playwright/Cypress route test. A Node 5 curl proves only that the server responds; it does not prove the visual state.
 
-**OpenAI Codex boundary.** Portable methodology skills remain compatible with OpenAI Codex's Agent Skills discovery model, but `/stackpilot` sprint orchestration is Claude Code-specific until a maintained Codex plugin or `.agents/skills` orchestration package exists. Do not imply multi-host orchestration unless the corresponding host implementation is shipped.
+**OpenAI Codex boundary.** The Methodology Core remains compatible with OpenAI
+Codex's Agent Skills discovery model. A Codex adapter should implement the Host
+Adapter Contract with Codex-native skills, subagents, workspaces, browser/app
+verification, and PR mechanics instead of copying Claude Code-specific Agent
+calls.
 
 **Single-file project memory.** `.stackpilot/ARCHITECTURE.md` is the sole per-project memory surface. Fixed sections: What This Project Is / Stack / Key Directories / Data Flow / Key Design Decisions / Conventions & Gotchas / Review Patterns. Only the main agent writes it, and only at Sprint Finish (Step 4a). Sub-agents are read-only: `sp-architect` reads `§ Key Design Decisions` and surfaces new HIGH-risk decisions via a `## Decision Candidates` block in its report; `sp-qa` reads `§ Review Patterns` & `§ Conventions & Gotchas` and surfaces new patterns via a `## Pattern Candidates` block. The main agent merges both at Sprint Finish. This keeps writes serial on the feature branch and avoids worktree-level write contention.
 
@@ -286,7 +398,9 @@ Stackpilot follows the [Agent Skills open standard](https://agentskills.io) main
 
 | Date | Change |
 |------|--------|
-| 2026-06-07 | **v2.2.0**: Official-frontier refresh. Removed stale Claude/Opus point-release anchors from live prompts, aligned SKILL.md and run-sprint architecture review triggers (`standard` tasks, not HIGH risk), replaced the zsh-unsafe `.claude/plans/*.md` glob with `find`, added Action Safety Gate text to SKILL / Run Sprint / Finish, added sprint-level `events.jsonl` for durable dispatch / verification / decision evidence, required rendered UI verification for frontend tasks, and clarified that portable skills work in OpenAI Codex while `/stackpilot` orchestration remains Claude Code-specific. |
+| 2026-06-10 | **Single StackPilot entry model.** Reframed the portable `stackpilot-*` skills as default internal gates and adapter primitives rather than a user-facing skill catalog. Users should start from `/stackpilot` or natural-language StackPilot routing; bootstrap/hooks/host adapters decide when to trigger planning, workspace, execution, parallel, review-response, completion, TDD, QA, architecture, and debugging gates. Superpowers comparison remains a workflow coverage audit, not a skill-count parity target. |
+| 2026-06-10 | **Methodology Core + Host Adapters repositioning.** Added portable `stackpilot-methodology` as the host-neutral core and reframed `/stackpilot` as the Claude Code adapter. StackPilot's product boundary is now the method and gates, not a single host implementation. Future Codex/Gemini/Cursor adapters must implement the Host Adapter Contract rather than forking the workflow. |
+| 2026-06-07 | **v2.2.0**: Official-frontier refresh. Removed stale Claude/Opus point-release anchors from live prompts, aligned SKILL.md and run-sprint architecture review triggers (`standard` tasks, not HIGH risk), replaced the zsh-unsafe `.claude/plans/*.md` glob with `find`, added Action Safety Gate text to SKILL / Run Sprint / Finish, added sprint-level `events.jsonl` for durable dispatch / verification / decision evidence, required rendered UI verification for frontend tasks, and clarified that portable skills work in OpenAI Codex while the full autonomous sprint adapter remains Claude Code-specific. |
 | 2026-05-25 | **v2.1.0**: Skill Tighten — sister-file sync via sub-agent contract. Node 1 加 Scope Lock（多文件 refactor 前列 will-touch / will-NOT-touch）；Node 3 § 3.1 默认最小有效版本引导；Node 4 plan task schema 加可选 `sister_files` / `shared_field_grep`，§ 4.2 加对应 grep verify；Node 5 pre-merge 显式三件套（typecheck/lint/test）+ 残留脚本扫描（`scripts/(migrate\|audit\|debug\|oneshot)-*` 命中提示是否合并前删除）。Sub-agent 接力：sp-architect Implementation Blueprint 加 `Will NOT touch`；sp-dev Required behaviors 加 Sister-file ack + Completion Output 加 `## Sister-File Sync` 段；sp-qa Consistency Audit 加第 4 条 sister-file sync audit + Adversarial Angles 加 `sister-file sync`。Why: insights 报告（2026-05-25 / 283 sessions / 4520 messages）跨项目 5 大稳定 friction 中 wrong_approach（34 次）和 sister-file 漏改占主要比重，需要从 SKILL.md 一次性检查升级为 plan→dev→qa 接力 enforce。 |
 | 2026-05-22 | **qa-12-dimensions hardening (skill v1.0.1 → v1.1.0; shipped as part of v2.0.0).** After 43 days untouched the portable skill had drifted behind both upstream (Anthropic feature-dev v2 code-reviewer) and the stackpilot internal sp-qa. Three targeted backports: (1) 5-tier confidence rubric (0/25/50/75/100) replaces the single ">=80%" line, matching feature-dev v2; (2) Stage 1 renamed "Spec & Project Guidelines Compliance" and reads `CLAUDE.md` / `GEMINI.md` / `AGENTS.md` / `.cursorrules` as a first-class review angle; (3) "Adversarial Angles Tried" required field sourced from sp-qa — "no findings" only credible when angle list is non-trivial. Sub-agent-only sp-qa features (output schema, Consistency Audit grep triplet, WTF ratio, hard caps) deliberately NOT backported. |
 | 2026-05-20 | **Removed `/stackpilot-bench` skill and `codex-config/` Codex support.** Bench harness (3 workloads, history.csv, scoring/verdict scripts, run-codex-bench.sh, references/headless-mode.md) deleted; `codex-config/agents/` Codex-native sp-* prompts deleted; `claude-config/skills/stackpilot/references/codex-dispatch.md` deleted; `docs/bench-implementation.md` deleted; `qa.disable_criteria_gate` and `qa.disable_state_json` config flags (which only existed for the `stackpilot-serial` bench leg) removed from SKILL.md + run-sprint.md. Reason: bench v2 schema/runner/workload were inconsistent and unrunnable, and Codex orchestration was no longer maintained. |

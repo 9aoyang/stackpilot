@@ -1,0 +1,43 @@
+{
+  "name": "stackpilot",
+  "version": "2.3.0",
+  "description": "One StackPilot entry for coding-agent methodology: exploration, design, spec, plan, TDD, review, verification, and finish. Claude Code has the full sprint adapter; Codex can use the portable internal gates.",
+  "author": {
+    "name": "9aoyang",
+    "url": "https://github.com/9aoyang"
+  },
+  "homepage": "https://github.com/9aoyang/stackpilot",
+  "repository": "https://github.com/9aoyang/stackpilot",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "methodology",
+    "tdd",
+    "planning",
+    "code-review",
+    "verification",
+    "host-adapters"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "StackPilot",
+    "shortDescription": "One StackPilot entry with verification gates for coding agents",
+    "longDescription": "Use StackPilot as one entry that routes feature work through exploration, design approval, mechanically verifiable acceptance criteria, implementation planning, test-driven development, spec-compliance review, quality review, and finish gates. The Claude Code adapter is the current full autonomous sprint implementation; other hosts use the portable internal gates with native tools.",
+    "developerName": "9aoyang",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "I want to build a feature with StackPilot methodology.",
+      "Help me turn this request into verified software."
+    ],
+    "websiteURL": "https://github.com/9aoyang/stackpilot",
+    "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
+    "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
+    "brandColor": "#2563EB",
+    "screenshots": []
+  }
+}

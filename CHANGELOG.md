@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-06-10
+
+### Changed
+
+- **Reframed StackPilot around one user entry with internal gates** — users
+  start with `/stackpilot` or natural-language StackPilot routing; bootstrap,
+  hooks, and host adapters decide when to trigger methodology, planning,
+  workspace, execution, parallel dispatch, review-response, completion, TDD, QA,
+  architecture, and debugging gates. README, architecture docs, bootstrap
+  instructions, manifests, and tests now describe the portable `stackpilot-*`
+  skills as default/on-demand internals rather than a public skill catalog.
+- **Repositioned StackPilot as a general methodology core plus host adapters** —
+  added portable `/stackpilot-methodology` as the host-neutral workflow for
+  exploration, design, spec/criteria, planning, execution, review, and finish.
+  `/stackpilot` is now documented as the Claude Code adapter rather than the
+  whole product boundary, so future Codex/Gemini/Cursor adapters can implement
+  the same gates with host-native tools.
+- **Added cross-host package surfaces for the methodology core** — StackPilot now
+  includes `.codex-plugin/plugin.json`, `.cursor-plugin/plugin.json`,
+  `hooks/hooks-cursor.json`, `gemini-extension.json`, and `GEMINI.md` so Codex,
+  Cursor, and Gemini users can discover the portable methodology skills without
+  treating `/stackpilot` as the product boundary. The Claude Code adapter remains
+  the only full autonomous sprint implementation.
+- **Covered high-value Superpowers-style workflows with portable StackPilot gates** —
+  added `stackpilot-planning` for exact implementation plans,
+  `stackpilot-workspace` for isolation/setup/baseline verification,
+  `stackpilot-plan-execution` for task-by-task execution with spec review before
+  quality review, `stackpilot-parallel-agents` for independent parallel
+  dispatch, `stackpilot-review-response` for technical handling of review
+  feedback, `stackpilot-completion-verification` for evidence-before-claims
+  finish checks, and `stackpilot-skill-authoring` for skill changes. These make
+  the methodology strict across hosts even when the full Claude Code sprint
+  adapter is unavailable; they are StackPilot gates, not a skill-count parity
+  target.
+- **Added Superpowers-like session routing** — Stackpilot now ships a
+  `stackpilot-bootstrap` skill plus a Claude plugin `SessionStart` hook, so
+  natural feature requests can auto-route into `/stackpilot-methodology` before
+  implementation instead of relying on the user to type a host-specific command
+  every time. A `PreToolUse` gate now mechanically blocks feature/bug/code tool
+  calls before a StackPilot process skill is activated, covering models that
+  otherwise rationalize skipping process for small tasks. Run Sprint also adds
+  controller contract gates that verify agent report shape, git diff evidence,
+  command evidence, and criteria Status updates before phase advancement.
+  Regression coverage added in
+  `test-superpowers-experience`.
+- **Calibrated browser artifacts away from HTML-first defaults** — Stackpilot is
+  now terminal-first for text decisions and generates HTML only when layout,
+  interaction, visualization, editable review, live progress, or browser
+  verification adds signal. This follows Claude Artifacts guidance that
+  artifacts should help users see, iterate, and build code/visualizations, and
+  Claude Code best-practice guidance to show verification evidence such as test
+  output or screenshots. Regression coverage updated in `test-v2-2-upgrade`.
+
 ## [2.2.2] - 2026-06-09
 
 ### Fixed
@@ -58,9 +111,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   start or reuse the sprint server and print the `localhost` browser URL as the
   primary output; `.stackpilot/views/...` file paths are secondary context only.
 - **Clarified OpenAI Codex boundary** — portable methodology skills remain
-  compatible with OpenAI Codex Agent Skills, but `/stackpilot` sprint
-  orchestration remains Claude Code-specific until a maintained Codex plugin or
-  `.agents/skills` orchestration package is shipped.
+  compatible with OpenAI Codex Agent Skills, but the full autonomous sprint
+  adapter remains Claude Code-specific until a maintained Codex adapter is
+  shipped.
 
 ### Evidence
 

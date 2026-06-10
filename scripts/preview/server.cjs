@@ -81,7 +81,7 @@ const CONTENT_DIR = path.join(SESSION_DIR, 'content');
 const STATE_DIR = path.join(SESSION_DIR, 'state');
 let ownerPid = process.env.BRAINSTORM_OWNER_PID ? Number(process.env.BRAINSTORM_OWNER_PID) : null;
 
-// ========== Sprint Mode (v2 — HTML-first rebuild) ==========
+// ========== Sprint Mode (v2 — optional browser view layer) ==========
 // Coexists with brainstorm mode. New routes are additive; root path still
 // serves newest-screen for visual-companion back-compat.
 

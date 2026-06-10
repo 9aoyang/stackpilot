@@ -1,0 +1,6 @@
+{
+  "name": "stackpilot",
+  "description": "One StackPilot entry for coding-agent methodology: exploration, design, spec, plan, TDD, review, verification, and finish gates.",
+  "version": "2.3.0",
+  "contextFileName": "GEMINI.md"
+}

@@ -101,9 +101,25 @@ depending on the main conversation context.
 The `depends_on` field is consumed by `dashboard.html` to render the DAG edges.
 Keep it in sync with the plan's `depends_on:` field per task.
 
-### 4. Start sprint server + push dashboard (HTML view layer)
+### 4. Optional sprint server + dashboard (browser view layer)
+
+Terminal progress is the default. Start the sprint server and push
+`dashboard.html` only when the browser adds useful signal:
+
+- Multiple dependency waves, more than 3 tasks, or long-running tasks
+- Nontrivial `depends_on` topology where a DAG helps spot ordering
+- User wants a live browser monitor
+- Acceptance criteria/status density is high enough that live scanning helps
+
+If the sprint is a single short wave with straightforward terminal progress,
+skip this section, log `dashboard-skipped`, and continue with terminal status
+lines only.
 
 ```bash
+SHOULD_DASHBOARD="<yes-or-no-from-eligibility-gate>"
+if [ "${SHOULD_DASHBOARD}" != "yes" ]; then
+  append_event "dashboard-skipped" "" "$(jq -nc --arg reason "terminal-progress-clearer" '{reason:$reason}')"
+else
 SERVER_INFO=$(bash ~/Documents/github/stackpilot/scripts/preview/start-server.sh \
   --project-dir "$PWD" --sprint-slug "${SPRINT_SLUG}" --background 2>&1 | head -1)
 PORT=$(echo "${SERVER_INFO}" | sed -n 's/.*"port":[[:space:]]*\([0-9]*\).*/\1/p')
@@ -118,6 +134,7 @@ sed -i.bak "s/{{SPRINT_SLUG}}/${SPRINT_SLUG}/g" \
 
 DASHBOARD_URL="http://${URL_HOST:-localhost}:${PORT}/sprints/${SPRINT_SLUG}/dashboard.html"
 echo "📊 Live dashboard: ${DASHBOARD_URL}"
+fi
 ```
 
 **Print the URL exactly once** at sprint start. The dashboard auto-refreshes
@@ -208,6 +225,30 @@ Agent(description="Dev: TASK-NNN",
       isolation="worktree")
 ```
 
+#### 3.5. Controller Contract Gate — dev report
+
+Do not trust agent self-report success. Before advancing phase, the main
+controller independently checks the returned Completion Output and the working
+tree evidence.
+
+Required sections for sp-dev are schema-complete only when all are present:
+`## What was built`, `## TDD Cycle`, `## Files changed`, `## Sister-File Sync`,
+`## How to verify`, `## Verify Result`, `## Fix Rounds`, and `## Root Cause`
+when fixes occurred. Missing sections, `Verify Result` not equal to PASS /
+PASS_AFTER_FIX, or a claimed file change absent from `git diff --name-only`
+means the task is not clean. Re-dispatch with the missing contract details or
+mark `[SOFT-BLOCKED]` after retry limits.
+
+Controller evidence to record:
+
+```bash
+git diff --name-only <pre-task-sha>..HEAD -- <relevant_files>
+# Re-run or inspect the exact "How to verify" command before accepting PASS.
+```
+
+Append a `verification` event with result `schema-complete` only after these
+checks pass.
+
 `update_state TASK-NNN phase="simplify" verify_fix_rounds=<count from dev report>`
 
 #### 4. Handle dev result
@@ -237,6 +278,26 @@ Agent(description="QA: TASK-NNN",
 ```
 
 **sp-qa acceptance-criteria contract:** after passing the standard 12-dim review, sp-qa MUST execute each acceptance criterion's verify command and update the corresponding row's Status field (pass / fail / n-a-this-task) in `.stackpilot/specs/<feature>-criteria.md`. Criteria not applicable to this task → mark `n-a-this-task` with a one-line reason.
+
+#### 5.2. Controller Contract Gate — QA and criteria
+
+Do not trust QA success reports without data-layer evidence. The main
+controller must verify the QA Completion Output has `## QA Summary`,
+`## Code Review Findings`, `## Adversarial Angles Tried`, `## Tests Written`,
+`## QA Fixes Applied`, and `## Coverage`.
+
+Then independently verify acceptance criteria updates before phase advancement:
+
+```bash
+CRITERIA_FILE="$(ls -t .stackpilot/specs/*-criteria.md 2>/dev/null | head -1)"
+grep -E '^\| C[0-9]+ \|' "${CRITERIA_FILE}"
+```
+
+For criteria applicable to this task, Status must be `pass` or
+`n-a-this-task` with a note. `untested`, blank status, missing Status changes,
+or any `fail` is a criteria-updated gate failure. Re-dispatch QA with the exact
+missing rows; do not move to deep-review or complete until the criteria Status
+field is updated independently in the file.
 
 For frontend or UI-facing tasks, at least one criterion must verify the rendered
 state, not just source text: browser/devtools smoke, screenshot pixel/DOM check,

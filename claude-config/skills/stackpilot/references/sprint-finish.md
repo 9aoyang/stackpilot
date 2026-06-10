@@ -1,8 +1,9 @@
 # Sprint Finish
 
 Run after all tasks are done. Confirms tests pass, optionally starts dev
-server for preview, then surfaces the sprint outcome via `finish-report.html`
-(or terminal fallback) and executes the user's merge/PR/keep/discard choice.
+server for preview, then surfaces the sprint outcome in terminal by default.
+Generate `finish-report.html` only when browser charts/timelines/editable
+review materially improve the merge/PR/keep/discard decision.
 
 Inputs assumed present: `.stackpilot/runs/<slug>/TASK-*/state.json` for
 elapsed/phase data, `.stackpilot/specs/<slug>-criteria.md` for criteria,
@@ -184,9 +185,20 @@ Do NOT blindly run `cargo run`, `go run .`, `python app.py`, or `npm start`.
 
 **Wait for user to finish reviewing.**
 
-## Step 3 — Present options (HTML view + terminal fallback)
+## Step 3 — Present finish decision
 
-### 3a. Generate finish-report.html
+Terminal A/B/C/D is the default because most finish decisions are textual.
+Generate a browser report only when it adds signal:
+
+- Many tasks, commits, criteria, decisions, or pattern candidates
+- Timeline/phase comparison is useful for reviewing the sprint
+- The user asks for a browser audit report
+- A prior dashboard is already open and the browser handoff will save review time
+
+For small sprints, print the compact terminal summary and A/B/C/D choices, then
+wait for the terminal reply.
+
+### 3a. Optional finish-report.html
 
 Aggregate sprint data into JSON, fill `references/views/finish-report.html`
 tokens, write to `.stackpilot/views/<slug>/finish-report.html`:
@@ -196,32 +208,41 @@ SLUG="<sprint-slug>"
 BASE=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo main)
 BRANCH=$(git branch --show-current)
 EVENT_LOG=".stackpilot/runs/${SLUG}/events.jsonl"
+SHOULD_FINISH_REPORT="<yes-or-no-from-eligibility-gate>"
 
+if [ "${SHOULD_FINISH_REPORT}" = "yes" ]; then
 # Build DATA_JSON in a temp file (commits / tasks / criteria / patterns / decisions / event log / branch)
 # Then sed-replace tokens in the template
 cp ~/Documents/github/stackpilot/claude-config/skills/stackpilot/references/views/finish-report.html \
    ".stackpilot/views/${SLUG}/finish-report.html"
 # Tokens to replace: {{SPRINT_SLUG}}, {{BRANCH}}, {{DATA_JSON}}
+else
+  printf '{"ts":"%s","type":"finish-report-skipped","payload":{"reason":"terminal-summary-clearer"}}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "${EVENT_LOG}"
+fi
 ```
 
-The dashboard server is still running from Node 4; the same instance
-serves this view at `http://localhost:<port>/sprints/<slug>/finish-report.html`.
+If Node 4 started the dashboard server, reuse that instance. If no server is
+running and the finish report is eligible, start the sprint server before
+printing `http://localhost:<port>/sprints/<slug>/finish-report.html`.
 
-Print URL once to terminal alongside this prompt:
+Print the terminal summary and prompt in all cases. If HTML was generated,
+print the URL once alongside this prompt:
 
 > A. Squash merge into `${BASE}`
 > B. Push and create a PR
 > C. Leave as-is (handle later)
 > D. Discard (destructive — confirm first)
 >
-> Click in browser OR reply A/B/C/D here.
+> Reply A/B/C/D here, or click in the browser if a report URL was printed.
 
 ### 3b. Wait for action
 
-Poll `.stackpilot/views/<slug>/finish-action.json` every 2 seconds. **First
-to arrive wins** (HTML click or terminal reply). If 30 seconds elapse with
-no action.json AND no terminal response, fall back to terminal-only prompt
-(do not regenerate the HTML; user can still type the choice).
+If HTML was generated, poll `.stackpilot/views/<slug>/finish-action.json` every
+2 seconds. **First to arrive wins** (HTML click or terminal reply). If 30
+seconds elapse with no action.json AND no terminal response, fall back to
+terminal-only prompt (do not regenerate the HTML; user can still type the
+choice). If HTML was skipped, wait only for terminal A/B/C/D.
 
 Record the final branch decision in the event log:
 

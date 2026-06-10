@@ -1,18 +1,18 @@
 # Visual Companion
 
-> **DEPRECATED in v2.0** — folded into the sprint server (`scripts/preview/server.cjs`
-> + `references/views/` HTML templates). Node 2 (Design) in SKILL.md now starts the
-> sprint server itself and renders `design-options.html` via the same infrastructure.
-> This file is kept one release for back-compat; will be removed in v2.1.
+> Historical reference for browser companion behavior. The sprint server
+> (`scripts/preview/server.cjs` + `references/views/` HTML templates) owns current
+> browser views. Node 2 (Design) uses it only when the design decision needs
+> visual layout, interaction, or diagram evidence.
 
 Browser-based design visualization for design discussion phases. Use when a design question would be understood better visually than textually.
 
 ## When to Use
 
-- **Use browser**: UI mockups, wireframes, layout comparisons, architecture diagrams, side-by-side visual designs
-- **Use terminal**: requirements, conceptual choices, tradeoff lists, scope decisions, technical decisions
+- **Use browser**: UI mockups, wireframes, layout comparisons, interactive prototypes, nontrivial architecture diagrams, dense dashboards, visual verification evidence
+- **Use terminal**: requirements, conceptual choices, tradeoff lists, scope decisions, technical decisions, simple A/B/C approvals
 
-Decide **per question**. Do NOT send a separate permission-seeking message — start visual inline with the design question.
+Decide **per question**. Do NOT send a separate permission-seeking message; if the browser is eligible, start visual inline with the design question. If the content is prose, keep it terminal-only.
 
 ## Server Setup
 

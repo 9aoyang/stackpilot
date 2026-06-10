@@ -36,3 +36,6 @@ jobs:
 
       - name: Run v2.2 upgrade regression tests
         run: bash tests/test-v2-2-upgrade.sh
+
+      - name: Run Superpowers-like experience regression tests
+        run: bash tests/test-superpowers-experience.sh
