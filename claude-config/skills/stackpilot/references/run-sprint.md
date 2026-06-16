@@ -13,6 +13,7 @@ PLAN=$(ls -t .stackpilot/plans/*.md | head -1)
 SPRINT_SLUG=$(basename "${PLAN}" .md)
 RUN_DIR=".stackpilot/runs/${SPRINT_SLUG}"
 EVENT_LOG="${RUN_DIR}/events.jsonl"
+HANDOFF="${RUN_DIR}/handoff.json"
 
 MAX_PARALLEL=$(yq '.qa.max_parallel // 3' stackpilot.config.yml 2>/dev/null || echo 3)
 TEST_CMD=$(yq '.qa.test_command' stackpilot.config.yml)
@@ -49,7 +50,7 @@ Sprint Wave Plan (max_parallel=3):
 Total: 6 tasks across 3 waves
 ```
 
-### 3. Initialize sprint run directory + per-task state.json
+### 3. Initialize sprint run directory + handoff.json + per-task state.json
 
 ```bash
 mkdir -p "${RUN_DIR}"
@@ -69,7 +70,32 @@ append_event() {
     >> "${EVENT_LOG}"
 }
 
+write_handoff() {
+  local phase="$1"
+  local status="$2"
+  local next_action="$3"
+  [ -f "${HANDOFF}" ] || printf '{}\n' > "${HANDOFF}"
+  jq \
+    --arg version "1" \
+    --arg sprint_slug "${SPRINT_SLUG}" \
+    --arg phase "${phase}" \
+    --arg status "${status}" \
+    --arg next_action "${next_action}" \
+    --arg updated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '.version = $version
+     | .sprint_slug = $sprint_slug
+     | .phase = $phase
+     | .status = $status
+     | .inputs = (.inputs // {})
+     | .outputs = (.outputs // {})
+     | .decisions = (.decisions // [])
+     | .next_action = $next_action
+     | .updated_at = $updated_at' "${HANDOFF}" > "${HANDOFF}.tmp" \
+    && mv "${HANDOFF}.tmp" "${HANDOFF}"
+}
+
 append_event "sprint-started" "" "$(jq -nc --arg slug "${SPRINT_SLUG}" '{slug:$slug}')"
+write_handoff "pre-sprint" "running" "initialize task state"
 
 for TASK_ID in $ALL_TASK_IDS; do
   mkdir -p "${RUN_DIR}/${TASK_ID}"
@@ -90,6 +116,8 @@ for TASK_ID in $ALL_TASK_IDS; do
 EOF
   append_event "task-state-initialized" "${TASK_ID}" "$(jq -nc --argjson deps "${DEPS_JSON}" --argjson wave "${WAVE_NUM}" '{wave:$wave, depends_on:$deps}')"
 done
+
+write_handoff "run-sprint" "running" "dispatch first ready wave"
 ```
 
 state.json transitions during the loop — see "State Transitions" section below.
@@ -97,6 +125,28 @@ state.json transitions during the loop — see "State Transitions" section below
 task-dispatched, phase-change, verification, decision, action-safety-gate, and
 task-complete events so a resumed run can reconstruct what happened without
 depending on the main conversation context.
+
+`handoff.json` is the compact cross-phase resume contract. Keep this schema
+stable:
+
+```json
+{
+  "version": "1",
+  "sprint_slug": "2026-06-16-feature-plan",
+  "phase": "run-sprint",
+  "status": "running",
+  "inputs": {},
+  "outputs": {},
+  "decisions": [],
+  "next_action": "dispatch first ready wave",
+  "updated_at": "2026-06-16T00:00:00Z"
+}
+```
+
+Update `handoff.json` after plan parsing, after task state initialization, after
+each wave finishes, when the sprint pauses for user attention, and when the
+sprint is complete. It should point to the next controller action, not duplicate
+the full event log.
 
 The `depends_on` field is consumed by `dashboard.html` to render the DAG edges.
 Keep it in sync with the plan's `depends_on:` field per task.
@@ -351,6 +401,12 @@ Check each task's state.json `last_result`:
 - Any `critical` or unresolved `escalation` → pause sprint, present to user
 - Otherwise advance to next wave
 
+Update `handoff.json` at the same boundary:
+
+- `phase: "run-sprint"`, `status: "running"`, `next_action: "dispatch wave N"` when another wave is ready.
+- `phase: "run-sprint"`, `status: "paused"`, `next_action: "resolve <critical|escalation|soft-blocked> task"` when user attention is required.
+- `phase: "finish"`, `status: "ready"`, `next_action: "run sprint-finish"` when all tasks are complete.
+
 ## State Transitions
 
 state.json `phase` lifecycle per task:
@@ -376,12 +432,15 @@ update_state() {
 
 Atomic write (`.tmp` then `mv`) — matches the project's CSV append convention so a mid-write crash leaves the previous state intact.
 
-## Sprint Interrupted — read state.json first
+## Sprint Interrupted — read handoff.json and state.json first
 
 When `/stackpilot` detects an interrupted sprint (plans exist, no active
-TaskList from the current session), prefer reading
-`.stackpilot/runs/<sprint-slug>/TASK-*/state.json` over grep'ing git log.
-Only fall back to git log heuristic if state.json is missing.
+TaskList from the current session), read
+`.stackpilot/runs/<sprint-slug>/handoff.json` first to recover the controller
+phase, status, and next action. Then prefer
+`.stackpilot/runs/<sprint-slug>/TASK-*/state.json` over grep'ing git log for
+per-task completion. Only fall back to git log heuristic if state.json is
+missing.
 
 When resuming, also restart the sprint server (if not still running) and
 print the dashboard URL — re-opening the browser tab will reconnect via WS
@@ -401,6 +460,16 @@ done | sort -n
 Tasks where `phase == "complete" && last_result == "complete"` are done. Otherwise resume from the recorded phase — skip already-completed sub-steps (e.g. if phase is `qa`, dev/simplify already done; jump straight to sp-qa dispatch).
 
 ## Sprint Complete
+
+Before entering Finish, update `handoff.json` to:
+
+```json
+{
+  "phase": "finish",
+  "status": "ready",
+  "next_action": "run sprint-finish"
+}
+```
 
 YOU MUST complete the Sprint Finish flow before ending the conversation. Read
 `references/sprint-finish.md` and follow every step. You MUST present the

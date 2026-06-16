@@ -5,11 +5,13 @@ server for preview, then surfaces the sprint outcome in terminal by default.
 Generate `finish-report.html` only when browser charts/timelines/editable
 review materially improve the merge/PR/keep/discard decision.
 
-Inputs assumed present: `.stackpilot/runs/<slug>/TASK-*/state.json` for
-elapsed/phase data, `.stackpilot/specs/<slug>-criteria.md` for criteria,
-agent reports for Pattern/Decision Candidates, `git log <base>..HEAD` for
-the commits list, and `.stackpilot/runs/<slug>/events.jsonl` for durable
-dispatch / verification / decision evidence.
+Inputs assumed present: `.stackpilot/runs/<slug>/handoff.json` for controller
+resume state, `.stackpilot/runs/<slug>/TASK-*/state.json` for elapsed/phase
+data, `.stackpilot/specs/<slug>-criteria.md` for criteria, agent reports for
+Pattern/Decision Candidates, `git log <base>..HEAD` for the commits list,
+`.stackpilot/runs/<slug>/events.jsonl` for durable dispatch / verification /
+decision evidence, and `.stackpilot/feedback/open/*.md` for external audit
+feedback.
 
 ## Action Safety Gate
 
@@ -51,9 +53,73 @@ Auto-detect which checks exist (don't fail on missing tools). Report results:
 
 Do NOT silently skip verification.
 
+## Step 0.25 — Sprint evals
+
+Before the closure gate, derive a compact retrospective from data-layer
+evidence and write it to `.stackpilot/runs/<slug>/sprint-evals.md`.
+
+Required inputs:
+
+- `.stackpilot/runs/<slug>/events.jsonl`
+- `.stackpilot/runs/<slug>/TASK-*/state.json`
+- latest `.stackpilot/specs/*-criteria.md`
+
+Required sections:
+
+```markdown
+# Sprint Evals — <slug>
+
+## Summary
+- tasks_total:
+- tasks_complete:
+- tasks_soft_blocked:
+- tasks_critical:
+- criteria_pass:
+- criteria_fail_or_untested:
+
+## Loop Health
+- verify_fix_rounds:
+- retry_count:
+- common_failing_gates:
+- plateau_or_stuck_notes:
+
+## Recommendation
+stop | continue | change-strategy
+```
+
+Look specifically for plateau/stuck signals: repeated `retry_count`, repeated
+verify/fix rounds on the same command, unchanged failing gates across waves, or
+a high keep/revert churn pattern in events. The recommendation should be
+actionable: `stop` when all gates are green, `continue` when remaining work is
+bounded, and `change-strategy` when evidence shows saturation.
+
+Append a `sprint-evals-written` event to `events.jsonl` and update
+`handoff.json` with `phase: "finish"`, `status: "evaluated"`, and
+`next_action: "run closure gate"`.
+
+## Step 0.4 — Feedback inbox gate
+
+Initialize the external audit inbox and never silently ignore it:
+
+```bash
+mkdir -p .stackpilot/feedback/open .stackpilot/feedback/resolved
+find .stackpilot/feedback/open -maxdepth 1 -name '*.md' -type f -print
+```
+
+Treat each open Markdown file as human or external review feedback. Summarize by
+target and severity before merge decisions. If any unresolved HIGH or CRITICAL
+feedback remains, surface it in terminal and ask whether to fix now, defer with
+a recorded reason, or override the gate. Auto mode cannot silently override this
+gate.
+
+When feedback is handled, append a `# Resolution` section to the file with the
+decision, evidence, and commit or command references, then move it to
+`.stackpilot/feedback/resolved/`. Keep unresolved items in
+`.stackpilot/feedback/open/` so the next sprint sees them.
+
 ## Step 0.5 — Sprint Closure Gate
 
-After Step 0 tech checks pass, verify sprint **business completeness** before allowing merge. 3 sub-gates.
+After Step 0 tech checks pass, verify sprint **business completeness** before allowing merge. 4 sub-gates.
 
 ### Gate 1: Acceptance criteria all green
 
@@ -126,6 +192,22 @@ fi
 
 Gate 3 is informational only — does not block merge. Step 4a handles the merge prompt.
 
+### Gate 4: Feedback inbox and sprint evals surfaced
+
+```bash
+EVALS=".stackpilot/runs/${SLUG}/sprint-evals.md"
+OPEN_FEEDBACK=$(find .stackpilot/feedback/open -maxdepth 1 -name '*.md' -type f 2>/dev/null | wc -l | tr -d ' ')
+
+[ -f "${EVALS}" ] || { echo "❌ Gate 4: sprint-evals.md missing"; GATE_FAILED=1; }
+if [ "${OPEN_FEEDBACK}" -gt 0 ]; then
+  echo "⚠ Gate 4: ${OPEN_FEEDBACK} unresolved feedback file(s) remain in .stackpilot/feedback/open"
+fi
+```
+
+Missing `sprint-evals.md` blocks merge. Open feedback is a warning unless any
+file is HIGH or CRITICAL; unresolved HIGH/CRITICAL feedback blocks merge unless
+the user explicitly records an override reason.
+
 ### Result
 
 ```
@@ -135,10 +217,11 @@ Gate 3 is informational only — does not block merge. Step 4a handles the merge
 ✅ Gate 1 (criteria)      all 5 green
 ✅ Gate 2 (CHANGELOG)     3 scopes covered
 ⚠️  Gate 3 (patterns)      2 candidates pending (handled in Step 4a)
+✅ Gate 4 (evals/feedback) evals written, no critical feedback
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-- All `✅` (or only `⚠️` warnings) → proceed to Step 1
+- All `✅` (or only `⚠️` warnings without HIGH/CRITICAL feedback) → proceed to Step 1
 - Any `❌` (`GATE_FAILED=1`) → present to user:
   > "Closure gate failed: <reasons>. Fix before merge, or proceed anyway (override gate)?"
   
@@ -192,6 +275,8 @@ Generate a browser report only when it adds signal:
 
 - Many tasks, commits, criteria, decisions, or pattern candidates
 - Timeline/phase comparison is useful for reviewing the sprint
+- Sprint evals show retries, plateau/stuck notes, or strategy-change recommendation
+- Open feedback exists in `.stackpilot/feedback/open`
 - The user asks for a browser audit report
 - A prior dashboard is already open and the browser handoff will save review time
 
@@ -211,7 +296,7 @@ EVENT_LOG=".stackpilot/runs/${SLUG}/events.jsonl"
 SHOULD_FINISH_REPORT="<yes-or-no-from-eligibility-gate>"
 
 if [ "${SHOULD_FINISH_REPORT}" = "yes" ]; then
-# Build DATA_JSON in a temp file (commits / tasks / criteria / patterns / decisions / event log / branch)
+# Build DATA_JSON in a temp file (commits / tasks / criteria / sprint_evals / feedback / patterns / decisions / event log / branch)
 # Then sed-replace tokens in the template
 cp ~/Documents/github/stackpilot/claude-config/skills/stackpilot/references/views/finish-report.html \
    ".stackpilot/views/${SLUG}/finish-report.html"
@@ -279,6 +364,10 @@ find .stackpilot/specs -name '*.md' -delete 2>/dev/null || true
 git add .stackpilot/
 git commit -m "chore(stackpilot): clear sprint artifacts"
 ```
+
+Do not delete `.stackpilot/runs/` or `.stackpilot/feedback/` during this
+housekeeping step. Runs preserve eval/handoff evidence; feedback files preserve
+external audit state across sprints.
 
 ## Step 5 — Execute choice
 

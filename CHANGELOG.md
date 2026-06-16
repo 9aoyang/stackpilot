@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-06-16
+
+### Added
+
+- **Added sprint handoff, evals, and feedback inbox data artifacts** — adapted
+  the durable parts of updated external references: autoresearch-style
+  `handoff.json` and eval/plateau analysis, plus LLM Wiki-style audit feedback
+  processing. StackPilot now documents `.stackpilot/runs/<slug>/handoff.json`,
+  `.stackpilot/runs/<slug>/sprint-evals.md`, and
+  `.stackpilot/feedback/open|resolved` without restoring `/stackpilot-bench` or
+  adding a runtime runner.
+
 ## [2.3.0] - 2026-06-10
 
 ### Changed

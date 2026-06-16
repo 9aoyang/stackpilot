@@ -105,8 +105,13 @@ stackpilot/                        ← 框架安装目录
     ├── ARCHITECTURE.md            ← 项目记忆（数据层）
     ├── specs/                     ← 设计文档 + 验收标准（数据层）
     ├── plans/                     ← 实现计划（数据层）
+    ├── feedback/                  ← 外部 audit inbox（数据层）
+    │   ├── open/*.md              ← 未解决的人类/外部 feedback
+    │   └── resolved/*.md          ← 已处理且包含 # Resolution 的 feedback
     ├── runs/<sprint>/TASK-*/state.json   ← 每任务 phase 状态（数据层）
     ├── runs/<sprint>/events.jsonl        ← 持久化 dispatch / verification / decision 事件日志
+    ├── runs/<sprint>/handoff.json        ← 精简 phase/status/next-action 恢复契约
+    ├── runs/<sprint>/sprint-evals.md     ← 基于 events/state/criteria 的收尾复盘
     └── views/                     ← 可选生成的浏览器视图（视图层，gitignore）
         └── <sprint>/{design-options,dashboard,spec-review,finish-report}.html
 ```
@@ -191,14 +196,15 @@ Agent(
 Node 1 — Exploration: 先 scout 代码（grep + 读 2-5 个文件）→ 逐个澄清问题 → spec 中记录 canonical refs
 Node 2 — Design: 终端列出 2-3 个方案；只有视觉布局、交互或非平凡图示能降低歧义时才生成 design-options.html
 Node 3 — Spec & Criteria: 写 spec → auto-verify（grep 检查）→ 12-QA 矩阵 → 派生验收 criteria → 终端 review；可编辑/视觉扫描更高效时才生成 spec-review.html
-Node 4 — Plan & Run Sprint: 写 plan → auto-verify → traceability trace → 建分支 → 多 wave/密集进度时可选 dashboard.html → 按 wave 并行调度 sub-agent → 记录 events.jsonl
-Node 5 — Finish: pre-merge gate（typecheck/lint/tests）→ closure gate（criteria 全绿 / CHANGELOG / patterns 浮现）→ 终端 A/B/C/D；密集时间线/报告审阅时才生成 finish-report.html
+Node 4 — Plan & Run Sprint: 写 plan → auto-verify → traceability trace → 建分支 → 初始化 handoff.json/state.json/events.jsonl → 多 wave/密集进度时可选 dashboard.html → 按 wave 并行调度 sub-agent → 每个边界更新 handoff
+Node 5 — Finish: pre-merge gate（typecheck/lint/tests）→ sprint-evals.md + feedback inbox gate → closure gate（criteria 全绿 / CHANGELOG / patterns 浮现 / critical feedback 已处理）→ 终端 A/B/C/D；密集时间线/报告审阅时才生成 finish-report.html
   ↳ pre-merge-commit hook 硬性拒绝非 squash 的 merge
 ```
 
 行内验证（grep / 12-QA / traceability）是 node 内的子步骤，不再是独立 phase。浏览器
 视图在 Node 2/3/4/5 按需产出；数据层 source-of-truth（spec / plan / criteria /
-state.json / events.jsonl）保持 markdown/JSON 供 sub-agent 消费。
+handoff.json / state.json / events.jsonl / sprint-evals.md / feedback inbox）
+保持 markdown/JSON 供 sub-agent 消费。
 
 ---
 
@@ -336,7 +342,13 @@ skill 激活前阻断实现或检查类工具。hook 无法读取 transcript 时
 success report。每次推进 task phase 前，主控必须检查 Completion Output 必填段、
 独立查看 git diff、复跑或核验报告中的命令证据，并确认 criteria Status 已写回数据层。
 
-**Plan + state + event log 即持久层。** 任务在会话内通过 TaskCreate 跟踪。Plan 文件定义预期工作；每任务 `state.json` 记录 phase 完成状态；sprint 级 `events.jsonl` 记录 dispatch、verification、safety、user/action decision。resume 先读 state，只有 legacy sprint 缺失 state 时才回退 git history。
+**Plan + handoff + state + event log 即持久层。** 任务在会话内通过 TaskCreate 跟踪。Plan 文件定义预期工作；`handoff.json` 记录主控 phase 和 next action；每任务 `state.json` 记录 phase 完成状态；sprint 级 `events.jsonl` 记录 dispatch、verification、safety、user/action decision。resume 先读 handoff，再读 state，只有 legacy sprint 缺失 state 时才回退 git history。
+
+**数据层 handoff 作为恢复契约。** `.stackpilot/runs/<sprint>/handoff.json` 记录主控 phase、status、inputs/outputs、decisions 和 next action。它刻意保持精简：用它恢复 phase 边界，再读 `state.json` 与 `events.jsonl` 获取详细证据。
+
+**Sprint evals 来自 events/state/criteria。** Sprint Finish 会从 `events.jsonl`、每任务 `state.json` 和 acceptance criteria 写出 `.stackpilot/runs/<sprint>/sprint-evals.md`。内容包括任务总数、retry 与 verify/fix 轮次、常见失败 gate、plateau/stuck 信号，以及 stop/continue/change-strategy 建议。这样保留 eval loop 的价值，但不恢复已删除的 `/stackpilot-bench` runner。
+
+**Feedback inbox audit loop。** `.stackpilot/feedback/open/*.md` 存放人类或外部 audit feedback，直到 Sprint Finish 处理。未解决的 HIGH/CRITICAL feedback 会在 merge 决策前暴露；处理后的条目只有在追加 `# Resolution` 记录证据与处置后，才移动到 `.stackpilot/feedback/resolved/`。
 
 **零外部依赖。** 所有 Agent 协议内联，无需安装任何外部插件。
 
@@ -373,6 +385,7 @@ Claude Code-specific Agent 调用。
 
 | 日期 | 变更 |
 |------|------|
+| 2026-06-16 | **外部方法刷新：handoff、evals、feedback inbox。** 重新检查 autoresearch 与 LLM Wiki 风格仓库后，只吸收持久数据层能力：`handoff.json` 用于 phase 恢复，`sprint-evals.md` 用于 plateau/retry/gate 复盘，`.stackpilot/feedback/open|resolved` 用于外部 audit feedback。刻意不恢复 `/stackpilot-bench`，也不新增 runtime runner。 |
 | 2026-06-10 | **单一 StackPilot 入口模型。** 将 portable `stackpilot-*` skills 重新定义为默认内部门禁和 adapter primitives，而不是用户可见 skill catalog。用户从 `/stackpilot` 或自然语言 StackPilot routing 开始；bootstrap/hooks/host adapters 决定何时触发 planning、workspace、execution、parallel、review-response、completion、TDD、QA、architecture、debugging gates。Superpowers 对比保持为 workflow 覆盖审计，不作为 skill 数量对齐目标。 |
 | 2026-06-10 | **Methodology Core + Host Adapters 产品重定位。** 新增便携式 `stackpilot-methodology` 作为宿主无关核心，把 `/stackpilot` 重新定义为 Claude Code adapter。StackPilot 的产品边界变成方法论与门禁，而不是单一宿主实现。后续 Codex/Gemini/Cursor adapter 必须实现 Host Adapter Contract，而不是 fork 一套流程。 |
 | 2026-06-07 | **v2.2.0**：官方一线进度刷新。移除 live prompt 中过期的 Claude/Opus 点版本锚点；同步 SKILL.md 与 run-sprint 的架构审查触发条件（`standard` task，而不是 HIGH risk）；用 `find` 替换 zsh 下不安全的 `.claude/plans/*.md` glob；在 SKILL / Run Sprint / Finish 加 Action Safety Gate；新增 sprint 级 `events.jsonl` 作为 dispatch / verification / decision 的持久证据；前端任务要求 rendered UI verification；明确 portable skills 可用于 OpenAI Codex，但完整自主 sprint adapter 仍是 Claude Code-specific。 |

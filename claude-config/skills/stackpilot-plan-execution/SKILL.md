@@ -47,7 +47,9 @@ skill is host-neutral; use the strongest host adapter available.
 3. **Create task tracking**
 
    Use the host task tracker. Track at least: task id, title, status, files,
-   verify command, and blockers.
+   verify command, blockers, and the current handoff/next action. When the repo
+   uses StackPilot artifacts, keep `.stackpilot/runs/<slug>/handoff.json` in
+   sync with task start, pause, resume, and completion boundaries.
 
 4. **Execute task-by-task**
 
@@ -74,12 +76,15 @@ skill is host-neutral; use the strongest host adapter available.
    - Diff inspected.
    - Verification command run or independently validated.
    - Acceptance criteria updated or explicitly N/A.
+   - `handoff.json` points to the next controller action when artifacts exist.
    - Review findings resolved or escalated.
 
 7. **Finish**
 
    Use `stackpilot-completion-verification` before any completion claim or
-   merge/PR decision.
+   merge/PR decision. If StackPilot artifacts exist, route Finish through
+   sprint eval generation and feedback inbox review before presenting the final
+   choices.
 
 ## Output Contract
 
@@ -98,6 +103,7 @@ skill is host-neutral; use the strongest host adapter available.
 - Spec review:
 - Quality review:
 - Criteria status:
+- Handoff next action:
 
 ## Blockers
 - <none or exact blocker>

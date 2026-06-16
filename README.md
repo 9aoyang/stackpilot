@@ -95,6 +95,8 @@ Plan is ready. Proceed with coding? (Y/n)
   ✅ TASK-003  integration tests       dev → QA passed           (3/3)
 
 Sprint complete. All tests passing.
+Sprint evals written: .stackpilot/runs/2026-04-05-user-search-plan/sprint-evals.md
+Feedback inbox: no unresolved HIGH/CRITICAL items
 Dev server running at: http://localhost:3000
 
 A. Merge into main  B. Push and create PR  C. Leave as-is  D. Discard
@@ -163,7 +165,10 @@ Key design decisions:
 - **Host adapters** — Claude Code adapter uses Agent tool with `isolation: "worktree"` for parallel development
 - **Agent Skills standard** — core methodology skills work across 30+ agent products
 - **Progressive disclosure** — SKILL.md stays lean (<500 lines), heavy content in `references/`
-- **Plan as persistence** — TaskCreate for runtime, plan files for cross-session recovery
+- **Plan/handoff as persistence** — TaskCreate for runtime; plan, handoff, state, and event files for cross-session recovery
+- **Data-layer handoff** — `handoff.json` records phase/status/next action for reliable resume
+- **Sprint evals** — `sprint-evals.md` summarizes retries, plateau/stuck signals, criteria state, and recommendation
+- **Feedback inbox** — `.stackpilot/feedback/open|resolved` keeps external audit feedback visible through Finish
 
 ## [Contributing](CONTRIBUTING.md) | [License](LICENSE)
 
@@ -261,6 +266,8 @@ Node 4: 写入 plan → .stackpilot/plans/2026-04-05-user-search-plan.md ✓
   ✅ TASK-003  集成测试           开发 → QA 通过              (3/3)
 
 Sprint 完成，所有测试通过。
+Sprint evals 已写入：.stackpilot/runs/2026-04-05-user-search-plan/sprint-evals.md
+Feedback inbox：没有未解决的 HIGH/CRITICAL 项
 Dev server 运行中：http://localhost:3000
 
 A. 合并到 main  B. 推送并创建 PR  C. 暂时保留  D. 丢弃
@@ -327,6 +334,9 @@ Superpowers workflow 覆盖审计见 [docs/superpowers-gap-audit.md](docs/superp
 - **宿主适配器** — Claude Code adapter 用 Agent tool + `isolation: "worktree"` 实现并行开发
 - **Agent Skills 标准** — core methodology skills 可在 30+ agent 产品中使用
 - **渐进式展开** — SKILL.md 精简（<500 行），重内容放 `references/`
-- **Plan 即持久层** — 运行时用 TaskCreate，跨会话用 plan 文件恢复
+- **Plan/handoff 即持久层** — 运行时用 TaskCreate，跨会话用 plan、handoff、state、event 文件恢复
+- **数据层 handoff** — `handoff.json` 记录 phase/status/next action，保证恢复可靠
+- **Sprint evals** — `sprint-evals.md` 汇总 retry、plateau/stuck 信号、criteria 状态和建议
+- **Feedback inbox** — `.stackpilot/feedback/open|resolved` 让外部 audit feedback 贯穿 Finish
 
 ## [贡献指南](CONTRIBUTING.md) | [许可证](LICENSE)

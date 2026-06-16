@@ -60,9 +60,15 @@ fresh worker can execute without guessing.
 
 6. **Handoff**
 
-   Save to `.stackpilot/plans/<date>-<feature>-plan.md` when the repo uses
-   StackPilot artifacts. Otherwise keep the plan in the response and route to
-   `stackpilot-plan-execution` for implementation.
+   When the repo uses StackPilot artifacts, save to
+   `.stackpilot/plans/<date>-<feature>-plan.md`. If `.stackpilot/runs/<slug>/`
+   already exists, update `.stackpilot/runs/<slug>/handoff.json` with
+   `phase: "plan"`, the plan path, and the next action; if the run directory
+   does not exist yet, record the intended next action so the adapter can create
+   `handoff.json` during run initialization.
+
+   When the repo does not use StackPilot artifacts, keep the plan in the
+   response and route to `stackpilot-plan-execution` for implementation.
 
 ## Output Contract
 

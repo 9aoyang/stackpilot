@@ -45,8 +45,9 @@ mechanics, not the gates.
    not trust implementer self-reports; inspect evidence. Use
    `stackpilot-review-response` for incoming human or external review feedback.
 7. **Finish** — use `stackpilot-completion-verification`, check acceptance
-   criteria, present merge / PR / keep / discard choices, and record any
-   reusable lessons.
+   criteria, surface open feedback, write a sprint eval summary when artifacts
+   exist, present merge / PR / keep / discard choices, and record any reusable
+   lessons.
 
 ## Hard Gates
 
@@ -84,8 +85,14 @@ When you use this skill without a richer adapter, keep a compact data layer:
 ```
 
 When an adapter provides stronger artifacts, such as `.stackpilot/specs`,
-`.stackpilot/plans`, `state.json`, `events.jsonl`, dashboards, or browser
+`.stackpilot/plans`, `handoff.json`, `state.json`, `events.jsonl`,
+`sprint-evals.md`, `.stackpilot/feedback/open|resolved`, dashboards, or browser
 evidence, use those artifacts as the source of truth.
+
+For host-neutral runs without the full adapter, preserve the same data-layer
+concepts in compact form: a handoff note for the next action, a feedback inbox
+for unresolved external audit items, and a short eval summary before claiming
+the sprint is finished.
 
 ## Red Flags
 

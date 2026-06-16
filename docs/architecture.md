@@ -109,8 +109,13 @@ stackpilot/                        ← framework installation
     ├── ARCHITECTURE.md            ← project memory (data layer)
     ├── specs/                     ← design documents + criteria (data layer)
     ├── plans/                     ← implementation plans (data layer)
+    ├── feedback/                  ← external audit inbox (data layer)
+    │   ├── open/*.md              ← unresolved human/external feedback
+    │   └── resolved/*.md          ← handled feedback with # Resolution
     ├── runs/<sprint>/TASK-*/state.json   ← per-task phase state (data layer)
     ├── runs/<sprint>/events.jsonl        ← durable dispatch / verification / decision log
+    ├── runs/<sprint>/handoff.json        ← compact phase/status/next-action resume contract
+    ├── runs/<sprint>/sprint-evals.md     ← finish retrospective from events/state/criteria
     └── views/                     ← optional generated browser artifacts (view layer, gitignored)
         └── <sprint>/{design-options,dashboard,spec-review,finish-report}.html
 ```
@@ -195,15 +200,16 @@ Agent(
 Node 1 — Exploration: scout code first (grep + read 2-5 files) → clarifying questions (one at a time) → canonical refs captured in spec
 Node 2 — Design: 2-3 terminal approaches; optional design-options.html only for visual layout, interaction, or nontrivial diagrams
 Node 3 — Spec & Criteria: write spec → auto-verify (grep checks) → 12-QA matrix → derive acceptance criteria → terminal review, or spec-review.html when editable visual review helps
-Node 4 — Plan & Run Sprint: write plan → auto-verify → traceability trace → branch + commit → optional dashboard.html for multi-wave/dense live progress → dispatch tasks in parallel waves → record events.jsonl
-Node 5 — Finish: pre-merge gate (typecheck/lint/tests) → closure gate (criteria all green / CHANGELOG / patterns surfaced) → terminal A/B/C/D, or finish-report.html for dense timelines/reports
+Node 4 — Plan & Run Sprint: write plan → auto-verify → traceability trace → branch + commit → initialize handoff.json/state.json/events.jsonl → optional dashboard.html for multi-wave/dense live progress → dispatch tasks in parallel waves → update handoff after each boundary
+Node 5 — Finish: pre-merge gate (typecheck/lint/tests) → sprint-evals.md + feedback inbox gate → closure gate (criteria all green / CHANGELOG / patterns surfaced / critical feedback handled) → terminal A/B/C/D, or finish-report.html for dense timelines/reports
   ↳ pre-merge-commit hook rejects non-squash merges on main as a hard guard
 ```
 
 Inline verifications (grep, 12-QA matrix, traceability check) are sub-steps
 inside their node, not separate phases. Browser view artifacts are optional at
 Nodes 2, 3, 4, 5; data-layer source-of-truth files (spec, plan, criteria,
-state.json / events.jsonl) remain markdown/JSON for sub-agent consumption.
+handoff.json / state.json / events.jsonl / sprint-evals.md / feedback inbox)
+remain markdown/JSON for sub-agent consumption.
 
 ---
 
@@ -352,7 +358,13 @@ checks required Completion Output sections, independently inspects the git diff,
 re-runs or verifies the reported command evidence, and confirms criteria Status
 updates in the data layer.
 
-**Plan + state + event log as persistence layer.** Tasks are tracked in-session via TaskCreate. Plan files define intended work; per-task `state.json` records phase completion; sprint-level `events.jsonl` records dispatch, verification, safety, and user/action decisions. Resume reads state first, then falls back to git history only for legacy sprints.
+**Plan + handoff + state + event log as persistence layer.** Tasks are tracked in-session via TaskCreate. Plan files define intended work; `handoff.json` records the controller phase and next action; per-task `state.json` records phase completion; sprint-level `events.jsonl` records dispatch, verification, safety, and user/action decisions. Resume reads handoff first, then state, then falls back to git history only for legacy sprints.
+
+**Data-layer handoff as resume contract.** `.stackpilot/runs/<sprint>/handoff.json` records the controller phase, status, inputs/outputs, decisions, and next action. It is intentionally compact: use it to resume the phase boundary, then read `state.json` and `events.jsonl` for detailed evidence.
+
+**Sprint evals from events/state/criteria.** Sprint Finish writes `.stackpilot/runs/<sprint>/sprint-evals.md` from `events.jsonl`, per-task `state.json`, and acceptance criteria. It summarizes task totals, retry and verify/fix rounds, common failing gates, plateau/stuck signals, and a stop/continue/change-strategy recommendation. This revives the useful eval loop without restoring the deleted `/stackpilot-bench` runner.
+
+**Feedback inbox audit loop.** `.stackpilot/feedback/open/*.md` holds human or external audit feedback until Sprint Finish processes it. HIGH/CRITICAL unresolved feedback is surfaced before merge decisions; handled items move to `.stackpilot/feedback/resolved/` only after a `# Resolution` section records evidence and disposition.
 
 **Zero external dependencies.** All agent protocols are inlined. The skill works without any external plugin installed.
 
@@ -398,6 +410,7 @@ calls.
 
 | Date | Change |
 |------|--------|
+| 2026-06-16 | **External-method refresh: handoff, evals, feedback inbox.** Rechecked autoresearch and LLM Wiki style repositories, then adapted only the durable data-layer pieces: `handoff.json` for phase resume, `sprint-evals.md` for plateau/retry/gate retrospectives, and `.stackpilot/feedback/open|resolved` for external audit feedback. Deliberately did not restore `/stackpilot-bench` or add a runtime runner. |
 | 2026-06-10 | **Single StackPilot entry model.** Reframed the portable `stackpilot-*` skills as default internal gates and adapter primitives rather than a user-facing skill catalog. Users should start from `/stackpilot` or natural-language StackPilot routing; bootstrap/hooks/host adapters decide when to trigger planning, workspace, execution, parallel, review-response, completion, TDD, QA, architecture, and debugging gates. Superpowers comparison remains a workflow coverage audit, not a skill-count parity target. |
 | 2026-06-10 | **Methodology Core + Host Adapters repositioning.** Added portable `stackpilot-methodology` as the host-neutral core and reframed `/stackpilot` as the Claude Code adapter. StackPilot's product boundary is now the method and gates, not a single host implementation. Future Codex/Gemini/Cursor adapters must implement the Host Adapter Contract rather than forking the workflow. |
 | 2026-06-07 | **v2.2.0**: Official-frontier refresh. Removed stale Claude/Opus point-release anchors from live prompts, aligned SKILL.md and run-sprint architecture review triggers (`standard` tasks, not HIGH risk), replaced the zsh-unsafe `.claude/plans/*.md` glob with `find`, added Action Safety Gate text to SKILL / Run Sprint / Finish, added sprint-level `events.jsonl` for durable dispatch / verification / decision evidence, required rendered UI verification for frontend tasks, and clarified that portable skills work in OpenAI Codex while the full autonomous sprint adapter remains Claude Code-specific. |

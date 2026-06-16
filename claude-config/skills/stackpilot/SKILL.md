@@ -4,7 +4,7 @@ description: Primary Claude Code entry and host adapter for the StackPilot metho
 license: Apache-2.0
 metadata:
   author: stackpilot
-  version: "2.3.0"
+  version: "2.4.0"
 ---
 
 # Stackpilot
@@ -23,7 +23,7 @@ Every stackpilot artifact lives in exactly one of two layers: the **data layer**
 
 | Layer | Audience | Format | SoT? | Examples |
 |-------|----------|--------|------|----------|
-| **Data** | sub-agents (sp-architect/dev/qa/docs), git diff, version control | markdown / YAML / JSON | ✅ | `.stackpilot/ARCHITECTURE.md`, `specs/*-design.md`, `specs/*-criteria.md`, `plans/*-plan.md`, `runs/<sprint>/TASK-*/state.json`, agent completion reports |
+| **Data** | sub-agents (sp-architect/dev/qa/docs), git diff, version control | markdown / YAML / JSON | ✅ | `.stackpilot/ARCHITECTURE.md`, `specs/*-design.md`, `specs/*-criteria.md`, `plans/*-plan.md`, `runs/<sprint>/handoff.json`, `runs/<sprint>/TASK-*/state.json`, `runs/<sprint>/sprint-evals.md`, `.stackpilot/feedback/{open,resolved}/*.md`, agent completion reports |
 | **View** | human decision-maker, browser | HTML (self-contained, CDN libs) | ❌ | `.stackpilot/views/<sprint>/{design-options,dashboard,spec-review,finish-report,architecture}.html` when eligible |
 
 **Rules:**
@@ -49,6 +49,12 @@ echo "---STATE---"
 [ -f .stackpilot/ARCHITECTURE.md ] && echo "ARCH_EXISTS" || echo "ARCH_MISSING"
 ls -t .stackpilot/plans/*.md 2>/dev/null || echo "NO_PLANS"
 ls -t .stackpilot/specs/*.md 2>/dev/null || echo "NO_SPECS"
+if [ -d .stackpilot/feedback/open ]; then
+  FEEDBACK_OPEN_COUNT="$(find .stackpilot/feedback/open -maxdepth 1 -name '*.md' -type f 2>/dev/null | wc -l | tr -d ' ')"
+  echo "FEEDBACK_OPEN=${FEEDBACK_OPEN_COUNT}"
+else
+  echo "NO_FEEDBACK_INBOX"
+fi
 
 echo "---DEBRIS---"
 find .claude/plans -maxdepth 1 -name '*.md' -type f -print 2>/dev/null || true
@@ -140,7 +146,7 @@ Then continue routing.
 
 **1. Find plan:** `ls -t .stackpilot/plans/*.md | head -1` — read, parse `### TASK-` sections.
 
-**2. Determine done:** prefer reading `.stackpilot/runs/<sprint>/TASK-*/state.json` (`phase == complete && last_result == complete` → done). Fall back to `git log --oneline -50` heuristic (commit messages contain TASK ID or title keywords) only if state.json missing.
+**2. Determine done:** read `.stackpilot/runs/<sprint>/handoff.json` first when present to recover `phase`, `status`, and `next_action`; then prefer `.stackpilot/runs/<sprint>/TASK-*/state.json` (`phase == complete && last_result == complete` → done). Fall back to `git log --oneline -50` heuristic (commit messages contain TASK ID or title keywords) only if state.json missing.
 
 **3. Show status + offer choices:**
 
@@ -400,7 +406,7 @@ Create feature branch, commit spec + plan.
 Pre-Sprint:
   1. Parse plan + read config (qa.max_parallel default 3, qa.test_command, qa.deep_review)
   2. Dependency wave analysis — topological sort over depends_on, cap per wave by max_parallel
-  3. Init .stackpilot/runs/<sprint-slug>/TASK-NNN/state.json
+  3. Init/refresh .stackpilot/runs/<sprint-slug>/handoff.json and TASK-NNN/state.json
   4. Start sprint server + dashboard only when there are multiple waves,
      >3 tasks, long-running tasks, user wants browser monitoring, or the
      dependency DAG is easier to inspect visually
@@ -419,6 +425,8 @@ Pre-coding confirmation:
 
 When generated, the dashboard auto-refreshes via WS as `state.json` files change — user can leave it open the whole sprint. Terminal still prints per-task `✅ TASK-NNN  passed (k/N)` lines.
 
+Update `handoff.json` at plan parse, task-state initialization, wave completion, sprint pause, and sprint complete. It is the cross-phase resume index; `state.json` and `events.jsonl` remain the detailed evidence.
+
 When all tasks complete (or sprint paused for user attention) → proceed to Node 5.
 
 ## Node 5 — Finish
@@ -428,15 +436,16 @@ When all tasks complete (or sprint paused for user attention) → proceed to Nod
 Full protocol in [references/sprint-finish.md](references/sprint-finish.md). High level:
 
 1. **Pre-merge gate** — 显式三件套：`tsc --noEmit`（若存在）、`npm run lint` / `pnpm lint`（若存在）、`qa.test_command`（无显式时按 `npm test` / `pytest` 等存在性兜底；都不存在记录 `N/A`）。任一红 → 问用户是否继续。**Action Safety Gate** 仍生效：force push、remote delete、production database、credential/secret movement、部署或外部上传不能被 auto mode 静默执行。**残留脚本扫描**：`git diff --name-only $(git merge-base main HEAD)..HEAD | grep -E '^scripts/(migrate|audit|debug|oneshot)-.+\.(ts|js|sh|py)$'` — 命中即报告"以下一次性脚本是否合并前删除？"（按全局 CLAUDE.md `## 多文件同步律` 一次性脚本即用即删原则；auto mode 下保留并记录到 finish-report）。
-2. **Closure gate** — acceptance criteria all green (`pass` or `n-a-this-task`), CHANGELOG updated, pattern candidates surfaced. Block merge on red.
-3. **Present finish decision in terminal by default.** Generate `finish-report.html` only for dense outcome review: many tasks/commits/criteria, nontrivial patterns/decisions, timeline comparison, or user-requested browser audit. Fill: elapsed_ms, tasks (with per-phase timings from state.json), commits (`git log <base>..HEAD --stat`), criteria, patterns, decisions, branch.
-4. **Wait** for terminal A/B/C/D, or `finish-action.json` if an HTML report was generated. *(user gate)* Terminal fallback if no action.json in 30s.
-5. **Execute choice:**
+2. **Sprint evals + feedback inbox** — derive `.stackpilot/runs/<slug>/sprint-evals.md` from `events.jsonl`, `state.json`, and criteria; scan `.stackpilot/feedback/open/*.md`, summarize unresolved HIGH/CRITICAL feedback, and move resolved items to `resolved/` with a `# Resolution` section.
+3. **Closure gate** — acceptance criteria all green (`pass` or `n-a-this-task`), CHANGELOG updated, pattern candidates surfaced, and unresolved HIGH/CRITICAL feedback explicitly handled. Block merge on red.
+4. **Present finish decision in terminal by default.** Generate `finish-report.html` only for dense outcome review: many tasks/commits/criteria, eval trends, unresolved feedback, nontrivial patterns/decisions, timeline comparison, or user-requested browser audit. Fill: elapsed_ms, tasks (with per-phase timings from state.json), commits (`git log <base>..HEAD --stat`), criteria, sprint_evals, feedback, patterns, decisions, branch.
+5. **Wait** for terminal A/B/C/D, or `finish-action.json` if an HTML report was generated. *(user gate)* Terminal fallback if no action.json in 30s.
+6. **Execute choice:**
    - **merge** → squash merge into base branch, delete feature branch
    - **pr** → push + `gh pr create`
    - **keep** → no-op
    - **discard** → confirm once, then delete feature branch
-6. **Stop sprint server:** `bash ~/Documents/github/stackpilot/scripts/preview/stop-server.sh --slug <sprint-slug>`
+7. **Stop sprint server:** `bash ~/Documents/github/stackpilot/scripts/preview/stop-server.sh --slug <sprint-slug>`
 
 > **Note:** a `pre-merge-commit` git hook enforces squash-only merges on main/master.
 

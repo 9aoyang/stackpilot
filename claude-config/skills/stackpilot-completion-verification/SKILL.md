@@ -45,8 +45,9 @@ adapter.
 
 4. **Check requirements**
 
-   Re-read the spec, plan, user request, and acceptance criteria. Mark every
-   requirement:
+   Re-read the spec, plan, user request, acceptance criteria, unresolved
+   feedback inbox items, and sprint eval summary when those artifacts exist.
+   Mark every requirement:
 
    - `pass` - directly proven.
    - `fail` - contradicted by evidence.
@@ -82,6 +83,8 @@ adapter.
 ## Finish State
 - Complete: Yes / No
 - Remaining work:
+- Sprint evals:
+- Feedback inbox:
 - Safe finish choices:
 ```
 
