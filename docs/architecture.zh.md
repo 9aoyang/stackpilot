@@ -385,6 +385,7 @@ Claude Code-specific Agent 调用。
 
 | 日期 | 变更 |
 |------|------|
+| 2026-06-26 | **v2.4.1**：界面类请求强制生成浏览器设计方案。Node 2 现在把明确涉及 page/screen/UI/UX/frontend layout、视觉设计、交互、信息架构、dashboard、以及多版本界面方案的请求视为 browser-view eligible，因此 StackPilot 会生成 `design-options.html`，启动或复用 sprint server，并打印本地 URL，除非用户明确要求 terminal/text-only。 |
 | 2026-06-16 | **外部方法刷新：handoff、evals、feedback inbox。** 重新检查 autoresearch 与 LLM Wiki 风格仓库后，只吸收持久数据层能力：`handoff.json` 用于 phase 恢复，`sprint-evals.md` 用于 plateau/retry/gate 复盘，`.stackpilot/feedback/open|resolved` 用于外部 audit feedback。刻意不恢复 `/stackpilot-bench`，也不新增 runtime runner。 |
 | 2026-06-10 | **单一 StackPilot 入口模型。** 将 portable `stackpilot-*` skills 重新定义为默认内部门禁和 adapter primitives，而不是用户可见 skill catalog。用户从 `/stackpilot` 或自然语言 StackPilot routing 开始；bootstrap/hooks/host adapters 决定何时触发 planning、workspace、execution、parallel、review-response、completion、TDD、QA、architecture、debugging gates。Superpowers 对比保持为 workflow 覆盖审计，不作为 skill 数量对齐目标。 |
 | 2026-06-10 | **Methodology Core + Host Adapters 产品重定位。** 新增便携式 `stackpilot-methodology` 作为宿主无关核心，把 `/stackpilot` 重新定义为 Claude Code adapter。StackPilot 的产品边界变成方法论与门禁，而不是单一宿主实现。后续 Codex/Gemini/Cursor adapter 必须实现 Host Adapter Contract，而不是 fork 一套流程。 |

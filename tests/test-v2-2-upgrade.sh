@@ -46,9 +46,10 @@ echo ""
 
 # Version metadata must move as one unit.
 VERSION_VALUE="$(tr -d '[:space:]' < "$ROOT_DIR/VERSION")"
-[ "$VERSION_VALUE" = "2.4.0" ] && pass "VERSION is 2.4.0" || fail "VERSION is '$VERSION_VALUE', expected 2.4.0"
-assert_contains "SKILL.md metadata version is 2.4.0" 'version: "2\.4\.0"' "claude-config/skills/stackpilot/SKILL.md"
-assert_contains "plugin.json version is 2.4.0" '"version": "2\.4\.0"' ".claude-plugin/plugin.json"
+[ "$VERSION_VALUE" = "2.4.1" ] && pass "VERSION is 2.4.1" || fail "VERSION is '$VERSION_VALUE', expected 2.4.1"
+assert_contains "SKILL.md metadata version is 2.4.1" 'version: "2\.4\.1"' "claude-config/skills/stackpilot/SKILL.md"
+assert_contains "plugin.json version is 2.4.1" '"version": "2\.4\.1"' ".claude-plugin/plugin.json"
+assert_contains "CHANGELOG has 2.4.1 release entry" '^## \[2\.4\.1\] - 2026-06-26' "CHANGELOG.md"
 assert_contains "CHANGELOG has 2.4.0 release entry" '^## \[2\.4\.0\] - 2026-06-16' "CHANGELOG.md"
 assert_contains "CHANGELOG keeps 2.3.0 release entry" '^## \[2\.3\.0\] - 2026-06-10' "CHANGELOG.md"
 assert_contains "CHANGELOG keeps 2.2.2 release entry" '^## \[2\.2\.2\] - 2026-06-09' "CHANGELOG.md"

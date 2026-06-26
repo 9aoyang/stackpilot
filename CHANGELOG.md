@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-06-26
+
+### Fixed
+
+- **Forced browser design options for interface prompts** — StackPilot Node 2
+  now treats explicit page, screen, UI, UX, frontend layout, visual design,
+  interaction, information architecture, dashboard, and multi-version interface
+  design requests as browser-view eligible. These prompts now generate
+  `design-options.html`, start or reuse the sprint server, and print the local
+  URL unless the user explicitly asks for terminal/text-only output.
+
 ## [2.4.0] - 2026-06-16
 
 ### Added

@@ -4,7 +4,7 @@ description: Primary Claude Code entry and host adapter for the StackPilot metho
 license: Apache-2.0
 metadata:
   author: stackpilot
-  version: "2.4.0"
+  version: "2.4.1"
 ---
 
 # Stackpilot
@@ -239,13 +239,14 @@ Skip mini-mode only when user explicitly said "just do it" / "skip planning" / c
 
 **Goal:** present 2-3 architectural approaches, get user to pick one.
 
-**Default:** terminal-only. Generate `design-options.html` only when the choice depends on visual layout, interaction flow, information hierarchy, or a diagram that materially reduces ambiguity. A prose-only architecture trade-off belongs in the terminal.
+**Default:** terminal-only for non-visual decisions. Generate `design-options.html` whenever the choice depends on visual layout, interaction flow, information hierarchy, or a diagram that materially reduces ambiguity. A prose-only architecture trade-off belongs in the terminal.
 
 **Design view eligibility gate:**
 
+- Force eligible: any request explicitly about a page, screen, UI, UX, frontend layout, visual design, interaction design, information architecture, dashboard layout, or "several design options/versions" for an interface. For these, create the browser view and start/reuse the sprint server unless the user explicitly asks for terminal/text-only output.
 - Eligible: UI layout options, interaction prototypes, data visualization choices, architecture diagrams with non-obvious topology, workflow maps with many states, or anything the user must see/click to judge.
 - Not eligible: textual trade-off lists, simple data-source choices, yes/no approvals, pros/cons cards, or mermaid diagrams that merely restate the paragraph.
-- If unsure, keep it terminal-only and offer to generate a browser view only if the user wants to inspect layout/interaction.
+- If unsure and the prompt contains interface words such as "page", "screen", "UI", "UX", "frontend", "layout", "interaction", "visual", or "dashboard", treat it as eligible. Otherwise keep it terminal-only and offer to generate a browser view only if the user wants to inspect layout/interaction.
 
 **Design view contract when eligible:**
 
@@ -257,13 +258,13 @@ Skip mini-mode only when user explicitly said "just do it" / "skip planning" / c
 **Produce:**
 
 1. Text proposal in terminal (always).
-2. `design-options.html` view artifact only if the eligibility gate passes (template at `references/views/design-options.html`).
+2. `design-options.html` view artifact when the eligibility gate passes or force-eligible interface language is present (template at `references/views/design-options.html`).
 
 **Steps:**
 
 1. Propose 2-3 approaches with trade-offs and your recommendation.
 2. Decide and state whether a browser view is eligible in one sentence.
-3. If not eligible: print the terminal choices, wait for terminal response, record the choice, and proceed to Node 3.
+3. If the prompt is force eligible, do not downgrade to terminal-only because the options can be described in text; still generate the browser view. If not eligible: print the terminal choices, wait for terminal response, record the choice, and proceed to Node 3.
 4. If eligible, start sprint server if not yet running:
    ```bash
    SLUG="$(date +%Y-%m-%d)-<feature-slug>"
