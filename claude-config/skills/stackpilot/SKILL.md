@@ -4,7 +4,7 @@ description: Primary Claude Code entry and host adapter for the StackPilot metho
 license: Apache-2.0
 metadata:
   author: stackpilot
-  version: "2.4.1"
+  version: "3.0.0"
 ---
 
 # Stackpilot
@@ -207,7 +207,14 @@ Then choose path by scope:
 
 If the request spans multiple subsystems, flag and decompose first.
 
-**Then ask clarifying questions one at a time** — multiple-choice preferred, focus on purpose/constraints/success criteria.
+**Then ask clarifying questions one at a time** — multiple-choice preferred, focus on purpose/constraints/success criteria. Each question includes your recommended answer so the user can accept, correct, or reject a concrete proposal.
+
+**Design interrogation gate (standard only):**
+
+- Walk the design tree in dependency order: settle parent decisions before asking about child details.
+- If the codebase, project memory, or canonical refs can answer a question, answer it from evidence instead of asking the user.
+- Ask one question, wait, then continue. Do not dump a questionnaire.
+- Capture resolved domain terms in the spec's optional `## Domain Language` section; do not create `CONTEXT.md` or ADR files.
 
 **Exploration rigor rules:**
 
@@ -226,7 +233,7 @@ Even "simple" tasks need a 30-second design check — silent assumptions cause t
 </HARD-GATE>
 
 1. Scout once (1 grep + 1-2 files)
-2. At most one clarifying question (only if genuine ambiguity)
+2. At most one clarifying question with your recommended answer (only if genuine ambiguity)
 3. State ONE chosen approach in 1-2 sentences + explicitly what you'll NOT do (YAGNI)
 4. User confirms with "go" or rejection *(user gate)*
 5. Skip ahead to "write plan" inside Node 4
@@ -237,9 +244,9 @@ Skip mini-mode only when user explicitly said "just do it" / "skip planning" / c
 
 ## Node 2 — Design
 
-**Goal:** present 2-3 architectural approaches, get user to pick one.
+**Goal:** make a design decision the user can approve before spec and plan.
 
-**Default:** terminal-only for non-visual decisions. Generate `design-options.html` whenever the choice depends on visual layout, interaction flow, information hierarchy, or a diagram that materially reduces ambiguity. A prose-only architecture trade-off belongs in the terminal.
+**Default:** terminal-only for non-visual decisions. Present one recommended approach, briefly name rejected alternatives when the trade-off is real, and ask for approval or changes. Generate `design-options.html` whenever the choice depends on visual layout, interaction flow, information hierarchy, or a diagram that materially reduces ambiguity. A prose-only architecture trade-off belongs in the terminal.
 
 **Design view eligibility gate:**
 
@@ -262,23 +269,24 @@ Skip mini-mode only when user explicitly said "just do it" / "skip planning" / c
 
 **Steps:**
 
-1. Propose 2-3 approaches with trade-offs and your recommendation.
+1. Decide whether this is a terminal decision or a selectable visual/interactive choice.
 2. Decide and state whether a browser view is eligible in one sentence.
-3. If the prompt is force eligible, do not downgrade to terminal-only because the options can be described in text; still generate the browser view. If not eligible: print the terminal choices, wait for terminal response, record the choice, and proceed to Node 3.
-4. If eligible, start sprint server if not yet running:
+3. If not eligible: print one recommended approach with concise rationale plus rejected alternatives when useful, wait for terminal approval/changes, record the decision, and proceed to Node 3.
+4. If the prompt is force eligible, do not downgrade to terminal-only because the options can be described in text; still generate the browser view.
+5. If eligible, start sprint server if not yet running:
    ```bash
    SLUG="$(date +%Y-%m-%d)-<feature-slug>"
    bash ~/Documents/github/stackpilot/scripts/preview/start-server.sh \
      --project-dir "$PWD" --sprint-slug "$SLUG" --background 2>&1 | head -1
    ```
    Parse the returned JSON for `port` and `url`.
-5. Fill template tokens — `{{SPRINT_SLUG}}`, `{{SPRINT_DESCRIPTION}}`, `{{QUESTION}}`, `{{OPTIONS_JSON}}` — write to `.stackpilot/views/<slug>/design-options.html`. The template renders Apple-like selectable option cards via mermaid (CDN) on load. Each option provides `diagram_mermaid` (only when useful) or `diagram_svg` for the architecture sketch.
-6. Validate the generated HTML: no unresolved template tokens, no placeholder fallback text, and 2-3 rendered options available from `OPTIONS_JSON`.
-7. Print to terminal: the 2-3 approaches in compressed form + the URL `http://localhost:<port>/sprints/<slug>/design-options.html`.
-8. **Wait for either** the user's terminal response OR `.stackpilot/views/<slug>/design-options-action.json` (poll every 2-5s; the server writes this when a Pick button is clicked). First to arrive wins. *(user gate)*
-9. Record the choice. Proceed to Node 3.
+6. Fill template tokens — `{{SPRINT_SLUG}}`, `{{SPRINT_DESCRIPTION}}`, `{{QUESTION}}`, `{{OPTIONS_JSON}}` — write to `.stackpilot/views/<slug>/design-options.html`. The template renders Apple-like selectable option cards via mermaid (CDN) on load. Each option provides `diagram_mermaid` (only when useful) or `diagram_svg` for the architecture sketch.
+7. Validate the generated HTML: no unresolved template tokens, no placeholder fallback text, and 2-3 rendered options available from `OPTIONS_JSON`.
+8. Print to terminal: the 2-3 approaches in compressed form + the URL `http://localhost:<port>/sprints/<slug>/design-options.html`.
+9. **Wait for either** the user's terminal response OR `.stackpilot/views/<slug>/design-options-action.json` (poll every 2-5s; the server writes this when a Pick button is clicked). First to arrive wins. *(user gate)*
+10. Record the choice. Proceed to Node 3.
 
-**Fallback:** if server failed to start or template not found, print 3 approaches in terminal only and wait for text response.
+**Fallback:** if server failed to start or template not found for an eligible view, print 2-3 selectable options in terminal and wait for text response.
 
 **Skip Node 2 entirely** for Light tasks (jump from Node 1 directly to Node 4 plan writing).
 
@@ -289,6 +297,8 @@ Skip mini-mode only when user explicitly said "just do it" / "skip planning" / c
 ### 3.1 Write spec → `.stackpilot/specs/YYYY-MM-DD-<topic>-design.md`
 
 **默认最小有效版本**：spec 先出最小可执行版本（目标 / 范围 / 验收 / Canonical Refs）。Comparison framework / decision matrix / "send to X" framing / 多 audience 切片这类扩展只在用户明确要求时加。≥300 字下限不是要求"凑长度"，是要求"覆盖必要语义"。
+
+**Domain Language（可选）**：当 Node 1/2 明确了项目特有术语、避免用词或概念边界时，在 spec 增加 `## Domain Language`。只写术语和边界，不写实现细节、临时讨论记录或 ADR；长期有价值的条目在 Finish Step 4a 合入 `.stackpilot/ARCHITECTURE.md`。
 
 ### 3.2 Auto-verify (≤ 1 self-fix round)
 

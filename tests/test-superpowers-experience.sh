@@ -26,6 +26,15 @@ assert_file() {
   fi
 }
 
+assert_no_file() {
+  local label="$1" file="$2"
+  if [ ! -e "$ROOT_DIR/$file" ]; then
+    pass "$label"
+  else
+    fail "$label -- should not exist: $file"
+  fi
+}
+
 assert_contains() {
   local label="$1" pattern="$2" file="$3"
   if contains "$pattern" "$file"; then
@@ -175,11 +184,10 @@ else
 fi
 rm -rf "$HOOK_TMP"
 
-# Behavior testing: repository should test triggering discipline, not just prose.
-assert_file "triggering test runner exists" "tests/stackpilot-triggering/run-test.sh"
-assert_file "feature prompt fixture exists" "tests/stackpilot-triggering/prompts/feature-work.txt"
-assert_contains "triggering test checks Skill invocation" '"name":"Skill"|Skill tool' "tests/stackpilot-triggering/run-test.sh"
-assert_contains "triggering test checks no premature tools" 'premature|BEFORE Skill|before.*Skill' "tests/stackpilot-triggering/run-test.sh"
+# Behavior testing: repository should test triggering discipline locally through
+# hook behavior, not through a live Claude CLI/API integration test.
+assert_no_file "Claude CLI triggering test runner removed" "tests/stackpilot-triggering/run-test.sh"
+assert_no_file "Claude CLI feature prompt fixture removed" "tests/stackpilot-triggering/prompts/feature-work.txt"
 assert_contains "CI runs Superpowers-like experience test" 'test-superpowers-experience\.sh' ".github/workflows/ci.yml"
 
 # Docs should no longer position Stackpilot as explicit-invocation-only.

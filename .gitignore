@@ -1,4 +1,5 @@
 .worktrees/
+.claude/
 
 # Session-local skill working dirs (untracked, not part of repo)
 .superpowers/

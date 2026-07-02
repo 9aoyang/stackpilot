@@ -64,8 +64,6 @@ stackpilot/                        ← framework installation
 │       │           ├── spec-review.html
 │       │           ├── finish-report.html
 │       │           └── architecture.html
-│       ├── stackpilot-compete/
-│       │   └── SKILL.md           ← /stackpilot-compete competitive gap analysis
 │       ├── stackpilot-research/
 │       │   └── SKILL.md           ← /stackpilot-research deep research (横纵分析法)
 │       ├── stackpilot-sync/
@@ -197,9 +195,9 @@ Agent(
 **Standard Feature — 5 nodes (terminal-first, browser when useful):**
 
 ```
-Node 1 — Exploration: scout code first (grep + read 2-5 files) → clarifying questions (one at a time) → canonical refs captured in spec
-Node 2 — Design: 2-3 terminal approaches; optional design-options.html only for visual layout, interaction, or nontrivial diagrams
-Node 3 — Spec & Criteria: write spec → auto-verify (grep checks) → 12-QA matrix → derive acceptance criteria → terminal review, or spec-review.html when editable visual review helps
+Node 1 — Exploration: scout code first (grep + read 2-5 files) → one-question design interrogation with recommended answers → canonical refs and optional domain language captured in spec
+Node 2 — Design: one recommended terminal approach + rejected alternatives; design-options.html with 2-3 selectable options only for visual layout, interaction, or nontrivial diagrams
+Node 3 — Spec & Criteria: write spec (including Domain Language only when terms crystallize) → auto-verify (grep checks) → 12-QA matrix → derive acceptance criteria → terminal review, or spec-review.html when editable visual review helps
 Node 4 — Plan & Run Sprint: write plan → auto-verify → traceability trace → branch + commit → initialize handoff.json/state.json/events.jsonl → optional dashboard.html for multi-wave/dense live progress → dispatch tasks in parallel waves → update handoff after each boundary
 Node 5 — Finish: pre-merge gate (typecheck/lint/tests) → sprint-evals.md + feedback inbox gate → closure gate (criteria all green / CHANGELOG / patterns surfaced / critical feedback handled) → terminal A/B/C/D, or finish-report.html for dense timelines/reports
   ↳ pre-merge-commit hook rejects non-squash merges on main as a hard guard
@@ -263,7 +261,6 @@ are implementation surfaces, not a user-facing command taxonomy.
 | Default internal gate | `architecture-review` | Codebase pattern analysis + blueprint. |
 | Default internal gate | `systematic-debugging` | 4-phase root cause investigation + red flags. |
 | Bootstrap only | `stackpilot-bootstrap` | SessionStart routing discipline; not a user-facing command. |
-| Expert on-demand | `/stackpilot-compete` | Competitive gap analysis from power-user persona. |
 | Expert on-demand | `/stackpilot-research` | Deep research reports using cross-longitudinal analysis (横纵分析法). |
 | Maintainer-only | `/stackpilot-sync` | External skill tracking and sync. |
 | Maintainer-only | `stackpilot-skill-authoring` | StackPilot skill creation/update workflow with routing, docs, and tests. |
@@ -308,7 +305,7 @@ Codex, JetBrains Junie, and 25+ more):
 | OpenAI Codex | `.codex-plugin/plugin.json` | StackPilot package metadata + portable internal gates; full sprint adapter not yet implemented |
 | Gemini CLI | `gemini-extension.json` + `GEMINI.md` | StackPilot routing context, tool mapping, and portable internal gates |
 
-**Progressive disclosure** — SKILL.md stays under 500 lines. Heavy content (visual companion, optimize sprint, sprint finish) lives in `references/` and loads on demand.
+**Progressive disclosure** — SKILL.md stays under 500 lines. Heavy content such as Run Sprint, Sprint Finish, the 12-QA matrix, and browser view templates lives in `references/` and loads on demand.
 
 **Superpowers gap audit** — `docs/superpowers-gap-audit.md` maps each
 Superpowers workflow to the StackPilot gate or adapter that covers the same
@@ -398,7 +395,7 @@ Adapter Contract with Codex-native skills, subagents, workspaces, browser/app
 verification, and PR mechanics instead of copying Claude Code-specific Agent
 calls.
 
-**Single-file project memory.** `.stackpilot/ARCHITECTURE.md` is the sole per-project memory surface. Fixed sections: What This Project Is / Stack / Key Directories / Data Flow / Key Design Decisions / Conventions & Gotchas / Review Patterns. Only the main agent writes it, and only at Sprint Finish (Step 4a). Sub-agents are read-only: `sp-architect` reads `§ Key Design Decisions` and surfaces new HIGH-risk decisions via a `## Decision Candidates` block in its report; `sp-qa` reads `§ Review Patterns` & `§ Conventions & Gotchas` and surfaces new patterns via a `## Pattern Candidates` block. The main agent merges both at Sprint Finish. This keeps writes serial on the feature branch and avoids worktree-level write contention.
+**Single-file project memory.** `.stackpilot/ARCHITECTURE.md` is the sole per-project memory surface. Fixed sections: What This Project Is / Stack / Key Directories / Data Flow / Key Design Decisions / Conventions & Gotchas / Review Patterns. Only the main agent writes it, and only at Sprint Finish (Step 4a). Sub-agents are read-only: `sp-architect` reads `§ Key Design Decisions` and surfaces new HIGH-risk decisions via a `## Decision Candidates` block in its report; `sp-qa` reads `§ Review Patterns` & `§ Conventions & Gotchas` and surfaces new patterns via a `## Pattern Candidates` block. Specs may carry temporary `## Domain Language` entries from design interrogation; durable terms merge into `ARCHITECTURE.md` at Step 4a instead of creating `CONTEXT.md` or ADR files. The main agent merges these candidates at Sprint Finish. This keeps writes serial on the feature branch and avoids worktree-level write contention.
 
 **TDD enforcement.** sp-dev enforces RED-GREEN-REFACTOR. Tests written before implementation.
 
@@ -410,6 +407,7 @@ calls.
 
 | Date | Change |
 |------|--------|
+| 2026-07-02 | **v3.0.0: Repository cleanup and product-surface trim.** Removed unused `/stackpilot-compete`, its empty `.stackpilot/compete-insights.tsv` seed, the project-local `.claude/skills/release` skill, stale skill-tighten plan/spec artifacts, legacy `.stackpilot/sprint-metrics.md`, and deprecated `visual-companion` / `optimize-sprint` references. Added structural regression checks so these unused surfaces do not regrow. |
 | 2026-06-26 | **v2.4.1**: Browser design options for interface prompts. Node 2 now force-treats explicit page/screen/UI/UX/frontend layout, visual design, interaction, information architecture, dashboard, and multi-version interface design requests as browser-view eligible, so StackPilot generates `design-options.html`, starts or reuses the sprint server, and prints the local URL unless the user explicitly asks for terminal/text-only output. |
 | 2026-06-16 | **External-method refresh: handoff, evals, feedback inbox.** Rechecked autoresearch and LLM Wiki style repositories, then adapted only the durable data-layer pieces: `handoff.json` for phase resume, `sprint-evals.md` for plateau/retry/gate retrospectives, and `.stackpilot/feedback/open|resolved` for external audit feedback. Deliberately did not restore `/stackpilot-bench` or add a runtime runner. |
 | 2026-06-10 | **Single StackPilot entry model.** Reframed the portable `stackpilot-*` skills as default internal gates and adapter primitives rather than a user-facing skill catalog. Users should start from `/stackpilot` or natural-language StackPilot routing; bootstrap/hooks/host adapters decide when to trigger planning, workspace, execution, parallel, review-response, completion, TDD, QA, architecture, and debugging gates. Superpowers comparison remains a workflow coverage audit, not a skill-count parity target. |

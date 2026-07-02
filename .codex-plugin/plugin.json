@@ -1,6 +1,6 @@
 {
   "name": "stackpilot",
-  "version": "2.4.1",
+  "version": "3.0.0",
   "description": "One StackPilot entry for coding-agent methodology: exploration, design, spec, plan, TDD, review, verification, and finish. Claude Code has the full sprint adapter; Codex can use the portable internal gates.",
   "author": {
     "name": "9aoyang",

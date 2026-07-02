@@ -1,8 +1,0 @@
-Build a small React todo list in this project.
-
-It should support:
-- adding todos
-- toggling a todo complete
-- filtering active and completed todos
-
-Please implement it.

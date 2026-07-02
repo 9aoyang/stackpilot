@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-07-02
+
+### Breaking Changes
+
+- **Removed the unused `/stackpilot-compete` public skill** — competitive gap
+  analysis was an unmaintained side mode rather than part of the StackPilot
+  methodology. The empty `.stackpilot/compete-insights.tsv` seed and related
+  README / architecture references were removed with it.
+
+### Changed
+
+- **Integrated design interrogation without adding public skill entries** —
+  StackPilot Node 1 now asks one question at a time with a recommended answer,
+  answers from code before asking the user, and walks parent design decisions
+  before child details. Node 2 terminal decisions now default to one recommended
+  approach plus rejected alternatives, while eligible visual/interactive choices
+  still produce 2-3 selectable `design-options.html` options.
+- **Mapped terminology capture into the existing StackPilot data layer** —
+  specs may include `## Domain Language` for resolved project terms, and Sprint
+  Finish Step 4a can merge durable terms into `.stackpilot/ARCHITECTURE.md`.
+  This preserves the single-file project memory model instead of adding
+  `CONTEXT.md` or `docs/adr/`.
+- **Removed the live Claude CLI triggering test** — routing discipline is now
+  covered by local hook and structural tests instead of a flaky integration
+  harness that depends on external Claude API availability.
+- **Removed unused and deprecated project surfaces** — deleted
+  the project-local `.claude/skills/release` skill, stale sprint plan/spec
+  artifacts, the legacy `.stackpilot/sprint-metrics.md` file, and the deprecated
+  `visual-companion` / `optimize-sprint` references. Structural tests now guard
+  against these artifacts regrowing.
+
 ## [2.4.1] - 2026-06-26
 
 ### Fixed

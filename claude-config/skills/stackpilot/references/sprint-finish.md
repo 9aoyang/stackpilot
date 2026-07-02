@@ -348,13 +348,14 @@ Commit all housekeeping on the feature branch **before** touching the base branc
 - **A**: Before editing, scan this sprint's agent completion reports:
   - `sp-architect` reports — collect any `## Decision Candidates` blocks; surface as suggested additions to `## Key Design Decisions`
   - `sp-qa` reports — collect any `## Pattern Candidates` blocks; surface as suggested additions to `## Review Patterns` (merge counts for "merge with existing" candidates, append as new entries for others; enforce the 20-entry cap by pruning lowest-count entries, ties broken by oldest)
+  - latest sprint spec — collect any `## Domain Language` entries for `.stackpilot/ARCHITECTURE.md`; surface durable project terms as suggested additions to `## Conventions & Gotchas` or `## Key Design Decisions` when they describe a hard boundary
 
   Then update `.stackpilot/ARCHITECTURE.md` in-place — sections include Stack / Key Directories / Data Flow / Key Design Decisions / Conventions & Gotchas / Review Patterns. Commit:
   ```bash
   git add .stackpilot/ARCHITECTURE.md
   git commit -m "docs(arch): update after sprint"
   ```
-- **B**: Skip silently. Any surfaced Pattern Candidates / Decision Candidates are discarded — sp-qa and sp-architect will re-surface them next sprint if the underlying issues or decisions recur.
+- **B**: Skip silently. Any surfaced Domain Language / Pattern Candidates / Decision Candidates are discarded — specs and agents will re-surface them next sprint if the underlying terms, issues, or decisions recur.
 
 **4b. Clear sprint artifacts:**
 

@@ -30,9 +30,13 @@ mechanics, not the gates.
 ## Core Pipeline
 
 1. **Explore** — inspect project context before asking questions. Read project
-   instructions, search relevant code, and identify canonical refs.
-2. **Design** — present one recommended approach, plus alternatives when the
-   trade-off is real. Get approval before implementation.
+   instructions, search relevant code, and identify canonical refs. Ask one
+   question at a time, each with a recommended answer; answer from code instead
+   of asking when evidence is available.
+2. **Design** — present one recommended approach, plus rejected alternatives
+   when the trade-off is real. Use 2-3 selectable options only when comparison,
+   visual design, interaction, or topology materially reduces ambiguity. Get
+   approval before implementation.
 3. **Spec & Criteria** — write a concise spec and 3-7 mechanically verifiable
    acceptance criteria. Criteria must use commands or observable evidence.
 4. **Plan** — use `stackpilot-planning` to break the work into task-sized steps
@@ -74,6 +78,7 @@ When you use this skill without a richer adapter, keep a compact data layer:
 ## Design
 ## Acceptance Criteria
 ## Canonical Refs
+## Domain Language
 
 # Plan — <feature>
 ## Tasks
