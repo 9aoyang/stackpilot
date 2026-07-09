@@ -28,6 +28,7 @@ the route needs them:
 
 | Internal route | When StackPilot uses it |
 |----------------|-------------------------|
+| `brainstorming` | Creative work (features/components) enters the explore → ask clarifying questions → propose approaches → design doc flow |
 | `stackpilot-methodology` | Feature work enters the host-neutral explore → design → spec/criteria → plan → execute → review → finish flow |
 | `stackpilot-planning` | Approved spec/design/clear requirement needs exact implementation tasks |
 | `stackpilot-workspace` | Non-trivial implementation needs isolated setup and clean baseline verification |

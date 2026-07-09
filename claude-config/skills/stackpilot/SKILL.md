@@ -4,7 +4,7 @@ description: Primary Claude Code entry and host adapter for the StackPilot metho
 license: Apache-2.0
 metadata:
   author: stackpilot
-  version: "3.1.0"
+  version: "3.1.1"
 ---
 
 # Stackpilot

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.1.1] - 2026-07-09
+
+### Added
+
+- **New `brainstorming` skill** — introduced a standalone [brainstorming](file:///Users/gaoyang/Documents/github/stackpilot/claude-config/skills/brainstorming/SKILL.md) skill adapted for the StackPilot workflow to refine features, requirements, and designs through collaborative dialogue.
+
 ## [3.1.0] - 2026-07-09
 
 ### Added
