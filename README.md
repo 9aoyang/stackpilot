@@ -58,9 +58,7 @@ feature requests are routed into the internal `stackpilot-methodology` gate
 before implementation; in Claude Code, that gate can hand execution to the
 `/stackpilot` host adapter for autonomous sprints. Bugs route to
 `systematic-debugging`, production code routes through `tdd-development`, and
-completion claims require fresh verification evidence. A `PreToolUse` gate backs
-this up mechanically by blocking feature/bug/code tools before a StackPilot
-process has been activated. Explicit user and project instructions still win;
+completion claims require fresh verification evidence. Explicit user and project instructions still win;
 saying to skip planning or verify manually disables the corresponding route for
 that request.
 

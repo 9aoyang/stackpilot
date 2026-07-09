@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-07-09
+
+### Added
+
+- **Deterministic packaging script** — introduced [scripts/package-codex-plugin.sh](file:///Users/gaoyang/Documents/github/stackpilot/scripts/package-codex-plugin.sh) to build deterministic, rootless zip/tar.gz archives for the Codex portal, with unified entry timestamps and strict path exclusion filters.
+
+### Changed
+
+- **Cleaned up Codex manifest hooks** — added `"hooks": {}` explicitly to [.codex-plugin/plugin.json](file:///Users/gaoyang/Documents/github/stackpilot/.codex-plugin/plugin.json) to prevent the Codex runtime from auto-discovering hooks and causing unwanted trust prompts.
+- **Removed PreToolUse hook** — deleted `hooks/pre-tool-use` and its hook entry in [hooks/hooks.json](file:///Users/gaoyang/Documents/github/stackpilot/hooks/hooks.json) to streamline tool execution speed and avoid execution delays.
+- **Optimized Stackpilot Bootstrap** — compressed [claude-config/skills/stackpilot-bootstrap/SKILL.md](file:///Users/gaoyang/Documents/github/stackpilot/claude-config/skills/stackpilot-bootstrap/SKILL.md) to reduce per-session token cost, added `<SUBAGENT-STOP>` to bypass routing for subagents, and inlined cross-platform tool mapping guidelines.
+
 ## [3.0.0] - 2026-07-02
 
 ### Breaking Changes
